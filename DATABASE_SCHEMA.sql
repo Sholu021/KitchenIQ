@@ -1,0 +1,4 @@
+-- Core schema overview
+-- Tables: workspaces, users, inventory_items, stock_transactions,
+-- alerts, ai_reorder_predictions, wastage_logs, subscriptions
+-- Enforce workspace isolation via RLS.

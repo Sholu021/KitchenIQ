@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+:root {
+  --background: #080d1a;
+  --foreground: #f8fafc;
+  
+  --card: #0f1626;
+  --card-foreground: #f8fafc;
+  
+  --popover: #0f1626;
+  --popover-foreground: #f8fafc;
+  
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  
+  --secondary: #1e293b;
+  --secondary-foreground: #f8fafc;
+  
+  --muted: #131b2e;
+  --muted-foreground: #94a3b8;
+  
+  --accent: #3b82f6;
+  --accent-foreground: #ffffff;
+  
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  
+  --border: #1e293b;
+  --input: #1e293b;
+  --ring: #6366f1;
+  
+  --radius: 0.5rem;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #080d1a;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(15, 22, 38, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Radial glow and grid mesh background utility */
+.grid-bg {
+  background-color: #080d1a;
+  background-image: 
+    radial-gradient(circle at top, rgba(99, 102, 241, 0.15) 0%, transparent 65%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 48px 48px, 48px 48px;
+}
+

@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Databases
+*.db
+kitcheniq.db
+
+# Environments & secrets
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Node (Frontend build folders)
+node_modules/
+.next/
+out/
+build/
+frontend/.next/
+frontend/node_modules/

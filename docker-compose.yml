@@ -1,0 +1,67 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: kitcheniq-db
+    environment:
+      POSTGRES_USER: kitcheniq_user
+      POSTGRES_PASSWORD: kitcheniq_password
+      POSTGRES_DB: kitcheniq_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - kitcheniq-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kitcheniq_user -d kitcheniq_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kitcheniq-backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://kitcheniq_user:kitcheniq_password@db:5432/kitcheniq_db
+      - JWT_SECRET=supersecretjwtsecretkeykitcheniqai2026!
+      - JWT_ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=60
+      - REFRESH_TOKEN_EXPIRE_DAYS=7
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-mock}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - kitcheniq-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: kitcheniq-frontend
+    command: npm run dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - backend
+    networks:
+      - kitcheniq-network
+
+networks:
+  kitcheniq-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
