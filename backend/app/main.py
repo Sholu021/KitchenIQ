@@ -11,10 +11,20 @@ app = FastAPI(
     version="1.0.0"
 )
 
+import os
 # Enable CORS for frontend integration
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://kitcheniq-frontend.vercel.app",
+]
+env_origins = os.getenv("ALLOWED_ORIGINS")
+if env_origins:
+    origins.extend([o.strip() for o in env_origins.split(",") if o.strip()])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
