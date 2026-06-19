@@ -127,14 +127,14 @@ export default function Home() {
         <div className="flex items-center gap-4">
           <Link
             href="/login"
-            className="text-xs font-semibold text-slate-300 hover:text-white transition-colors cursor-pointer"
+            className="text-xs font-bold px-4 py-2.5 bg-[#f59e0b] hover:bg-[#d97706] text-slate-950 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] cursor-pointer"
           >
             Get Start
           </Link>
           <button
             onClick={handleSeeDemo}
             disabled={demoLoading}
-            className="text-xs font-bold px-4 py-2.5 bg-[#f59e0b] hover:bg-[#d97706] text-slate-950 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] cursor-pointer disabled:opacity-50"
+            className="text-xs font-bold px-4 py-2.5 border border-slate-700/60 hover:border-slate-500 bg-slate-900/40 hover:bg-slate-900/80 text-slate-200 rounded-xl transition-all cursor-pointer disabled:opacity-50"
           >
             {demoLoading ? 'Loading...' : 'See Demo'}
           </button>
