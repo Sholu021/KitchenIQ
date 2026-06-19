@@ -27,6 +27,7 @@ export default function SettingsPage() {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedUpgradeTier, setSelectedUpgradeTier] = useState('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
 
   // 1. Fetch Organization Details
   const { data: orgDetails, isLoading: isLoadingOrg, refetch: refetchOrg } = useQuery({
@@ -154,15 +155,7 @@ export default function SettingsPage() {
                   <span className="font-semibold text-slate-400 block">Current Tier Plan</span>
                   <span className="text-sm font-black text-white block mt-0.5">{orgDetails.subscription_tier} Tier</span>
                 </div>
-                {orgDetails.subscription_tier === 'Free' ? (
-                  <button
-                    onClick={() => handleStartUpgrade('Pro')}
-                    disabled={role !== 'Owner'}
-                    className="py-2 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs cursor-pointer flex items-center gap-1.5 transition-all"
-                  >
-                    <Zap size={13} /> Upgrade to Pro
-                  </button>
-                ) : (
+                {orgDetails.subscription_tier !== 'Free' && (
                   <button
                     onClick={handleDowngradeToFree}
                     disabled={role !== 'Owner'}
@@ -172,6 +165,60 @@ export default function SettingsPage() {
                   </button>
                 )}
               </div>
+
+              {orgDetails.subscription_tier === 'Free' && (
+                <div className="p-4 bg-slate-950/25 border border-slate-900 rounded-xl space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white text-xs">Select Pricing Plan:</span>
+                    {/* Billing Cycle Toggle */}
+                    <div className="flex items-center gap-1.5 bg-slate-950/80 p-1 border border-slate-800 rounded-lg">
+                      <button
+                        type="button"
+                        onClick={() => setBillingCycle('monthly')}
+                        className={`py-1 px-2.5 rounded-md font-bold text-[10px] transition-all cursor-pointer ${
+                          billingCycle === 'monthly'
+                            ? 'bg-indigo-600 text-white'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Monthly
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBillingCycle('annual')}
+                        className={`py-1 px-2.5 rounded-md font-bold text-[10px] transition-all flex items-center gap-1 cursor-pointer ${
+                          billingCycle === 'annual'
+                            ? 'bg-indigo-600 text-white'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Annual
+                        <span className="text-[8px] bg-emerald-600 text-white font-black px-1 rounded">
+                          Save 17%
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-900/60">
+                    <div>
+                      <span className="font-black text-white text-xs block">KitchenIQ Pro</span>
+                      <span className="text-slate-400 text-[10px] block mt-0.5">
+                        {billingCycle === 'monthly'
+                          ? '$24.00 / month, cancel anytime'
+                          : '$20.00 / month ($240.00 billed annually)'}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleStartUpgrade('Pro')}
+                      disabled={role !== 'Owner'}
+                      className="py-2 px-3.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold rounded-lg text-xs cursor-pointer flex items-center gap-1.5 transition-all"
+                    >
+                      <Zap size={12} /> {billingCycle === 'monthly' ? 'Subscribe @ $24/mo' : 'Subscribe @ $240/yr'}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Quotas list */}
               <div className="space-y-2.5">
@@ -276,10 +323,16 @@ export default function SettingsPage() {
             <div className="p-6 space-y-6">
               <div className="p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-xl space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="text-slate-300">KitchenIQ Pro Annual Plan</span>
-                  <span className="text-white font-mono">$240.00 / yr</span>
+                  <span className="text-slate-300">
+                    KitchenIQ Pro {billingCycle === 'annual' ? 'Annual Plan' : 'Monthly Plan'}
+                  </span>
+                  <span className="text-white font-mono">
+                    {billingCycle === 'annual' ? '$240.00 / yr' : '$24.00 / mo'}
+                  </span>
                 </div>
-                <p className="text-[11px] text-slate-400 leading-normal font-medium">Unlocks AI natural language Copilot chat, detailed wastage logs analytical audits, and removes all product CRUD database limits.</p>
+                <p className="text-[11px] text-slate-400 leading-normal font-medium">
+                  Unlocks AI natural language Copilot chat, detailed wastage logs analytical audits, and removes all product CRUD database limits. Billed {billingCycle === 'annual' ? 'annually' : 'monthly'}.
+                </p>
               </div>
 
               <div className="space-y-4">

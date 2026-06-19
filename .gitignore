@@ -24,3 +24,5 @@ out/
 build/
 frontend/.next/
 frontend/node_modules/
+
+.vercel

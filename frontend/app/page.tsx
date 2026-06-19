@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/auth-store';
+import { apiClient } from '@/lib/api-client';
 import {
   Sparkles,
   ArrowRight,
@@ -29,6 +30,9 @@ export default function Home() {
   const router = useRouter();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isHydrated = useAuthStore((state) => state.isHydrated);
+  const login = useAuthStore((state) => state.login);
+  
+  const [demoLoading, setDemoLoading] = useState(false);
 
   // ROI Calculator State
   const [monthlySpend, setMonthlySpend] = useState(15000);
@@ -38,6 +42,23 @@ export default function Home() {
 
   // FAQ Accordion State
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  const handleSeeDemo = async () => {
+    setDemoLoading(true);
+    try {
+      const res = await apiClient.post('/auth/login', {
+        email: 'owner@kitcheniq.com',
+        password: 'password123'
+      });
+      const { access_token, refresh_token, role, organization_id, user_name } = res.data;
+      login(access_token, refresh_token, role, organization_id, user_name);
+      router.push('/dashboard');
+    } catch (err) {
+      alert('Failed to log in to demo mode. Please verify the backend is online.');
+    } finally {
+      setDemoLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (isHydrated && isAuthenticated) {
@@ -108,14 +129,15 @@ export default function Home() {
             href="/login"
             className="text-xs font-semibold text-slate-300 hover:text-white transition-colors cursor-pointer"
           >
-            Sign In
+            Get Start
           </Link>
-          <Link
-            href="/register"
-            className="text-xs font-bold px-4 py-2.5 bg-[#f59e0b] hover:bg-[#d97706] text-slate-950 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] cursor-pointer"
+          <button
+            onClick={handleSeeDemo}
+            disabled={demoLoading}
+            className="text-xs font-bold px-4 py-2.5 bg-[#f59e0b] hover:bg-[#d97706] text-slate-950 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] cursor-pointer disabled:opacity-50"
           >
-            Book Demo
-          </Link>
+            {demoLoading ? 'Loading...' : 'See Demo'}
+          </button>
         </div>
       </header>
 
@@ -143,18 +165,25 @@ export default function Home() {
         </p>
 
         {/* Action Buttons */}
-        <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center items-center w-full max-w-md mx-auto">
+        <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center items-center w-full max-w-2xl mx-auto">
           <Link
-            href="/register"
+            href="/login"
             className="w-full sm:w-auto py-3.5 px-8 bg-[#f59e0b] hover:bg-[#d97706] text-slate-950 font-bold rounded-xl transition-all flex items-center justify-center gap-2 hover:shadow-[0_0_25px_rgba(245,158,11,0.3)] cursor-pointer"
           >
-            Book Free Demo <ArrowRight size={16} />
+            Get Start <ArrowRight size={16} />
           </Link>
+          <button
+            onClick={handleSeeDemo}
+            disabled={demoLoading}
+            className="w-full sm:w-auto py-3.5 px-8 border border-slate-700/60 hover:border-slate-500 bg-slate-900/40 hover:bg-slate-900/80 text-slate-200 font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+          >
+            {demoLoading ? 'Loading...' : 'See Demo'}
+          </button>
           <a
             href="https://wa.me/message/H5CMPBY5X675B1"
             target="_blank"
             rel="noreferrer"
-            className="w-full sm:w-auto py-3.5 px-8 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-600/10"
+            className="w-full sm:w-auto py-3.5 px-8 bg-[#10b981]/15 hover:bg-[#10b981]/25 border border-[#10b981]/30 text-emerald-400 font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <MessageCircle size={18} /> WhatsApp Us
           </a>
