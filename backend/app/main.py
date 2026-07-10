@@ -53,5 +53,13 @@ def read_root():
         "docs_url": "/docs"
     }
 
+@app.get("/health")
+def health():
+    return {
+        "status": "healthy",
+        "service": "KitchenIQ API",
+        "version": "1.0.0"
+    }
+
 # Include API Router
 app.include_router(api_router, prefix="/api/v1")
