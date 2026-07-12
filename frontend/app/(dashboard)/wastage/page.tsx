@@ -31,7 +31,7 @@ export default function WastagePage() {
   const [errorMsg, setErrorMsg] = useState('');
 
   // 1. Fetch Wastage logs
-  const { data: wastageList = [], isLoading: isLoadingWastage, error: wastageError } = useQuery({
+  const { data: wastageList = [], isLoading: isLoadingWastage } = useQuery({
     queryKey: ['wastage'],
     queryFn: async () => {
       const res = await apiClient.get('/wastage');
@@ -40,7 +40,7 @@ export default function WastagePage() {
   });
 
   // 2. Fetch Products for select input
-  const { data: productsData = { items: [] }, isLoading: isLoadingProducts } = useQuery({
+  const { data: productsData = { items: [] } } = useQuery({
     queryKey: ['products-all'],
     queryFn: async () => {
       const res = await apiClient.get('/products?limit=100');
@@ -132,16 +132,16 @@ export default function WastagePage() {
     <div className="space-y-8">
       
       {/* Title Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
-            <Flame className="text-rose-500 animate-pulse" /> Wastage & Spoilage Logs
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
+            <Flame className="text-rose-500 shrink-0" /> Wastage & Spoilage Logs
           </h1>
-          <p className="text-sm text-slate-400 mt-1">Record food waste details, audit write-off costs, and automatically decrement batch shelf stock.</p>
+          <p className="text-sm text-slate-500 mt-1.5 font-medium">Record food waste details, audit write-off costs, and automatically decrement batch shelf stock.</p>
         </div>
         <button
           onClick={() => setModalOpen(true)}
-          className="py-3 px-6 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-2 hover:shadow-[0_0_20px_rgba(239,68,68,0.2)] cursor-pointer"
+          className="py-3 px-5 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-rose-500/10 self-start sm:self-auto"
         >
           <Plus size={16} /> Log Wastage
         </button>
@@ -149,105 +149,99 @@ export default function WastagePage() {
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-[#0f1626] border border-rose-500/10 rounded-2xl p-6 shadow-xl relative overflow-hidden flex items-center gap-5">
-          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-rose-500/5 blur-3xl -z-10"></div>
-          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex items-center gap-5">
+          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-500">
             <Coins size={28} />
           </div>
           <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Cumulative Financial Loss</span>
-            <span className="text-3xl font-black text-white mt-1 block font-mono">${totalFinancialLoss.toFixed(2)}</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">Cumulative Financial Loss</span>
+            <span className="text-3xl font-extrabold text-slate-900 mt-1 block font-mono">-${totalFinancialLoss.toFixed(2)}</span>
           </div>
         </div>
 
-        <div className="bg-[#0f1626] border border-slate-900 rounded-2xl p-6 shadow-xl relative overflow-hidden flex items-center gap-5">
-          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-indigo-500/5 blur-3xl -z-10"></div>
-          <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex items-center gap-5">
+          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 text-amber-500">
             <AlertTriangle size={28} />
           </div>
           <div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Wastage Incidents logged</span>
-            <span className="text-3xl font-black text-white mt-1 block font-mono">{totalUnitsWasted} logs</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">Wastage Incidents Logged</span>
+            <span className="text-3xl font-extrabold text-slate-900 mt-1 block font-mono">{totalUnitsWasted} logs</span>
           </div>
         </div>
       </div>
 
       {/* Search & Listing */}
-      <div className="bg-[#0f1626] border border-slate-900 rounded-2xl shadow-xl">
-        <div className="p-6 border-b border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <h3 className="text-base font-bold text-white">Historical Wastage Feed</h3>
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <h3 className="text-lg font-bold text-slate-900">Historical Wastage Feed</h3>
           <div className="relative w-full sm:w-72">
             <input
               type="text"
               placeholder="Search by ingredient or reason..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-950/60 border border-slate-800 rounded-xl py-2 pl-9 pr-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
             />
-            <Search className="absolute left-3 top-2.5 text-slate-500" size={14} />
+            <Search className="absolute left-3.5 top-3.5 text-slate-400" size={16} />
           </div>
         </div>
 
         {isLoadingWastage ? (
-          <div className="p-12 text-center text-slate-500 text-sm">
-            <RefreshCw className="animate-spin inline-block mr-2 text-indigo-400" size={18} />
-            Loading wastage database records...
+          <div className="py-20 flex flex-col items-center gap-2.5 text-slate-400">
+            <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-xs font-bold tracking-widest uppercase">Retrieving Wastage logs...</p>
           </div>
         ) : filteredLogs.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 text-sm">
+          <div className="text-center py-20 text-slate-400 font-medium">
             No wastage records found matching your filters.
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-300">
-              <thead className="text-xs text-slate-400 uppercase tracking-wider border-b border-slate-900 bg-slate-950/20">
+            <table className="w-full text-left text-sm text-slate-700">
+              <thead className="text-[10px] text-slate-400 uppercase tracking-widest bg-slate-50 border-b border-slate-100">
                 <tr>
-                  <th className="px-6 py-4 font-semibold">Ingredient</th>
-                  <th className="px-6 py-4 font-semibold text-center">Wasted Quantity</th>
-                  <th className="px-6 py-4 font-semibold text-center">Sunk Cost Loss</th>
-                  <th className="px-6 py-4 font-semibold">Reason</th>
-                  <th className="px-6 py-4 font-semibold"><div className="flex items-center gap-1.5"><Calendar size={13} /> Logged Date</div></th>
-                  <th className="px-6 py-4 font-semibold text-right">Actions</th>
+                  <th className="px-6 py-4 font-bold">Ingredient</th>
+                  <th className="px-6 py-4 font-bold text-center">Wasted Quantity</th>
+                  <th className="px-6 py-4 font-bold text-center">Sunk Cost Loss</th>
+                  <th className="px-6 py-4 font-bold">Reason</th>
+                  <th className="px-6 py-4 font-bold"><div className="flex items-center gap-1.5"><Calendar size={13} className="text-slate-400" /> Logged Date</div></th>
+                  {canDelete && <th className="px-6 py-4 font-bold text-right">Actions</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-900/60">
+              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                 {filteredLogs.map((log: any) => (
-                  <tr key={log.id} className="hover:bg-slate-900/10 transition-colors">
+                  <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div>
-                        <span className="font-bold text-white block">{log.product?.name || 'Deleted Product'}</span>
-                        <span className="text-[10px] text-slate-500 font-mono mt-0.5 block">SKU: {log.product?.sku || 'N/A'}</span>
+                        <span className="font-bold text-slate-900 block">{log.product?.name || 'Deleted Product'}</span>
+                        <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">SKU: {log.product?.sku || 'N/A'}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center font-semibold font-mono text-slate-200">
+                    <td className="px-6 py-4 text-center font-bold font-mono text-slate-800">
                       {log.quantity} {log.product?.unit || ''}
                     </td>
-                    <td className="px-6 py-4 text-center font-bold font-mono text-rose-400">
+                    <td className="px-6 py-4 text-center font-bold font-mono text-rose-500">
                       -${log.cost_loss.toFixed(2)}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-full font-bold text-[10px]">
+                      <span className="px-2.5 py-0.5 bg-rose-50 border border-rose-200/50 text-rose-700 rounded-full font-bold text-[10px]">
                         {log.reason}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-xs font-semibold text-slate-400">
                       {new Date(log.created_at).toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      {canDelete ? (
+                    {canDelete && (
+                      <td className="px-6 py-4 text-right">
                         <button
                           onClick={() => handleDeleteRecord(log.id)}
-                          className="p-2 bg-slate-950 border border-slate-900 text-rose-500 hover:text-rose-400 hover:bg-slate-900 rounded-xl cursor-pointer transition-colors"
+                          className="p-2 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl border border-slate-200/60 hover:border-rose-200 transition-colors cursor-pointer"
                           title="Delete & Revert Stock"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={13} />
                         </button>
-                      ) : (
-                        <span className="text-[10px] text-slate-500 flex items-center justify-end gap-1" title="Manager only">
-                          <ShieldAlert size={12} /> Restricted
-                        </span>
-                      )}
-                    </td>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -258,18 +252,20 @@ export default function WastagePage() {
 
       {/* CREATE MODAL */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[#0f1626] border border-slate-900 rounded-2xl w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between p-6 border-b border-slate-900">
-              <h3 className="text-base font-bold text-white">Log Ingredient Wastage</h3>
-              <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white border border-slate-200 rounded-[20px] w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Flame size={18} className="text-rose-500" /> Log Ingredient Wastage
+              </h3>
+              <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-slate-900 p-1 rounded-lg hover:bg-slate-50 transition-all cursor-pointer">
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleLogWastage} className="p-6 space-y-4">
               {errorMsg && (
-                <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold rounded-xl flex items-center gap-2">
+                <div className="p-3 bg-rose-50 border border-rose-100 text-rose-600 text-xs font-semibold rounded-xl flex items-center gap-2">
                   <AlertTriangle size={15} />
                   {errorMsg}
                 </div>
@@ -277,7 +273,7 @@ export default function WastagePage() {
 
               {/* Product Select */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Select Stock Ingredient *</label>
+                <label className="text-xs font-bold text-slate-400 uppercase block">Select Stock Ingredient *</label>
                 <select
                   required
                   value={productId}
@@ -285,7 +281,7 @@ export default function WastagePage() {
                     setProductId(e.target.value);
                     setErrorMsg('');
                   }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-white text-sm text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold"
                 >
                   <option value="">-- Choose Ingredient --</option>
                   {productsData.items.map((prod: any) => (
@@ -298,7 +294,7 @@ export default function WastagePage() {
 
               {/* Quantity */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Quantity Wasted *</label>
+                <label className="text-xs font-bold text-slate-400 uppercase block">Quantity Wasted *</label>
                 <div className="relative">
                   <input
                     type="number"
@@ -310,9 +306,9 @@ export default function WastagePage() {
                       setErrorMsg('');
                     }}
                     placeholder="Enter numeric value..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3.5 py-2.5 border border-slate-200 bg-white text-sm text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-bold"
                   />
-                  <span className="absolute right-3.5 top-3.5 text-xs font-semibold text-slate-500">
+                  <span className="absolute right-3.5 top-3 text-xs font-bold text-slate-400">
                     {productId ? productsData.items.find((p: any) => p.id === parseInt(productId, 10))?.unit : ''}
                   </span>
                 </div>
@@ -320,12 +316,12 @@ export default function WastagePage() {
 
               {/* Reason */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Wastage Reason *</label>
+                <label className="text-xs font-bold text-slate-400 uppercase block">Wastage Reason *</label>
                 <select
                   required
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-white text-sm text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold"
                 >
                   {reasons.map((rsn) => (
                     <option key={rsn} value={rsn}>{rsn}</option>
@@ -333,18 +329,18 @@ export default function WastagePage() {
                 </select>
               </div>
 
-              <div className="pt-4 border-t border-slate-900 flex items-center justify-end gap-3">
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="py-2.5 px-4 bg-slate-950 hover:bg-slate-900 border border-slate-900 text-slate-400 font-semibold rounded-xl text-xs cursor-pointer transition-all"
+                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={logWastageMutation.isPending}
-                  className="py-2.5 px-5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs cursor-pointer transition-all flex items-center gap-1.5 disabled:opacity-50"
+                  className="py-2.5 px-5 bg-rose-500 hover:bg-rose-600 disabled:bg-rose-450 text-white font-bold rounded-xl text-xs cursor-pointer transition-all flex items-center gap-1.5 shadow-md shadow-rose-500/10"
                 >
                   {logWastageMutation.isPending ? 'Logging...' : 'Confirm Log'}
                 </button>
@@ -353,7 +349,6 @@ export default function WastagePage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

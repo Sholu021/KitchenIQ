@@ -30,7 +30,7 @@ export default function SettingsPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
 
   // 1. Fetch Organization Details
-  const { data: orgDetails, isLoading: isLoadingOrg, refetch: refetchOrg } = useQuery({
+  const { data: orgDetails, isLoading: isLoadingOrg } = useQuery({
     queryKey: ['org-details'],
     queryFn: async () => {
       const res = await apiClient.get('/auth/organization');
@@ -90,76 +90,76 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       
       {/* Title */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-2">
-            <Settings size={28} className="text-slate-400" /> Platform Settings
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Settings size={28} className="text-emerald-500 shrink-0" /> Platform Settings
           </h1>
-          <p className="text-sm text-slate-400 mt-1">Configure tenant profiles, review user role permissions, and check subscription billing status.</p>
+          <p className="text-sm text-slate-500 mt-1.5 font-medium">Configure tenant profiles, review user role permissions, and check subscription billing status.</p>
         </div>
         {isLoadingOrg && (
-          <RefreshCw className="animate-spin text-indigo-400" size={18} />
+          <RefreshCw className="animate-spin text-emerald-500" size={18} />
         )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         {/* --- USER ACCOUNT INFO --- */}
-        <div className="bg-[#0f1626] border border-slate-900 rounded-2xl p-6 shadow-xl space-y-6">
-          <h3 className="text-base font-bold text-white flex items-center gap-2 pb-3 border-b border-slate-900">
-            <User size={18} className="text-indigo-400" /> User Profile & Tenant Details
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6">
+          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 pb-3 border-b border-slate-100">
+            <User size={18} className="text-emerald-500 shrink-0" /> User Profile & Tenant Details
           </h3>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Full Name</span>
-                <span className="text-sm font-semibold text-white block mt-1">{userName || 'Alice Owner'}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Full Name</span>
+                <span className="text-sm font-bold text-slate-800 block mt-1">{userName || 'Alice Owner'}</span>
               </div>
               <div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Role Authorization</span>
-                <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 border border-indigo-500/20 bg-indigo-500/10 text-indigo-400 rounded-full">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Role Authorization</span>
+                <span className="inline-block mt-1 text-[10px] font-bold px-2.5 py-0.5 border border-emerald-250 bg-emerald-50 text-emerald-700 rounded-full">
                   {role || 'Owner'}
                 </span>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-900/60">
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
               <div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Organization Name</span>
-                <span className="text-sm font-semibold text-white block mt-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Organization Name</span>
+                <span className="text-sm font-bold text-slate-800 block mt-1">
                   {orgDetails?.name || 'KitchenIQ Demo Café'}
                 </span>
               </div>
               <div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Organization ID</span>
-                <span className="text-sm font-semibold text-indigo-300 font-mono block mt-1"># tenant-{organizationId || 1}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Organization ID</span>
+                <span className="text-sm font-bold text-emerald-600 font-mono block mt-1"># tenant-{organizationId || 1}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* --- BILLING & SUBSCRIPTION DETAILS --- */}
-        <div className="bg-[#0f1626] border border-slate-900 rounded-2xl p-6 shadow-xl space-y-6">
-          <h3 className="text-base font-bold text-white flex items-center gap-2 pb-3 border-b border-slate-900">
-            <CreditCard size={18} className="text-indigo-400" /> Billing & Plans Quota
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6">
+          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 pb-3 border-b border-slate-100">
+            <CreditCard size={18} className="text-emerald-500 shrink-0" /> Billing & Plans Quota
           </h3>
 
           {orgDetails ? (
-            <div className="space-y-4 text-xs">
-              <div className="flex items-center justify-between p-3.5 bg-slate-950/20 border border-slate-900 rounded-xl">
+            <div className="space-y-6 text-xs font-semibold text-slate-600">
+              <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200/80 rounded-xl">
                 <div>
-                  <span className="font-semibold text-slate-400 block">Current Tier Plan</span>
-                  <span className="text-sm font-black text-white block mt-0.5">{orgDetails.subscription_tier} Tier</span>
+                  <span className="font-bold text-slate-400 block text-[10px] uppercase tracking-widest">Current Tier Plan</span>
+                  <span className="text-base font-extrabold text-slate-900 block mt-0.5">{orgDetails.subscription_tier} Tier</span>
                 </div>
                 {orgDetails.subscription_tier !== 'Free' && (
                   <button
                     onClick={handleDowngradeToFree}
                     disabled={role !== 'Owner'}
-                    className="py-2 px-3 bg-slate-950 hover:bg-slate-900 border border-slate-900 disabled:opacity-50 text-rose-400 hover:text-rose-300 font-bold rounded-xl text-xs cursor-pointer transition-all"
+                    className="py-2 px-3 border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100/50 hover:text-rose-700 font-bold rounded-xl text-xs cursor-pointer transition-colors disabled:opacity-50"
                   >
                     Revert to Free
                   </button>
@@ -167,18 +167,18 @@ export default function SettingsPage() {
               </div>
 
               {orgDetails.subscription_tier === 'Free' && (
-                <div className="p-4 bg-slate-950/25 border border-slate-900 rounded-xl space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-white text-xs">Select Pricing Plan:</span>
+                <div className="p-4 bg-slate-50/50 border border-slate-200 rounded-xl space-y-4 shadow-inner">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <span className="font-bold text-slate-800 text-xs">Select Pricing Plan:</span>
                     {/* Billing Cycle Toggle */}
-                    <div className="flex items-center gap-1.5 bg-slate-950/80 p-1 border border-slate-800 rounded-lg">
+                    <div className="flex items-center gap-1.5 bg-slate-100 p-1 border border-slate-200/60 rounded-xl self-start sm:self-auto">
                       <button
                         type="button"
                         onClick={() => setBillingCycle('monthly')}
-                        className={`py-1 px-2.5 rounded-md font-bold text-[10px] transition-all cursor-pointer ${
+                        className={`py-1 px-3 rounded-lg font-bold text-[10px] transition-all cursor-pointer ${
                           billingCycle === 'monthly'
-                            ? 'bg-indigo-600 text-white'
-                            : 'text-slate-400 hover:text-white'
+                            ? 'bg-white text-slate-900 border border-slate-200 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-800'
                         }`}
                       >
                         Monthly
@@ -186,23 +186,23 @@ export default function SettingsPage() {
                       <button
                         type="button"
                         onClick={() => setBillingCycle('annual')}
-                        className={`py-1 px-2.5 rounded-md font-bold text-[10px] transition-all flex items-center gap-1 cursor-pointer ${
+                        className={`py-1 px-3 rounded-lg font-bold text-[10px] transition-all flex items-center gap-1 cursor-pointer ${
                           billingCycle === 'annual'
-                            ? 'bg-indigo-600 text-white'
-                            : 'text-slate-400 hover:text-white'
+                            ? 'bg-white text-slate-900 border border-slate-200 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-800'
                         }`}
                       >
                         Annual
-                        <span className="text-[8px] bg-emerald-600 text-white font-black px-1 rounded">
+                        <span className="text-[8px] bg-emerald-500 text-white font-extrabold px-1 rounded">
                           Save 17%
                         </span>
                       </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-900/60">
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-200/60">
                     <div>
-                      <span className="font-black text-white text-xs block">KitchenIQ Pro</span>
+                      <span className="font-bold text-slate-900 text-sm block">KitchenIQ Pro</span>
                       <span className="text-slate-400 text-[10px] block mt-0.5">
                         {billingCycle === 'monthly'
                           ? '$24.00 / month, cancel anytime'
@@ -212,7 +212,7 @@ export default function SettingsPage() {
                     <button
                       onClick={() => handleStartUpgrade('Pro')}
                       disabled={role !== 'Owner'}
-                      className="py-2 px-3.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold rounded-lg text-xs cursor-pointer flex items-center gap-1.5 transition-all"
+                      className="py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold rounded-xl text-xs cursor-pointer flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/10"
                     >
                       <Zap size={12} /> {billingCycle === 'monthly' ? 'Subscribe @ $24/mo' : 'Subscribe @ $240/yr'}
                     </button>
@@ -221,27 +221,27 @@ export default function SettingsPage() {
               )}
 
               {/* Quotas list */}
-              <div className="space-y-2.5">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Usage Limits Matrix</span>
+              <div className="space-y-3">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Usage Limits Matrix</span>
                 
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="p-3 bg-slate-950/45 border border-slate-900 rounded-xl text-center">
-                    <span className="text-slate-400 block font-semibold">Products</span>
-                    <span className="text-sm font-bold text-white block mt-1">
+                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-center">
+                    <span className="text-slate-400 block font-bold text-[9px] uppercase tracking-wider">Products</span>
+                    <span className="text-base font-extrabold text-slate-800 block mt-1 font-mono">
                       {orgDetails.products_count} / {orgDetails.products_limit || '∞'}
                     </span>
                   </div>
 
-                  <div className="p-3 bg-slate-950/45 border border-slate-900 rounded-xl text-center">
-                    <span className="text-slate-400 block font-semibold">Recipes</span>
-                    <span className="text-sm font-bold text-white block mt-1">
+                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-center">
+                    <span className="text-slate-400 block font-bold text-[9px] uppercase tracking-wider">Recipes</span>
+                    <span className="text-base font-extrabold text-slate-800 block mt-1 font-mono">
                       {orgDetails.recipes_count} / {orgDetails.recipes_limit || '∞'}
                     </span>
                   </div>
 
-                  <div className="p-3 bg-slate-950/45 border border-slate-900 rounded-xl text-center">
-                    <span className="text-slate-400 block font-semibold">Active Batches</span>
-                    <span className="text-sm font-bold text-white block mt-1">
+                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-center">
+                    <span className="text-slate-400 block font-bold text-[9px] uppercase tracking-wider">Active Batches</span>
+                    <span className="text-base font-extrabold text-slate-800 block mt-1 font-mono">
                       {orgDetails.batches_count} / {orgDetails.batches_limit || '∞'}
                     </span>
                   </div>
@@ -249,55 +249,55 @@ export default function SettingsPage() {
               </div>
             </div>
           ) : (
-            <div className="text-center py-6 text-slate-500 text-xs">
+            <div className="text-center py-6 text-slate-400 font-medium text-xs">
               Fetching billing quotas details...
             </div>
           )}
         </div>
 
         {/* --- SYSTEM METRICS --- */}
-        <div className="bg-[#0f1626] border border-slate-900 rounded-2xl p-6 shadow-xl space-y-6">
-          <h3 className="text-base font-bold text-white flex items-center gap-2 pb-3 border-b border-slate-900">
-            <Landmark size={18} className="text-indigo-400" /> System Integration Status
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6">
+          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 pb-3 border-b border-slate-100">
+            <Landmark size={18} className="text-emerald-500 shrink-0" /> System Integration Status
           </h3>
 
-          <div className="space-y-3.5 text-xs">
-            <div className="flex items-center justify-between p-3 bg-slate-950/20 border border-slate-900 rounded-xl">
-              <span className="font-semibold text-slate-400">Backend API URL</span>
-              <span className="font-mono text-indigo-400">{process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}</span>
+          <div className="space-y-3.5 text-xs font-semibold text-slate-600">
+            <div className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
+              <span className="font-bold text-slate-400">Backend API URL</span>
+              <span className="font-mono text-emerald-600 truncate max-w-xs">{process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}</span>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-slate-950/20 border border-slate-900 rounded-xl">
-              <span className="font-semibold text-slate-400">Database Driver</span>
-              <span className="font-mono text-slate-200">SQLite Local (SQLAlchemy 2.0)</span>
+            <div className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
+              <span className="font-bold text-slate-400">Database Driver</span>
+              <span className="font-mono text-slate-700">SQLite Local (SQLAlchemy 2.0)</span>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-slate-950/20 border border-slate-900 rounded-xl">
-              <span className="font-semibold text-slate-400">AI Engine status</span>
-              <span className="px-2 py-0.5 rounded-full border bg-indigo-500/10 border-indigo-500/20 text-indigo-400 font-bold text-[10px]">
-                {orgDetails?.subscription_tier === 'Free' ? 'LOCKED (AI INSIGHTS DISMISSED)' : 'FALLBACK ENGINE / OPENAI RUNNING'}
+            <div className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
+              <span className="font-bold text-slate-400">AI Engine Status</span>
+              <span className="px-2.5 py-0.5 rounded-full border bg-emerald-50 border-emerald-100 text-emerald-700 font-bold text-[10px]">
+                {orgDetails?.subscription_tier === 'Free' ? 'LOCKED (AI INSIGHTS DISMISSED)' : 'ACTIVE (FALLBACK ENGINE)'}
               </span>
             </div>
           </div>
         </div>
 
         {/* --- RBAC DEFINITION --- */}
-        <div className="bg-[#0f1626] border border-slate-900 rounded-2xl p-6 shadow-xl space-y-6">
-          <h3 className="text-base font-bold text-white flex items-center gap-2 pb-3 border-b border-slate-900">
-            <Shield size={18} className="text-indigo-400" /> Role-Based Access Control (RBAC) Matrix
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6">
+          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 pb-3 border-b border-slate-100">
+            <Shield size={18} className="text-emerald-500 shrink-0" /> Role-Based Access Control (RBAC) Matrix
           </h3>
 
-          <div className="space-y-3.5">
+          <div className="space-y-4">
             {rbacRules.map((rule) => (
-              <div key={rule.role} className="p-3 bg-slate-950/35 border border-slate-900 rounded-xl relative flex flex-col justify-between">
+              <div key={rule.role} className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl relative flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-bold text-white">{rule.role}</span>
-                    <span className="text-[9px] font-bold px-2 py-0.5 border border-slate-800 bg-slate-900 text-slate-400 rounded-full">
+                    <span className="text-xs font-bold text-slate-900">{rule.role}</span>
+                    <span className="text-[9px] font-bold px-2 py-0.5 border border-slate-200 bg-white text-slate-500 rounded-full">
                       {rule.access}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed font-medium">{rule.desc}</p>
+                  <p className="text-[11px] text-slate-500 leading-relaxed font-semibold">{rule.desc}</p>
                 </div>
               </div>
             ))}
@@ -308,64 +308,64 @@ export default function SettingsPage() {
 
       {/* STRIPE / RAZORPAY BILLING MODAL */}
       {paymentModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[#0f1626] border border-slate-900 rounded-2xl w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between p-6 border-b border-slate-900">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white border border-slate-200 rounded-[20px] w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <Coins className="text-indigo-400 animate-bounce" size={18} />
-                <h3 className="text-base font-bold text-white font-black tracking-tight">Checkout Order Summary</h3>
+                <Coins className="text-emerald-500" size={18} />
+                <h3 className="text-lg font-bold text-slate-900">Checkout Order Summary</h3>
               </div>
-              <button onClick={() => setPaymentModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
+              <button onClick={() => setPaymentModalOpen(false)} className="text-slate-400 hover:text-slate-900 p-1 rounded-lg hover:bg-slate-50 transition-all cursor-pointer">
                 <X size={18} />
               </button>
             </div>
 
             <div className="p-6 space-y-6">
-              <div className="p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-xl space-y-2">
+              <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="text-slate-300">
+                  <span className="text-slate-700">
                     KitchenIQ Pro {billingCycle === 'annual' ? 'Annual Plan' : 'Monthly Plan'}
                   </span>
-                  <span className="text-white font-mono">
+                  <span className="text-slate-800 font-bold font-mono">
                     {billingCycle === 'annual' ? '$240.00 / yr' : '$24.00 / mo'}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 leading-normal font-medium">
+                <p className="text-[11px] text-slate-500 leading-normal font-semibold">
                   Unlocks AI natural language Copilot chat, detailed wastage logs analytical audits, and removes all product CRUD database limits. Billed {billingCycle === 'annual' ? 'annually' : 'monthly'}.
                 </p>
               </div>
 
-              <div className="space-y-4">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Simulated Payment Details</span>
+              <div className="space-y-3 font-semibold text-slate-600">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Simulated Payment Details</span>
                 
-                <div className="p-4 bg-slate-950/60 border border-slate-850 rounded-xl space-y-3">
-                  <div className="flex items-center justify-between text-xs text-slate-400">
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 text-xs">
+                  <div className="flex items-center justify-between text-slate-500">
                     <span>Card Holder Name</span>
-                    <span className="font-semibold text-white">{userName}</span>
+                    <span className="font-bold text-slate-800">{userName}</span>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-900/60 pt-2">
+                  <div className="flex items-center justify-between text-slate-500 border-t border-slate-200/80 pt-2.5">
                     <span>Simulated Gateway</span>
-                    <span className="font-semibold text-indigo-400 flex items-center gap-1"><CheckCircle size={13} className="text-emerald-500" /> Razorpay Test Suite</span>
+                    <span className="font-bold text-emerald-600 flex items-center gap-1"><CheckCircle size={13} className="text-emerald-500" /> Razorpay Test Suite</span>
                   </div>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-900 flex items-center justify-end gap-3">
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setPaymentModalOpen(false)}
-                  className="py-2.5 px-4 bg-slate-950 hover:bg-slate-900 border border-slate-900 text-slate-400 font-semibold rounded-xl text-xs cursor-pointer transition-all"
+                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSimulatePayment}
                   disabled={isProcessingPayment}
-                  className="py-2.5 px-5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs cursor-pointer transition-all flex items-center gap-1.5 disabled:opacity-50"
+                  className="py-2.5 px-5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs cursor-pointer transition-all flex items-center gap-1.5 disabled:opacity-50 shadow-md shadow-emerald-500/10"
                 >
                   {isProcessingPayment ? (
                     <>
-                      <RefreshCw className="animate-spin" size={13} />
+                      <RefreshCw className="animate-spin text-white" size={13} />
                       Processing Checkout...
                     </>
                   ) : (

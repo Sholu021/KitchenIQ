@@ -63,27 +63,30 @@ export default function AIInsightsPage() {
   const getHealthStatusColor = (status: string) => {
     switch (status?.toUpperCase()) {
       case 'CRITICAL':
-        return 'text-rose-500 bg-rose-500/10 border-rose-500/20';
+        return 'text-rose-600 bg-rose-50 border-rose-200';
       case 'WARNING':
-        return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
+        return 'text-amber-600 bg-amber-50 border-amber-200';
       default:
-        return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
+        return 'text-emerald-600 bg-emerald-50 border-emerald-200';
     }
   };
 
   const getPriorityColor = (priority: string) => {
     return priority?.toUpperCase() === 'HIGH' 
-      ? 'text-rose-400 bg-rose-500/15 border-rose-500/25'
-      : 'text-amber-400 bg-amber-500/15 border-amber-500/25';
+      ? 'text-rose-600 bg-rose-50 border-rose-200'
+      : 'text-amber-600 bg-amber-50 border-amber-200';
   };
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="h-10 w-48 bg-slate-900 animate-pulse rounded-lg"></div>
+      <div className="space-y-6 animate-pulse">
+        <div className="space-y-2">
+          <div className="h-9 w-64 bg-slate-200 rounded-xl"></div>
+          <div className="h-4 w-96 bg-slate-200 rounded-lg"></div>
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 h-96 bg-[#0f1626] animate-pulse rounded-2xl border border-slate-900"></div>
-          <div className="h-96 bg-[#0f1626] animate-pulse rounded-2xl border border-slate-900"></div>
+          <div className="lg:col-span-2 h-96 bg-white rounded-2xl border border-slate-200 shadow-sm"></div>
+          <div className="h-96 bg-white rounded-2xl border border-slate-200 shadow-sm"></div>
         </div>
       </div>
     );
@@ -91,10 +94,13 @@ export default function AIInsightsPage() {
 
   if (isError) {
     return (
-      <div className="p-6 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400">
-        <h3 className="font-bold">Failed to load AI Intelligence data</h3>
+      <div className="p-6 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600">
+        <h3 className="font-bold text-base">Failed to load AI Intelligence data</h3>
         <p className="text-sm mt-1">Check database tables or verify your credentials.</p>
-        <button onClick={() => refetch()} className="mt-4 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs cursor-pointer">
+        <button 
+          onClick={() => refetch()} 
+          className="mt-4 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-xs cursor-pointer transition-colors"
+        >
           Retry Analysis
         </button>
       </div>
@@ -107,19 +113,19 @@ export default function AIInsightsPage() {
     <div className="space-y-8">
       
       {/* Title */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
-            <Sparkles className="text-indigo-400 animate-pulse" /> AI Intelligence Hub
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
+            <Sparkles className="text-emerald-500 shrink-0" /> AI Intelligence Hub
           </h1>
-          <p className="text-sm text-slate-400 mt-1">AI-driven reorder points, food wastage projection logs, and natural language copilot.</p>
+          <p className="text-sm text-slate-500 mt-1.5 font-medium">AI-driven reorder points, food wastage projection logs, and natural language copilot.</p>
         </div>
         <button
           onClick={() => refetch()}
           disabled={isRefetching}
-          className="py-2 px-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-semibold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          className="py-2.5 px-3.5 bg-white border border-slate-200/80 hover:border-slate-300 text-slate-700 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
         >
-          <RefreshCw size={14} className={isRefetching ? 'animate-spin' : ''} />
+          <RefreshCw size={14} className={isRefetching ? 'animate-spin text-slate-400' : 'text-slate-400'} />
           {isRefetching ? 'Re-analyzing...' : 'Refresh AI'}
         </button>
       </div>
@@ -130,33 +136,33 @@ export default function AIInsightsPage() {
         <div className="lg:col-span-2 space-y-6">
           
           {/* Tab triggers */}
-          <div className="flex p-1 bg-slate-950/40 border border-slate-900 rounded-2xl max-w-md">
+          <div className="flex p-1.5 bg-slate-100 rounded-2xl max-w-md border border-slate-200/60 shadow-inner">
             <button
               onClick={() => setActiveTab('health')}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 activeTab === 'health'
-                  ? 'bg-slate-900 text-white border border-slate-800'
-                  : 'text-slate-500 hover:text-slate-300'
+                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               <Heart size={14} /> Health Summary
             </button>
             <button
               onClick={() => setActiveTab('reorder')}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 activeTab === 'reorder'
-                  ? 'bg-slate-900 text-white border border-slate-800'
-                  : 'text-slate-500 hover:text-slate-300'
+                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               <ShoppingCart size={14} /> Reorders
             </button>
             <button
               onClick={() => setActiveTab('waste')}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 activeTab === 'waste'
-                  ? 'bg-slate-900 text-white border border-slate-800'
-                  : 'text-slate-500 hover:text-slate-300'
+                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               <Trash2 size={14} /> Waste Analysis
@@ -165,43 +171,42 @@ export default function AIInsightsPage() {
 
           {/* --- TAB CONTENT: HEALTH SUMMARY --- */}
           {activeTab === 'health' && (
-            <div className="bg-[#0f1626] border border-slate-900 rounded-2xl p-6 shadow-xl space-y-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-indigo-500/5 blur-3xl -z-10"></div>
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6 relative overflow-hidden">
               
-              <div className="flex items-center justify-between border-b border-slate-900 pb-4">
-                <h3 className="text-base font-bold text-white">Inventory Health Summary</h3>
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <h3 className="text-lg font-bold text-slate-900">Inventory Health Summary</h3>
                 <span className={`text-xs font-bold px-3 py-1 border rounded-full ${getHealthStatusColor(health_summary.status)}`}>
                   {health_summary.status} Status
                 </span>
               </div>
 
-              <div className="p-4 bg-slate-950/20 border border-slate-900/60 rounded-xl">
-                <p className="text-sm text-slate-300 leading-relaxed font-medium">
+              <div className="p-4 bg-slate-50 border border-slate-150 rounded-xl">
+                <p className="text-sm text-slate-700 leading-relaxed font-semibold">
                   {health_summary.summary}
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-slate-950/40 border border-slate-900 rounded-xl flex items-center gap-3">
-                  <div className="p-2.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-3">
+                  <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-500 shrink-0">
                     <Coins size={20} />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Total Waste Financial Risk</span>
-                    <span className="text-base font-black text-white font-mono">${health_summary.waste_risk_value.toFixed(2)}</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Total Waste Financial Risk</span>
+                    <span className="text-base font-extrabold text-slate-800 font-mono">${health_summary.waste_risk_value.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">AI Operational Recommendations</span>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">AI Operational Recommendations</span>
                 <div className="space-y-2">
                   {health_summary.recommendations.map((rec: string, i: number) => (
-                    <div key={i} className="flex items-start gap-3 p-3 bg-slate-900/20 border border-slate-900/60 rounded-xl text-xs">
-                      <span className="w-5 h-5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold shrink-0">
+                    <div key={i} className="flex items-start gap-3 p-3.5 bg-slate-50/50 border border-slate-200/60 rounded-xl text-xs font-semibold">
+                      <span className="w-5 h-5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 text-[10px]">
                         {i + 1}
                       </span>
-                      <p className="text-slate-300 font-medium leading-normal mt-0.5">{rec}</p>
+                      <p className="text-slate-600 leading-relaxed mt-0.5">{rec}</p>
                     </div>
                   ))}
                 </div>
@@ -211,14 +216,14 @@ export default function AIInsightsPage() {
 
           {/* --- TAB CONTENT: REORDER SUGGESTIONS --- */}
           {activeTab === 'reorder' && (
-            <div className="bg-[#0f1626] border border-slate-900 rounded-2xl p-6 shadow-xl space-y-6">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6">
               <div>
-                <h3 className="text-base font-bold text-white">AI-Suggested Purchase Replenishments</h3>
-                <p className="text-xs text-slate-400 mt-1">Intelligent calculations computed from category reorder points and current stock levels.</p>
+                <h3 className="text-lg font-bold text-slate-900">AI-Suggested Purchase Replenishments</h3>
+                <p className="text-xs text-slate-500 mt-1 font-medium">Intelligent calculations computed from category reorder points and current stock levels.</p>
               </div>
 
               {reorder_suggestions.length === 0 ? (
-                <div className="text-center py-10 text-slate-500 text-sm">
+                <div className="text-center py-10 text-slate-400 font-medium text-sm">
                   Excellent! No products are currently below safety reorder points.
                 </div>
               ) : (
@@ -226,28 +231,28 @@ export default function AIInsightsPage() {
                   {reorder_suggestions.map((suggestion: any, index: number) => (
                     <div
                       key={index}
-                      className="bg-slate-950/20 border border-slate-900 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                      className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 font-semibold text-slate-700"
                     >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-bold text-white">{suggestion.product_name}</h4>
+                          <h4 className="text-sm font-bold text-slate-900">{suggestion.product_name}</h4>
                           <span className={`text-[9px] font-bold px-2 py-0.5 border rounded-full ${getPriorityColor(suggestion.priority)}`}>
                             {suggestion.priority} Priority
                           </span>
                         </div>
-                        <p className="text-xs text-slate-400 leading-normal">{suggestion.reason}</p>
+                        <p className="text-xs text-slate-400 leading-normal font-medium">{suggestion.reason}</p>
                       </div>
 
-                      <div className="flex items-center gap-6 shrink-0 bg-slate-950 border border-slate-900 p-3 rounded-xl min-w-48 justify-between">
+                      <div className="flex items-center gap-6 shrink-0 bg-white border border-slate-200 p-3 rounded-xl min-w-48 justify-between shadow-sm">
                         <div className="text-left">
-                          <span className="text-[9px] font-bold text-slate-500 uppercase block">Suggest Buy</span>
-                          <span className="text-sm font-bold text-white font-mono">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase block tracking-wider">Suggest Buy</span>
+                          <span className="text-sm font-bold text-slate-800 font-mono">
                             {suggestion.suggested_quantity} {suggestion.unit}
                           </span>
                         </div>
                         <div className="text-right">
-                          <span className="text-[9px] font-bold text-slate-500 uppercase block">Est. Cost</span>
-                          <span className="text-sm font-bold text-emerald-400 font-mono">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase block tracking-wider">Est. Cost</span>
+                          <span className="text-sm font-bold text-emerald-600 font-mono">
                             ${suggestion.estimated_cost.toFixed(2)}
                           </span>
                         </div>
@@ -261,30 +266,30 @@ export default function AIInsightsPage() {
 
           {/* --- TAB CONTENT: WASTE ANALYSIS --- */}
           {activeTab === 'waste' && (
-            <div className="bg-[#0f1626] border border-slate-900 rounded-2xl p-6 shadow-xl space-y-6">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6">
               <div>
-                <h3 className="text-base font-bold text-white">Food Spoilage & Financial Loss Analysis</h3>
-                <p className="text-xs text-slate-400 mt-1">Audit active batch logs to track expired items and products expiring within 30 days.</p>
+                <h3 className="text-lg font-bold text-slate-900">Food Spoilage & Financial Loss Analysis</h3>
+                <p className="text-xs text-slate-500 mt-1 font-medium">Audit active batch logs to track expired items and products expiring within 30 days.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-slate-950/40 border border-slate-900 rounded-xl flex items-center gap-3">
-                  <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400">
+                <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-3">
+                  <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-100 text-rose-500">
                     <AlertTriangle size={20} />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Expired Batch Valuation</span>
-                    <span className="text-sm font-black text-rose-400 font-mono">${waste_analysis.expired_batches_value.toFixed(2)}</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Expired Batch Valuation</span>
+                    <span className="text-sm font-extrabold text-rose-500 font-mono">${waste_analysis.expired_batches_value.toFixed(2)}</span>
                   </div>
                 </div>
 
-                <div className="p-4 bg-slate-950/40 border border-slate-900 rounded-xl flex items-center gap-3">
-                  <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-3">
+                  <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-100 text-amber-500">
                     <AlertCircle size={20} />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Expiring within 30 Days</span>
-                    <span className="text-sm font-black text-amber-400 font-mono">${waste_analysis.expiring_30_days_value.toFixed(2)}</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Expiring within 30 Days</span>
+                    <span className="text-sm font-extrabold text-amber-600 font-mono">${waste_analysis.expiring_30_days_value.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -292,17 +297,17 @@ export default function AIInsightsPage() {
               {/* Dead stock list */}
               {waste_analysis.dead_stock_recommendations.length > 0 && (
                 <div className="space-y-3">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Slow-Moving Overstock Warning</span>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">Slow-Moving Overstock Warning</span>
                   <div className="space-y-2">
                     {waste_analysis.dead_stock_recommendations.map((item: any, i: number) => (
-                      <div key={i} className="bg-slate-950/20 border border-slate-900 p-3 rounded-xl flex items-center justify-between gap-4 text-xs">
+                      <div key={i} className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex items-center justify-between gap-4 text-xs font-semibold text-slate-700">
                         <div>
-                          <span className="font-bold text-white block">{item.product_name}</span>
-                          <span className="text-slate-400 mt-1 block">{item.reason}</span>
+                          <span className="font-bold text-slate-900 block">{item.product_name}</span>
+                          <span className="text-slate-400 mt-1 block font-medium">{item.reason}</span>
                         </div>
                         <div className="text-right">
-                          <span className="text-slate-500 block uppercase font-bold text-[9px]">Sunk Cost</span>
-                          <span className="font-bold text-slate-300 font-mono">${item.value.toFixed(2)}</span>
+                          <span className="text-slate-400 block uppercase font-bold text-[9px] tracking-wider">Sunk Cost</span>
+                          <span className="font-bold text-slate-800 font-mono">${item.value.toFixed(2)}</span>
                         </div>
                       </div>
                     ))}
@@ -315,22 +320,22 @@ export default function AIInsightsPage() {
         </div>
 
         {/* --- RIGHT / COPILOT CHAT PANEL --- */}
-        <div className="bg-[#0f1626] border border-slate-900 rounded-2xl flex flex-col h-[560px] shadow-xl relative overflow-hidden">
+        <div className="bg-white border border-slate-200/80 rounded-2xl flex flex-col h-[560px] shadow-sm relative overflow-hidden">
           {/* Header */}
-          <div className="p-4 border-b border-slate-900 bg-slate-950/20 flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+          <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-500 shrink-0 animate-pulse">
               <Bot size={16} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">KitchenIQ Copilot</h3>
-              <p className="text-[10px] text-slate-500 font-mono uppercase tracking-wider flex items-center gap-1">
+              <h3 className="text-sm font-bold text-slate-900">KitchenIQ Copilot</h3>
+              <p className="text-[9px] text-emerald-600 font-bold uppercase tracking-wider flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span> Live Agent
               </p>
             </div>
           </div>
 
           {/* Chat Messages */}
-          <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+          <div className="flex-1 p-4 space-y-4 overflow-y-auto font-semibold text-xs">
             {messages.map((msg, i) => (
               <div
                 key={i}
@@ -338,17 +343,17 @@ export default function AIInsightsPage() {
                   msg.sender === 'user' ? 'ml-auto flex-row-reverse' : 'mr-auto'
                 }`}
               >
-                <div className={`p-2 rounded-lg shrink-0 flex items-center justify-center ${
+                <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-xs shadow-sm border ${
                   msg.sender === 'user' 
-                    ? 'bg-slate-900 text-indigo-400' 
-                    : 'bg-indigo-600/10 border border-indigo-500/20 text-indigo-400'
+                    ? 'bg-slate-100 border-slate-200 text-slate-600' 
+                    : 'bg-emerald-50 border-emerald-100 text-emerald-600'
                 }`}>
                   {msg.sender === 'user' ? <User size={14} /> : <Bot size={14} />}
                 </div>
-                <div className={`p-3 rounded-2xl text-xs leading-relaxed ${
+                <div className={`p-3 rounded-2xl leading-relaxed shadow-sm ${
                   msg.sender === 'user'
-                    ? 'bg-indigo-600 text-white rounded-tr-none'
-                    : 'bg-slate-950/70 border border-slate-900 text-slate-300 rounded-tl-none'
+                    ? 'bg-emerald-500 text-white rounded-tr-none'
+                    : 'bg-slate-50 border border-slate-100 text-slate-700 rounded-tl-none'
                 }`}>
                   {msg.text}
                 </div>
@@ -357,33 +362,33 @@ export default function AIInsightsPage() {
 
             {copilotMutation.isPending && (
               <div className="flex gap-2.5 max-w-[80%]">
-                <div className="p-2 rounded-lg bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-600 shrink-0 flex items-center justify-center shadow-sm">
                   <Bot size={14} />
                 </div>
-                <div className="p-3 bg-slate-950/70 border border-slate-900 rounded-2xl rounded-tl-none flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-bounce"></span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-bounce delay-75"></span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-bounce delay-150"></span>
+                <div className="p-3 bg-slate-50 border border-slate-100 rounded-2xl rounded-tl-none flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce delay-75"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce delay-150"></span>
                 </div>
               </div>
             )}
           </div>
 
           {/* Input Form */}
-          <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-900 bg-slate-950/40 flex gap-2">
+          <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-100 bg-slate-50/50 flex gap-2">
             <input
               type="text"
               required
               disabled={copilotMutation.isPending}
               value={inputQuestion}
               onChange={(e) => setInputQuestion(e.target.value)}
-              className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold"
               placeholder="Ask: 'What should I reorder?'"
             />
             <button
               type="submit"
               disabled={copilotMutation.isPending || !inputQuestion.trim()}
-              className="p-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white rounded-xl transition-all cursor-pointer shrink-0 flex items-center justify-center"
+              className="p-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 text-white rounded-xl transition-all cursor-pointer shrink-0 flex items-center justify-center shadow-md shadow-emerald-500/10"
             >
               <Send size={14} />
             </button>

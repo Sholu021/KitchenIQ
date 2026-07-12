@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -35,75 +36,76 @@
 }
 
 :root {
-  --background: #080d1a;
-  --foreground: #f8fafc;
+  --background: #f8fafc;
+  --foreground: #111827;
   
-  --card: #0f1626;
-  --card-foreground: #f8fafc;
+  --card: #ffffff;
+  --card-foreground: #111827;
   
-  --popover: #0f1626;
-  --popover-foreground: #f8fafc;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
   
-  --primary: #6366f1;
+  --primary: #10b981;
   --primary-foreground: #ffffff;
   
-  --secondary: #1e293b;
-  --secondary-foreground: #f8fafc;
+  --secondary: #3b82f6;
+  --secondary-foreground: #ffffff;
   
-  --muted: #131b2e;
-  --muted-foreground: #94a3b8;
+  --muted: #f1f5f9;
+  --muted-foreground: #6b7280;
   
-  --accent: #3b82f6;
+  --accent: #10b981;
   --accent-foreground: #ffffff;
   
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
   
-  --border: #1e293b;
-  --input: #1e293b;
-  --ring: #6366f1;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #10b981;
   
-  --radius: 0.5rem;
+  --radius: 0.75rem; /* 12px for buttons/inputs, cards will use rounded-2xl (16px) */
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   margin: 0;
   padding: 0;
+  line-height: 1.6;
 }
 
-/* Custom Scrollbars */
+/* Custom Scrollbars - Light Theme */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #080d1a;
+  background: #f8fafc;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #e2e8f0;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #cbd5e1;
 }
 
-/* Glassmorphism utility */
+/* Premium Light Glassmorphism utility */
 .glass-panel {
-  background: rgba(15, 22, 38, 0.7);
+  background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(229, 231, 235, 0.6);
 }
 
-/* Radial glow and grid mesh background utility */
+/* Radial glow and grid mesh background utility for Light Theme */
 .grid-bg {
-  background-color: #080d1a;
+  background-color: #f8fafc;
   background-image: 
-    radial-gradient(circle at top, rgba(99, 102, 241, 0.15) 0%, transparent 65%),
-    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    radial-gradient(circle at top, rgba(16, 185, 129, 0.04) 0%, transparent 65%),
+    linear-gradient(to right, rgba(0, 0, 0, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.015) 1px, transparent 1px);
   background-size: 100% 100%, 48px 48px, 48px 48px;
 }
 

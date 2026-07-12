@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
+import { ChefHat, Building, User, Mail, Lock, Loader2 } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -52,101 +53,111 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080d1a] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#080d1a] to-black flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-slate-50 grid-bg flex items-center justify-center p-6">
+      <div className="w-full max-w-md space-y-8">
         
         {/* Logo and Tagline */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl mb-4 text-indigo-400">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-9-4.5h.008v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.008v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.008v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-            </svg>
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center p-3.5 bg-emerald-50 border border-emerald-100 rounded-2xl mb-4 text-emerald-500 shadow-sm">
+            <ChefHat size={32} />
           </div>
-          <h1 className="text-3xl font-black tracking-tight text-white">
-            KitchenIQ <span className="text-indigo-400">AI</span>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
+            KitchenIQ <span className="text-emerald-500">AI</span>
           </h1>
-          <p className="text-sm text-slate-400 mt-2">
-            AI Inventory & Restaurant Intelligence Platform
+          <p className="text-sm text-slate-500 mt-2 font-medium">
+            AI Restaurant Inventory & Intelligence
           </p>
         </div>
 
         {/* Register Card */}
-        <div className="glass-panel rounded-2xl p-8 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-8 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-emerald-400 via-teal-500 to-blue-500"></div>
 
-          <h2 className="text-xl font-bold text-white mb-6">Register Your Organization</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-6">Register Your Organization</h2>
 
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+            <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 text-sm font-medium">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Organization Name
               </label>
-              <input
-                type="text"
-                required
-                value={orgName}
-                onChange={(e) => setOrgName(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
-                placeholder="e.g. Roasters Cafe / Pizza World"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  value={orgName}
+                  onChange={(e) => setOrgName(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 bg-white text-sm placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                  placeholder="e.g. Roasters Cafe / Pizza World"
+                />
+                <Building size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Your Full Name
               </label>
-              <input
-                type="text"
-                required
-                value={ownerName}
-                onChange={(e) => setOwnerName(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
-                placeholder="e.g. Chef Jane Doe"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  value={ownerName}
+                  onChange={(e) => setOwnerName(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 bg-white text-sm placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                  placeholder="e.g. Chef Jane Doe"
+                />
+                <User size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Owner Email Address
               </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
-                placeholder="owner@mykitchen.com"
-              />
+              <div className="relative">
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 bg-white text-sm placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                  placeholder="owner@mykitchen.com"
+                />
+                <Mail size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Secret Access Password
               </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
-                placeholder="Choose a strong password"
-              />
+              <div className="relative">
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 bg-white text-sm placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                  placeholder="Choose a strong password"
+                />
+                <Lock size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-700 text-white font-medium rounded-xl transition-all hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] flex items-center justify-center gap-2 cursor-pointer mt-2"
+              className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-400 text-white font-bold rounded-xl transition-all shadow-md shadow-emerald-500/10 flex items-center justify-center gap-2 cursor-pointer text-sm mt-2"
             >
               {loading ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <Loader2 size={16} className="animate-spin" />
                   Registering Org...
                 </>
               ) : (
@@ -157,15 +168,14 @@ export default function RegisterPage() {
         </div>
 
         {/* Login link */}
-        <div className="text-center mt-6">
-          <p className="text-sm text-slate-400">
+        <div className="text-center">
+          <p className="text-sm text-slate-500 font-medium">
             Already have a kitchen registered?{' '}
-            <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
+            <Link href="/login" className="text-emerald-600 hover:text-emerald-500 font-bold transition-colors">
               Sign In
             </Link>
           </p>
         </div>
-
       </div>
     </div>
   );

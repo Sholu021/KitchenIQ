@@ -9,19 +9,15 @@ import {
   Plus,
   X,
   ShieldAlert,
-  UserCheck,
   Activity,
   Trash2,
   AlertTriangle,
   RefreshCw,
-  Search,
-  CheckCircle,
-  EyeOff
+  Search
 } from 'lucide-react';
 
 export default function TeamPage() {
   const queryClient = useQueryClient();
-  const currentUserId = useAuthStore((state) => state.organizationId); // wait, currentUserId should be matching? Let's check where the logged in user info is.
   const currentUserName = useAuthStore((state) => state.userName);
   const currentUserRole = useAuthStore((state) => state.role);
   
@@ -36,7 +32,7 @@ export default function TeamPage() {
   const [errorMsg, setErrorMsg] = useState('');
 
   // 1. Fetch Team Members
-  const { data: teamMembers = [], isLoading: isLoadingTeam, refetch: refetchTeam } = useQuery({
+  const { data: teamMembers = [], isLoading: isLoadingTeam } = useQuery({
     queryKey: ['team'],
     queryFn: async () => {
       const res = await apiClient.get('/users');
@@ -163,17 +159,17 @@ export default function TeamPage() {
     <div className="space-y-8">
       
       {/* Title Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
-            <Users className="text-indigo-400" /> Team & Workspace Members
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
+            <Users className="text-emerald-500 shrink-0" /> Team & Workspace Members
           </h1>
-          <p className="text-sm text-slate-400 mt-1">Configure role authorizations (RBAC), invite new staff, and monitor system activity logs.</p>
+          <p className="text-sm text-slate-500 mt-1.5 font-medium">Configure role authorizations (RBAC), invite new staff, and monitor system activity logs.</p>
         </div>
         {isManager && (
           <button
             onClick={() => setModalOpen(true)}
-            className="py-3 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-2 hover:shadow-[0_0_20px_rgba(99,102,241,0.2)] cursor-pointer"
+            className="py-3 px-5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-emerald-500/10 self-start sm:self-auto"
           >
             <Plus size={16} /> Add Member
           </button>
@@ -183,53 +179,53 @@ export default function TeamPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* --- LEFT: TEAM LIST PANEL --- */}
-        <div className="lg:col-span-2 bg-[#0f1626] border border-slate-900 rounded-2xl shadow-xl overflow-hidden">
+        <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col">
           
-          <div className="p-6 border-b border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <h3 className="text-base font-bold text-white">Active Members</h3>
+          <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <h3 className="text-lg font-bold text-slate-900">Active Members</h3>
             <div className="relative w-full sm:w-64">
               <input
                 type="text"
                 placeholder="Search team..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-950/60 border border-slate-800 rounded-xl py-2 pl-9 pr-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
               />
-              <Search className="absolute left-3 top-2.5 text-slate-500" size={14} />
+              <Search className="absolute left-3.5 top-3.5 text-slate-400" size={16} />
             </div>
           </div>
 
           {isLoadingTeam ? (
-            <div className="p-12 text-center text-slate-500 text-sm">
-              <RefreshCw className="animate-spin inline-block mr-2 text-indigo-400" size={18} />
-              Loading team directory...
+            <div className="py-20 flex flex-col items-center gap-2.5 text-slate-400">
+              <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-xs font-bold tracking-widest uppercase">Retrieving Team...</p>
             </div>
           ) : filteredMembers.length === 0 ? (
-            <div className="p-12 text-center text-slate-500 text-sm">
+            <div className="text-center py-20 text-slate-400 font-medium">
               No matching team members found.
             </div>
           ) : (
-            <div className="divide-y divide-slate-900/60">
+            <div className="divide-y divide-slate-100 font-semibold text-slate-700">
               {filteredMembers.map((member: any) => {
                 const isSelf = member.full_name === currentUserName;
                 return (
-                  <div key={member.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-900/10 transition-colors">
+                  <div key={member.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/50 transition-colors">
                     
                     {/* User profile */}
                     <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white text-sm">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center font-bold text-white text-sm shadow-sm shrink-0">
                         {member.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-white text-sm">{member.full_name}</span>
+                          <span className="font-bold text-slate-900 text-sm">{member.full_name}</span>
                           {isSelf && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 border border-indigo-500/20 bg-indigo-500/10 text-indigo-400 rounded-full">
+                            <span className="text-[9px] font-bold px-2 py-0.5 border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-full">
                               You
                             </span>
                           )}
                         </div>
-                        <span className="text-xs text-slate-400 mt-0.5 block">{member.email}</span>
+                        <span className="text-xs text-slate-400 mt-0.5 block font-medium">{member.email}</span>
                       </div>
                     </div>
 
@@ -240,13 +236,13 @@ export default function TeamPage() {
                         <select
                           value={member.role}
                           onChange={(e) => handleChangeRole(member.id, e.target.value)}
-                          className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-semibold cursor-pointer"
+                          className="px-3 py-1.5 border border-slate-200 bg-white text-xs text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-bold cursor-pointer"
                         >
                           <option value="Manager">Manager</option>
                           <option value="Staff">Staff</option>
                         </select>
                       ) : (
-                        <span className="text-xs font-bold text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-xl">
+                        <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-xl">
                           {member.role}
                         </span>
                       )}
@@ -255,11 +251,11 @@ export default function TeamPage() {
                       <button
                         onClick={() => handleToggleStatus(member.id, member.is_active, member.full_name)}
                         disabled={!isManager || isSelf || member.role === 'Owner'}
-                        className={`text-xs font-bold px-3 py-1 border rounded-xl transition-all ${
+                        className={`text-xs font-bold px-3 py-1 border rounded-xl transition-all cursor-pointer disabled:opacity-50 ${
                           member.is_active
-                            ? 'text-emerald-400 border-emerald-500/10 bg-emerald-500/5 hover:bg-emerald-500/10'
-                            : 'text-slate-400 border-slate-800 bg-slate-950 hover:bg-slate-900'
-                        } cursor-pointer disabled:opacity-50`}
+                            ? 'text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100/50'
+                            : 'text-slate-400 border-slate-200 bg-slate-50 hover:bg-slate-100'
+                        }`}
                       >
                         {member.is_active ? 'Active' : 'Inactive'}
                       </button>
@@ -269,7 +265,7 @@ export default function TeamPage() {
                         <button
                           onClick={() => handleDeleteUser(member.id, member.full_name)}
                           disabled={member.role === 'Manager' && !isOwner}
-                          className="p-2 bg-slate-950 border border-slate-900 text-rose-500 hover:text-rose-400 hover:bg-slate-900 rounded-xl cursor-pointer transition-colors disabled:opacity-30"
+                          className="p-2 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl border border-slate-200/60 hover:border-rose-200 transition-colors cursor-pointer disabled:opacity-30"
                           title="Remove user"
                         >
                           <Trash2 size={13} />
@@ -285,43 +281,44 @@ export default function TeamPage() {
         </div>
 
         {/* --- RIGHT: AUDIT LOG FEED --- */}
-        <div className="bg-[#0f1626] border border-slate-900 rounded-2xl shadow-xl flex flex-col h-[520px] overflow-hidden">
-          <div className="p-6 border-b border-slate-900 bg-slate-950/20 flex items-center justify-between">
+        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm flex flex-col h-[520px] overflow-hidden">
+          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Activity className="text-indigo-400" size={18} />
-              <h3 className="text-sm font-bold text-white">Audit Log Activity</h3>
+              <Activity className="text-emerald-500 shrink-0" size={18} />
+              <h3 className="text-lg font-bold text-slate-900">Audit Log Activity</h3>
             </div>
             <button
               onClick={() => refetchAudit()}
               disabled={isRefetchingAudit}
-              className="p-1 bg-slate-950 border border-slate-900 text-slate-400 rounded-lg hover:text-white cursor-pointer"
+              className="p-1.5 bg-slate-50 border border-slate-200 text-slate-500 rounded-lg hover:text-slate-900 hover:border-slate-350 cursor-pointer transition-colors"
             >
-              <RefreshCw size={12} className={isRefetchingAudit ? 'animate-spin' : ''} />
+              <RefreshCw size={13} className={isRefetchingAudit ? 'animate-spin text-slate-400' : 'text-slate-400'} />
             </button>
           </div>
 
-          <div className="flex-1 p-5 space-y-4 overflow-y-auto divide-y divide-slate-900/40">
+          <div className="flex-1 p-5 space-y-4 overflow-y-auto divide-y divide-slate-100">
             {isLoadingAudit ? (
-              <div className="text-center py-10 text-slate-500 text-xs">
-                Loading activity events...
+              <div className="py-20 flex flex-col items-center gap-2.5 text-slate-400">
+                <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-[10px] font-bold tracking-widest uppercase">Retrieving events...</p>
               </div>
             ) : auditLogs.length === 0 ? (
-              <div className="text-center py-10 text-slate-500 text-xs">
+              <div className="text-center py-10 text-slate-400 font-medium text-xs">
                 No system events recorded.
               </div>
             ) : (
               auditLogs.map((log: any) => (
                 <div key={log.id} className="pt-3.5 first:pt-0 space-y-1">
                   <div className="flex items-start justify-between gap-2 text-xs">
-                    <span className="font-bold text-white font-mono uppercase text-[10px] bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                    <span className="font-bold text-slate-700 font-mono uppercase text-[9px] bg-slate-100 px-2 py-0.5 rounded border border-slate-200/50">
                       {log.action}
                     </span>
-                    <span className="text-[10px] text-slate-500 shrink-0 font-mono">
+                    <span className="text-[10px] text-slate-400 shrink-0 font-semibold font-mono">
                       {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                  <div className="text-[11px] text-slate-400 leading-relaxed font-medium">
-                    Performed by <strong className="text-slate-300 font-semibold">{log.user_name}</strong> on entity {log.entity_type} {log.entity_id ? `#${log.entity_id}` : ''}
+                  <div className="text-[11px] text-slate-500 leading-relaxed font-semibold">
+                    Performed by <strong className="text-slate-700 font-bold">{log.user_name}</strong> on entity {log.entity_type} {log.entity_id ? `#${log.entity_id}` : ''}
                   </div>
                 </div>
               ))
@@ -333,18 +330,20 @@ export default function TeamPage() {
 
       {/* CREATE USER MODAL */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[#0f1626] border border-slate-900 rounded-2xl w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between p-6 border-b border-slate-900">
-              <h3 className="text-base font-bold text-white font-black tracking-tight">Create Workspace User</h3>
-              <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white border border-slate-200 rounded-[20px] w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Users size={18} className="text-emerald-500" /> Create Workspace User
+              </h3>
+              <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-slate-900 p-1 rounded-lg hover:bg-slate-50 transition-all cursor-pointer">
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleAddMember} className="p-6 space-y-4">
               {errorMsg && (
-                <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold rounded-xl flex items-center gap-2">
+                <div className="p-3 bg-rose-50 border border-rose-100 text-rose-600 text-xs font-semibold rounded-xl flex items-center gap-2">
                   <AlertTriangle size={15} />
                   {errorMsg}
                 </div>
@@ -352,7 +351,7 @@ export default function TeamPage() {
 
               {/* Full Name */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Full Name *</label>
+                <label className="text-xs font-bold text-slate-400 uppercase block">Full Name *</label>
                 <input
                   type="text"
                   required
@@ -362,13 +361,13 @@ export default function TeamPage() {
                     setErrorMsg('');
                   }}
                   placeholder="e.g. Charlie Staff"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-white text-sm text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-bold"
                 />
               </div>
 
               {/* Email */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Email Address *</label>
+                <label className="text-xs font-bold text-slate-400 uppercase block">Email Address *</label>
                 <input
                   type="email"
                   required
@@ -378,13 +377,13 @@ export default function TeamPage() {
                     setErrorMsg('');
                   }}
                   placeholder="name@kitcheniq.com"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-white text-sm text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold"
                 />
               </div>
 
               {/* Password */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Password * (Min 6 chars)</label>
+                <label className="text-xs font-bold text-slate-400 uppercase block">Password * (Min 6 chars)</label>
                 <input
                   type="password"
                   required
@@ -394,36 +393,36 @@ export default function TeamPage() {
                     setErrorMsg('');
                   }}
                   placeholder="••••••••"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-white text-sm text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold"
                 />
               </div>
 
               {/* Role */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Role Authorization *</label>
+                <label className="text-xs font-bold text-slate-400 uppercase block">Role Authorization *</label>
                 <select
                   required
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-white text-sm text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold"
                 >
                   <option value="Staff">Staff (Read-only + stock updates)</option>
                   {isOwner && <option value="Manager">Manager (Full catalog CRUD + purchases)</option>}
                 </select>
               </div>
 
-              <div className="pt-4 border-t border-slate-900 flex items-center justify-end gap-3">
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="py-2.5 px-4 bg-slate-950 hover:bg-slate-900 border border-slate-900 text-slate-400 font-semibold rounded-xl text-xs cursor-pointer transition-all"
+                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={createUserMutation.isPending}
-                  className="py-2.5 px-5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs cursor-pointer transition-all flex items-center gap-1.5 disabled:opacity-50"
+                  className="py-2.5 px-5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs cursor-pointer transition-all flex items-center gap-1.5 shadow-md shadow-emerald-500/10"
                 >
                   {createUserMutation.isPending ? 'Creating...' : 'Create User'}
                 </button>
@@ -432,7 +431,6 @@ export default function TeamPage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
-import { Plus, Search, Edit, Trash, Mail, Phone, MapPin, X } from 'lucide-react';
+import { Plus, Search, Edit, Trash, Mail, Phone, MapPin, X, Landmark } from 'lucide-react';
 
 export default function SuppliersPage() {
   const queryClient = useQueryClient();
@@ -120,18 +120,18 @@ export default function SuppliersPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-white tracking-tight">Suppliers Wholesalers</h1>
-          <p className="text-sm text-slate-400 mt-1">Manage food vendors, contact channels, and distributor profiles.</p>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Suppliers Directory</h1>
+          <p className="text-sm text-slate-500 mt-1.5 font-medium">Manage wholesale vendors, communication details, and supplier profiles.</p>
         </div>
         {!isReadOnly && (
           <button
             onClick={handleOpenCreateModal}
-            className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-sm transition-colors flex items-center gap-1.5 cursor-pointer shadow-lg shadow-indigo-600/10 self-start md:self-auto"
+            className="py-3 px-5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-emerald-500/10 self-start sm:self-auto"
           >
             <Plus size={16} /> Add Supplier
           </button>
@@ -145,19 +145,19 @@ export default function SuppliersPage() {
           placeholder="Search suppliers by name or email..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 bg-[#0f1626] border border-slate-900 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
         />
-        <Search size={16} className="absolute left-3.5 top-3.5 text-slate-500" />
+        <Search size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
       </div>
 
       {/* Grid List */}
       {isLoading ? (
-        <div className="py-20 flex flex-col items-center gap-2 text-slate-500">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-xs font-mono tracking-wider">RETRIEVING SUPPLIERS...</p>
+        <div className="py-20 flex flex-col items-center gap-2.5 text-slate-400">
+          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs font-bold tracking-widest uppercase">Retrieving Suppliers...</p>
         </div>
       ) : suppliers.length === 0 ? (
-        <div className="text-center py-20 text-slate-500 bg-[#0f1626] border border-slate-900 rounded-2xl">
+        <div className="text-center py-20 text-slate-400 font-medium bg-white border border-slate-200/80 rounded-2xl shadow-sm">
           No suppliers found. Create a supplier to start drafting Purchase Orders.
         </div>
       ) : (
@@ -165,22 +165,27 @@ export default function SuppliersPage() {
           {suppliers.map((sup: any) => (
             <div
               key={sup.id}
-              className="bg-[#0f1626] border border-slate-900 rounded-2xl p-6 shadow-xl relative overflow-hidden flex flex-col justify-between"
+              className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-start justify-between gap-4 mb-4">
-                  <h3 className="text-base font-bold text-white truncate">{sup.name}</h3>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="p-1.5 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-500 shrink-0">
+                      <Landmark size={15} />
+                    </div>
+                    <h3 className="text-base font-bold text-slate-900 truncate">{sup.name}</h3>
+                  </div>
                   {!isReadOnly && (
                     <div className="flex gap-1 shrink-0">
                       <button
                         onClick={() => handleOpenEditModal(sup)}
-                        className="p-1.5 bg-slate-900 hover:bg-slate-800 text-indigo-400 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 rounded-lg border border-slate-200/60 hover:border-emerald-200 transition-colors cursor-pointer"
                       >
                         <Edit size={12} />
                       </button>
                       <button
                         onClick={() => handleDeleteSupplier(sup.id, sup.name)}
-                        className="p-1.5 bg-slate-900 hover:bg-red-900/20 text-rose-500 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg border border-slate-200/60 hover:border-rose-200 transition-colors cursor-pointer"
                       >
                         <Trash size={12} />
                       </button>
@@ -188,18 +193,24 @@ export default function SuppliersPage() {
                   )}
                 </div>
 
-                <div className="space-y-2.5 text-xs text-slate-300 font-medium">
-                  <div className="flex items-center gap-2">
-                    <Mail size={14} className="text-indigo-400 shrink-0" />
+                <div className="space-y-3.5 text-xs text-slate-600 font-semibold pt-1">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 shrink-0">
+                      <Mail size={13} />
+                    </div>
                     <span className="truncate">{sup.email || 'No email specified'}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Phone size={14} className="text-indigo-400 shrink-0" />
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 shrink-0">
+                      <Phone size={13} />
+                    </div>
                     <span>{sup.phone || 'No phone specified'}</span>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <MapPin size={14} className="text-indigo-400 shrink-0 mt-0.5" />
-                    <span className="line-clamp-2">{sup.address || 'No address specified'}</span>
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 shrink-0 mt-0.5">
+                      <MapPin size={13} />
+                    </div>
+                    <span className="line-clamp-2 leading-relaxed">{sup.address || 'No address specified'}</span>
                   </div>
                 </div>
               </div>
@@ -210,27 +221,28 @@ export default function SuppliersPage() {
 
       {/* --- SUPPLIER FORM MODAL --- */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-[#0c1222] border border-slate-900 rounded-2xl p-6 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-white border border-slate-200 rounded-[20px] p-6 shadow-2xl relative animate-in zoom-in-95 duration-150">
             <button
               onClick={() => setModalOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white cursor-pointer"
+              className="absolute top-4.5 right-4.5 text-slate-400 hover:text-slate-900 p-1 rounded-lg hover:bg-slate-50 transition-all cursor-pointer"
             >
               <X size={18} />
             </button>
-            <h3 className="text-lg font-bold text-white mb-4">
+            <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <Landmark size={18} className="text-emerald-500" />
               {editingSupplier ? `Edit Supplier: ${editingSupplier.name}` : 'Add New Supplier'}
             </h3>
             
             {error && (
-              <div className="mb-4 p-2 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-lg">
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-100 text-rose-600 text-xs font-semibold rounded-xl">
                 {error}
               </div>
             )}
 
             <form onSubmit={handleSaveSupplier} className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
                   Supplier Name *
                 </label>
                 <input
@@ -238,45 +250,45 @@ export default function SuppliersPage() {
                   required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 text-sm text-white rounded-lg focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-white text-sm text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-bold"
                   placeholder="e.g. Arabica Roast Co."
                 />
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
                   Phone Number
                 </label>
                 <input
                   type="text"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 text-sm text-white rounded-lg focus:outline-none"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-white text-sm text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold"
                   placeholder="e.g. +1 555 123-456"
                 />
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
                   Email Address
                 </label>
                 <input
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 text-sm text-white rounded-lg focus:outline-none"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-white text-sm text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold"
                   placeholder="orders@supplier.com"
                 />
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
                   Street Address
                 </label>
                 <textarea
                   value={form.address}
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 text-sm text-white rounded-lg focus:outline-none h-20"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 bg-white text-sm text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold h-20 resize-none"
                   placeholder="e.g. 100 Wholesaler Drive, City"
                 />
               </div>
@@ -284,7 +296,7 @@ export default function SuppliersPage() {
               <button
                 type="submit"
                 disabled={saveSupplierMutation.isPending}
-                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition-colors cursor-pointer mt-2"
+                className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-400 text-white font-bold rounded-xl text-sm transition-all shadow-md shadow-emerald-500/10 cursor-pointer mt-2"
               >
                 {saveSupplierMutation.isPending ? 'Saving Supplier...' : 'Save Supplier'}
               </button>
@@ -292,7 +304,6 @@ export default function SuppliersPage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
