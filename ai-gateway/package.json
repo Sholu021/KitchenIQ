@@ -1,0 +1,19 @@
+{
+  "name": "ai-gateway-text-generation",
+  "version": "1.0.0",
+  "description": "AI Gateway for text generation using Vercel AI SDK",
+  "main": "index.ts",
+  "scripts": {
+    "start": "tsx index.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/gateway": "latest",
+    "ai": "latest",
+    "dotenv": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "tsx": "latest",
+    "typescript": "latest"
+  }
+}
