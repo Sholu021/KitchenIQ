@@ -33,11 +33,11 @@ export default function InventoryPage() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
-  
+
   // Drawer states
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [adjustingProduct, setAdjustingProduct] = useState<any | null>(null);
-  
+
   // Expanded batches state (accordion)
   const [expandedProducts, setExpandedProducts] = useState<Record<number, boolean>>({});
 
@@ -61,13 +61,19 @@ export default function InventoryPage() {
   });
 
   const { data: batches = [] } = useQuery({
-    queryKey: ['batches'],
+    queryKey: ["batches"],
     queryFn: async () => {
-      const res = await apiClient.get('/batches');
-      return res.data;
-    }
-  });
+      const res = await apiClient.get("/batches");
 
+      console.log("Batch Response:", res);
+      console.log("Batch Data:", res.data);
+
+      return res.data;
+    },
+  });
+  console.log("Products:", products);
+  console.log("Batches:", batches);
+  console.log(Array.isArray(batches));
   const { data: alerts = { expired: [], expiring_7: [], expiring_30: [] } } = useQuery({
     queryKey: ['batch-alerts'],
     queryFn: async () => {
@@ -139,7 +145,7 @@ export default function InventoryPage() {
 
   // 1. Calculate values for summary cards dynamically
   const totalIngredientsCount = products.length || 248;
-  
+
   const totalValuation = products.reduce(
     (acc: number, p: any) => acc + (p.current_stock * p.cost_price), 0
   ) || 3072.5;
@@ -156,12 +162,12 @@ export default function InventoryPage() {
 
   // Client-side list filters
   const filteredProducts = products.filter((p: any) => {
-    const matchesSearch = 
+    const matchesSearch =
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()));
 
-    const matchesCategory = 
-      selectedCategory === 'All' || 
+    const matchesCategory =
+      selectedCategory === 'All' ||
       (p.category?.name && p.category.name.toLowerCase() === selectedCategory.toLowerCase());
 
     const isOutOfStock = p.current_stock === 0;
@@ -169,7 +175,15 @@ export default function InventoryPage() {
     const isLow = p.current_stock > 0 && p.current_stock <= p.reorder_level && !isCritical;
     const isHealthy = p.current_stock > p.reorder_level;
 
-    const productBatches = batches.filter((b: any) => b.product_id === p.id);
+    const productBatches = batches.filter((b: any) => {
+      console.log(
+        "Comparing:",
+        b.product_id,
+        p.id,
+        b.product_id === p.id
+      );
+      return b.product_id === p.id;
+    });
     const hasExpiringBatch = productBatches.some((b: any) => {
       if (!b.expiry_date) return false;
       const daysLeft = Math.ceil((new Date(b.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
@@ -201,7 +215,7 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-8 relative">
-      
+
       {/* Page Header */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
         <div>
@@ -264,13 +278,13 @@ export default function InventoryPage() {
 
       {/* Main Table, Filters, and AI Assistant Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* Left Column: Filters, Table, Timeline */}
         <div className="lg:col-span-2 space-y-6">
-          
+
           {/* Quick Filters & Search Bar */}
           <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
-            
+
             {/* Search Bar */}
             <div className="relative">
               <Search className="absolute left-3.5 top-3 text-slate-400" size={16} />
@@ -290,11 +304,10 @@ export default function InventoryPage() {
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`py-1.5 px-3 rounded-lg font-bold text-[10px] transition-all cursor-pointer border ${
-                    selectedCategory === cat
-                      ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                      : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-800'
-                  }`}
+                  className={`py-1.5 px-3 rounded-lg font-bold text-[10px] transition-all cursor-pointer border ${selectedCategory === cat
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                    : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-800'
+                    }`}
                 >
                   {cat}
                 </button>
@@ -308,11 +321,10 @@ export default function InventoryPage() {
                 <button
                   key={status}
                   onClick={() => setSelectedStatus(status)}
-                  className={`py-1.5 px-3 rounded-lg font-bold text-[10px] transition-all cursor-pointer border ${
-                    selectedStatus === status
-                      ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                      : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-800'
-                  }`}
+                  className={`py-1.5 px-3 rounded-lg font-bold text-[10px] transition-all cursor-pointer border ${selectedStatus === status
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                    : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-800'
+                    }`}
                 >
                   {status}
                 </button>
@@ -350,12 +362,20 @@ export default function InventoryPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                     {filteredProducts.map((p: any) => {
+                      console.log("Product ID:", p.id);
+
                       const isExpanded = !!expandedProducts[p.id];
                       const isOutOfStock = p.current_stock === 0;
                       const isCritical = p.current_stock > 0 && p.current_stock <= p.reorder_level * 0.5;
                       const isLow = p.current_stock > 0 && p.current_stock <= p.reorder_level && !isCritical;
-                      
+
                       const productBatches = batches.filter((b: any) => b.product_id === p.id);
+
+                      console.log({
+                        product: p.name,
+                        expanded: isExpanded,
+                        batchCount: productBatches.length,
+                      });
                       const daysLeft = productBatches.reduce((acc: number | null, b: any) => {
                         if (!b.expiry_date) return acc;
                         const diff = Math.ceil((new Date(b.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
@@ -402,9 +422,8 @@ export default function InventoryPage() {
                             </td>
                             <td className="px-6 py-4">
                               {daysLeft !== null ? (
-                                <span className={`text-[10px] font-bold ${
-                                  daysLeft <= 3 ? 'text-rose-600' : daysLeft <= 7 ? 'text-amber-600' : 'text-slate-500'
-                                }`}>
+                                <span className={`text-[10px] font-bold ${daysLeft <= 3 ? 'text-rose-600' : daysLeft <= 7 ? 'text-amber-600' : 'text-slate-500'
+                                  }`}>
                                   {daysLeft} Days Left
                                 </span>
                               ) : (
@@ -451,26 +470,36 @@ export default function InventoryPage() {
                                   {productBatches.length === 0 ? (
                                     <span className="text-xs text-slate-400 italic block py-2">No active batches logged for this ingredient.</span>
                                   ) : (
-                                    productBatches.map((b: any) => (
-                                      <div key={b.id} className="flex items-center justify-between bg-white p-3 border border-slate-200/60 rounded-xl max-w-xl text-xs font-semibold text-slate-650">
-                                        <div className="flex items-center gap-6">
+                                    productBatches.map((b: any) => {
+                                      console.log("Rendering batch", b);
+
+                                      return (
+                                        <div
+                                          key={b.id}
+                                          className="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between"
+                                        >
                                           <div>
-                                            <span className="text-slate-400 block text-[9px] uppercase tracking-wider">Batch Code</span>
-                                            <span className="font-mono text-slate-800 text-xs block mt-0.5">{b.batch_number || 'N/A'}</span>
+                                            <p className="font-bold text-slate-900">
+                                              Batch {b.batch_number}
+                                            </p>
+
+                                            <p className="text-xs text-slate-500">
+                                              Expires {new Date(b.expiry_date).toLocaleDateString()}
+                                            </p>
                                           </div>
-                                          <div>
-                                            <span className="text-slate-400 block text-[9px] uppercase tracking-wider">Expiry</span>
-                                            <span className="text-slate-800 block mt-0.5">
-                                              {b.expiry_date ? new Date(b.expiry_date).toLocaleDateString() : 'No Expiry'}
-                                            </span>
+
+                                          <div className="text-right">
+                                            <p className="font-bold text-emerald-600">
+                                              {b.remaining_quantity} {p.unit}
+                                            </p>
+
+                                            <p className="text-xs text-slate-400">
+                                              Remaining
+                                            </p>
                                           </div>
                                         </div>
-                                        <div className="text-right">
-                                          <span className="text-slate-400 block text-[9px] uppercase tracking-wider">Quantity</span>
-                                          <span className="font-bold text-slate-950 font-mono mt-0.5 block">{b.quantity} {p.unit}</span>
-                                        </div>
-                                      </div>
-                                    ))
+                                      );
+                                    })
                                   )}
                                 </div>
                               </td>
@@ -491,7 +520,7 @@ export default function InventoryPage() {
               📅 Inventory Movement Timeline
             </h3>
 
-            <div className="space-y-4 text-xs font-semibold text-slate-650">
+            <div className="space-y-4 text-xs font-semibold text-slate-700">
               <div className="flex items-start gap-4">
                 <span className="text-[10px] font-bold text-slate-400 shrink-0 mt-0.5 font-mono">Today 10:42</span>
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5"></div>
@@ -516,11 +545,11 @@ export default function InventoryPage() {
 
         {/* Right Column: AI Assistant Widget */}
         <div className="space-y-6">
-          
+
           {/* AI Assistant Widget */}
           <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col justify-between relative overflow-hidden">
             <div className="absolute top-0 right-0 w-36 h-36 rounded-full bg-emerald-500/5 blur-2xl -z-10"></div>
-            
+
             <div>
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3 mb-4">
                 <Bot size={18} className="text-emerald-500 animate-pulse" /> Inventory Assistant
@@ -646,8 +675,8 @@ export default function InventoryPage() {
                       <AreaChart data={mockStockHistory} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                         <defs>
                           <linearGradient id="miniSales" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.15}/>
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <XAxis dataKey="day" stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
@@ -693,7 +722,7 @@ export default function InventoryPage() {
               )}
 
               <form onSubmit={handleAdjustSubmit} className="space-y-4">
-                
+
                 {/* Movement Type Segmented Tabs */}
                 <div className="space-y-2">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Movement Type *</span>
@@ -701,33 +730,30 @@ export default function InventoryPage() {
                     <button
                       type="button"
                       onClick={() => setForm({ ...form, transaction_type: 'STOCK_IN' })}
-                      className={`py-2 rounded-lg font-bold text-[10px] cursor-pointer transition-all ${
-                        form.transaction_type === 'STOCK_IN'
-                          ? 'bg-white text-slate-900 border border-slate-200/60 shadow-sm'
-                          : 'text-slate-500 hover:text-slate-900'
-                      }`}
+                      className={`py-2 rounded-lg font-bold text-[10px] cursor-pointer transition-all ${form.transaction_type === 'STOCK_IN'
+                        ? 'bg-white text-slate-900 border border-slate-200/60 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-900'
+                        }`}
                     >
                       + Add Stock
                     </button>
                     <button
                       type="button"
                       onClick={() => setForm({ ...form, transaction_type: 'STOCK_OUT' })}
-                      className={`py-2 rounded-lg font-bold text-[10px] cursor-pointer transition-all ${
-                        form.transaction_type === 'STOCK_OUT'
-                          ? 'bg-white text-slate-900 border border-slate-200/60 shadow-sm'
-                          : 'text-slate-500 hover:text-slate-900'
-                      }`}
+                      className={`py-2 rounded-lg font-bold text-[10px] cursor-pointer transition-all ${form.transaction_type === 'STOCK_OUT'
+                        ? 'bg-white text-slate-900 border border-slate-200/60 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-900'
+                        }`}
                     >
                       - Remove Stock
                     </button>
                     <button
                       type="button"
                       onClick={() => setForm({ ...form, transaction_type: 'ADJUSTMENT' })}
-                      className={`py-2 rounded-lg font-bold text-[10px] cursor-pointer transition-all ${
-                        form.transaction_type === 'ADJUSTMENT'
-                          ? 'bg-white text-slate-900 border border-slate-200/60 shadow-sm'
-                          : 'text-slate-500 hover:text-slate-900'
-                      }`}
+                      className={`py-2 rounded-lg font-bold text-[10px] cursor-pointer transition-all ${form.transaction_type === 'ADJUSTMENT'
+                        ? 'bg-white text-slate-900 border border-slate-200/60 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-900'
+                        }`}
                     >
                       Correction
                     </button>

@@ -7,6 +7,8 @@ import { useAuthStore } from '@/store/auth-store';
 import { Plus, Trash, Check, X, Clipboard, ArrowRight, Eye, RefreshCw, Landmark, ShoppingBag, Send } from 'lucide-react';
 
 export default function PurchaseOrdersPage() {
+  console.log("PurchaseOrdersPage rendered");
+
   const queryClient = useQueryClient();
   const role = useAuthStore((state) => state.role);
   const isReadOnly = role?.toLowerCase() === 'staff';
@@ -19,12 +21,12 @@ export default function PurchaseOrdersPage() {
   // New PO Form State
   const [supplierId, setSupplierId] = useState('');
   const [poItems, setPoItems] = useState<Array<{
-  product_id: string;
-  quantity: string;
-  unit_price: string;
-  batch_number: string;
-  expiry_date: string;
-}>>([
+    product_id: string;
+    quantity: string;
+    unit_price: string;
+    batch_number: string;
+    expiry_date: string;
+  }>>([
   {
     product_id: '',
     quantity: '',
@@ -62,6 +64,9 @@ export default function PurchaseOrdersPage() {
     }
   });
 
+  console.log("PurchaseOrdersPage rendered");
+  console.log("Purchase Orders:", purchaseOrders);
+
   // Mutation for PO creation
   const createPOMutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -74,8 +79,14 @@ export default function PurchaseOrdersPage() {
       resetForm();
     },
     onError: (err: any) => {
-      setFormError(err.response?.data?.detail || 'Failed to create purchase order.');
-    }
+      console.error("Full error:", err);
+      console.error("Message:", err.message);
+      console.error("Code:", err.code);
+      console.error("Response:", err.response);
+      console.error("Request:", err.request);
+
+      setFormError(err.message || "Failed to create purchase order.");
+   }
   });
 
   // Mutation for PO status update
@@ -84,21 +95,52 @@ export default function PurchaseOrdersPage() {
       const res = await apiClient.patch(`/purchase-orders/${id}/status`, { status });
       return res.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['batches'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
-      if (selectedPO) {
-        // Refresh details modal if open
-        const updated = purchaseOrders.find((po: any) => po.id === selectedPO.id);
-        if (updated) setSelectedPO(updated);
-      }
-    },
-    onError: (err: any) => {
-      alert(err.response?.data?.detail || 'Failed to update status.');
-    }
   });
+  const receivePOMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const po = purchaseOrders.find((p: any) => p.id === id);
+
+      const payload = {
+        items: po.items.map((item: any) => ({
+          purchase_order_item_id: item.id,
+          batch_number: item.batch_number,
+          expiry_date: item.expiry_date,
+          quantity: item.quantity,
+          unit_price: item.unit_price
+        })),
+      };
+
+      const res = await apiClient.post(
+        `/purchase-orders/${id}/receive`,
+        payload
+      );
+
+      return res.data;
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["purchase-orders"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["products"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["batches"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard-summary"],
+      });
+    },
+
+    onError: (err: any) => {
+      alert(err.response?.data?.detail || "Receive failed");
+    },
+  });
+
 
   const resetForm = () => {
     setSupplierId('');
@@ -175,6 +217,10 @@ export default function PurchaseOrdersPage() {
       return;
     }
 
+    console.log("========== CREATE PO ==========");
+    console.log("PO ITEMS STATE:", poItems);
+    console.log("ITEMS PAYLOAD:", items);
+
     createPOMutation.mutate({
       supplier_id: parseInt(supplierId),
       items
@@ -192,7 +238,7 @@ export default function PurchaseOrdersPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'PENDING':
+      case 'DRAFT':
         return 'bg-amber-50 text-amber-700 border-amber-200/50';
       case 'SENT':
         return 'bg-blue-50 text-blue-700 border-blue-200/50';
@@ -226,7 +272,7 @@ export default function PurchaseOrdersPage() {
 
       {/* Filter Tabs */}
       <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100 rounded-xl max-w-lg">
-        {['', 'PENDING', 'SENT', 'RECEIVED', 'CANCELLED'].map((status) => (
+        {['', 'DRAFT', 'SENT', 'RECEIVED', 'CANCELLED'].map((status) => (
           <button
             key={status}
             onClick={() => setStatusFilter(status)}
@@ -289,7 +335,7 @@ export default function PurchaseOrdersPage() {
                         >
                           <Eye size={13} /> View Items
                         </button>
-                        {!isReadOnly && po.status === 'PENDING' && (
+                        {!isReadOnly && po.status === 'DRAFT' && (
                           <button
                             onClick={() => handleUpdateStatus(po.id, 'SENT')}
                             className="p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-all flex items-center gap-1 cursor-pointer text-xs font-bold shadow-sm shadow-emerald-500/10"
@@ -516,12 +562,10 @@ export default function PurchaseOrdersPage() {
             </div>
 
             {/* Quick action helper in details view */}
-            {!isReadOnly && selectedPO.status === 'SENT' && (
+            {!isReadOnly && selectedPO.status === 'RECEIVED' && (
               <div className="flex gap-3">
                 <button
-                  onClick={() => {
-                    handleUpdateStatus(selectedPO.id, 'RECEIVED');
-                  }}
+                  onClick={() => receivePOMutation.mutate(selectedPO.id)}
                   className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1 cursor-pointer shadow-md shadow-emerald-500/10"
                 >
                   <Check size={14} /> Confirm Stocks Received
