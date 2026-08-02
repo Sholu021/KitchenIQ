@@ -1,6 +1,6 @@
 import os
 import json
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, UTC
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -41,7 +41,7 @@ def serialize_kitchen_state(db: Session, organization_id: int) -> Dict[str, Any]
     # 2. Batches (expiring / active)
     batches = db.query(Batch).filter(
         Batch.organization_id == organization_id,
-        Batch.quantity > 0
+        Batch.remaining_quantity > 0
     ).all()
     batches_data = []
     for b in batches:
@@ -49,11 +49,11 @@ def serialize_kitchen_state(db: Session, organization_id: int) -> Dict[str, Any]
             "product_name": b.product.name if b.product else "Unknown",
             "batch_number": b.batch_number,
             "expiry_date": b.expiry_date.isoformat() if b.expiry_date else None,
-            "quantity": b.quantity
+            "quantity": b.remaining_quantity
         })
 
     # 3. Recent Sales (last 30 days)
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    thirty_days_ago = datetime.now(UTC) - timedelta(days=30)
     sales = db.query(Sale).filter(
         Sale.organization_id == organization_id,
         Sale.sale_date >= thirty_days_ago
@@ -196,7 +196,7 @@ def generate_mock_insights(db: Session, organization_id: int) -> Dict[str, Any]:
         "health_summary": health_summary,
         "reorder_suggestions": reorder_suggestions,
         "waste_analysis": waste_analysis,
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.now(UTC)
     }
 
 
@@ -255,7 +255,7 @@ def get_ai_insights(db: Session, organization_id: int) -> Dict[str, Any]:
         )
         
         data = json.loads(response.choices[0].message.content)
-        data["timestamp"] = datetime.utcnow()
+        data["timestamp"] = datetime.now(UTC)
         return data
 
     except Exception as e:
@@ -341,3 +341,9 @@ def ask_ai_copilot(db: Session, organization_id: int, question: str) -> str:
         return response.choices[0].message.content
     except Exception as e:
         return f"Error connecting to AI Copilot: {e}. Please try again later."
+
+def generate_ai_insights(
+    db: Session,
+    organization_id: int,
+):
+    pass

@@ -34,10 +34,14 @@ def calculate_recipe_cost(
     organization_id: int,
     recipe_id: int
 ) -> float:
-    recipe = db.query(Recipe).filter(
-        Recipe.id == recipe_id,
-        Recipe.organization_id == organization_id
-    ).first()
+    recipe = (
+        db.query(Recipe)
+        .filter(
+            Recipe.id == recipe_id,
+            Recipe.organization_id == organization_id,
+        )
+        .first()
+    )
     
     if not recipe:
         raise HTTPException(
@@ -45,78 +49,138 @@ def calculate_recipe_cost(
             detail="Recipe not found"
         )
         
-    total_cost = 0.0
+    total_cost = 0
+    breakdown = []
+
     for ingredient in recipe.ingredients:
         product = ingredient.product
+
         if not product:
             continue
-            
-        factor = get_unit_conversion_factor(product.unit, product.unit)  # Just fallback
-        # Let's check unit compatibility and factor
-        # If product unit is 'kg' and ingredient needs 'g', cost per gram is product.cost_price / 1000
-        # Wait, the ingredient doesn't store a separate unit. The recipe ingredient requires quantity in the product's unit!
-        # Ah, looking at the schema, recipe_ingredients has quantity_required. It doesn't have a separate unit, so it's in the product's unit.
-        # But wait! If it's in the product's unit, conversion factor is 1.0.
-        # But if the user specifies it, wait, we can assume the quantity required is in the product's base unit.
-        # Let's check: quantity_required * product.cost_price is the default.
-        # What if we want to support a separate ingredient unit? The schema doesn't have recipe_ingredient.unit.
-        # So quantity_required is always in the product's unit. The cost is simply quantity_required * product.cost_price.
-        # That's even easier and less error-prone! We will do:
-        total_cost += ingredient.quantity_required * product.cost_price
-        
-    return total_cost
 
+        cost = ingredient.quantity_required * product.cost_price
+        total_cost += cost
+
+        breakdown.append(
+            {
+                "ingredient": product.name,
+                "quantity": ingredient.quantity_required,
+                "unit": product.unit,
+                "unit_cost": product.cost_price,
+                "cost": round(cost, 2),
+            }
+        )
+
+    cost_per_serving = (
+        total_cost / recipe.yield_quantity
+        if recipe.yield_quantity
+        else total_cost
+    )
+
+    return {
+        "recipe_id": recipe.id,
+        "recipe_name": recipe.name,
+        "yield_quantity": recipe.yield_quantity,
+        "yield_unit": recipe.yield_unit,
+        "total_cost": round(total_cost, 2),
+        "cost_per_serving": round(cost_per_serving, 2),
+        "ingredients": breakdown,
+    }
+
+def calculate_recipe_cost_value(
+    db: Session,
+    organization_id: int,
+    recipe_id: int,
+) -> float:
+    data = calculate_recipe_cost(
+        db=db,
+        organization_id=organization_id,
+        recipe_id=recipe_id,
+    )
+
+    return data["cost_per_serving"]
+    
 def create_recipe(
     db: Session,
     organization_id: int,
     name: str,
+    yield_quantity: float,
+    yield_unit: str,
+    selling_price: float,
     description: Optional[str] = None,
     ingredients_data: List[dict] = [],
-    user_id: Optional[int] = None
+    user_id: Optional[int] = None,
 ) -> Recipe:
-    # 1. Create Recipe
+
+    # 1. Create finished product
+    finished_product = Product(
+        organization_id=organization_id,
+        name=name,
+        sku=None,
+        unit=yield_unit,
+        current_stock=0,
+        reorder_level=0,
+        preferred_order_quantity=0,
+        minimum_order_quantity=0,
+        cost_price=0,
+        selling_price=selling_price,
+        is_finished_product=True,
+    )
+
+    db.add(finished_product)
+    db.flush()
+
+    # 2. Create recipe
     recipe = Recipe(
         organization_id=organization_id,
         name=name,
-        description=description
+        description=description,
+        yield_quantity=yield_quantity,
+        yield_unit=yield_unit,
+        selling_price=selling_price,
+        finished_product_id=finished_product.id,
     )
+
     db.add(recipe)
     db.flush()
 
-    # 2. Add Ingredients
+    # 3. Add ingredients
     for ing in ingredients_data:
-        prod_id = ing["product_id"]
-        qty = ing["quantity_required"]
 
-        # Validate product exists in org
-        prod = db.query(Product).filter(
-            Product.id == prod_id,
-            Product.organization_id == organization_id
-        ).first()
-        if not prod:
+        product = (
+            db.query(Product)
+            .filter(
+                Product.id == ing["product_id"],
+                Product.organization_id == organization_id,
+            )
+            .first()
+        )
+
+        if not product:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Product ID {prod_id} not found"
+                detail=f"Product {ing['product_id']} not found",
             )
 
-        ingredient = RecipeIngredient(
-            recipe_id=recipe.id,
-            product_id=prod_id,
-            quantity_required=qty
+        db.add(
+            RecipeIngredient(
+                recipe_id=recipe.id,
+                product_id=product.id,
+                quantity_required=ing["quantity_required"],
+            )
         )
-        db.add(ingredient)
 
-    db.flush()
-
-    # Audit Log
+    # 4. Audit log
     audit = AuditLog(
         organization_id=organization_id,
         user_id=user_id,
         action="CREATE_RECIPE",
         entity_type="recipe",
-        entity_id=recipe.id
+        entity_id=recipe.id,
     )
+
     db.add(audit)
+
     db.commit()
     db.refresh(recipe)
 

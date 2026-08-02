@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, UTC
 from sqlalchemy.orm import Session
 from app.models.models import Organization, User, Category, Product, Supplier, Recipe, RecipeIngredient, Batch, Sale, SaleItem, InventoryTransaction
 from app.core.security import get_password_hash
@@ -263,7 +263,7 @@ def seed_db(db: Session):
     ]
 
     for days_ago, items in sales_history:
-        sale_time = datetime.utcnow() - timedelta(days=days_ago)
+        sale_time = datetime.now(UTC) - timedelta(days=days_ago)
         
         # Calculate total price
         total = 0.0
@@ -289,3 +289,11 @@ def seed_db(db: Session):
 
     db.commit()
     print("Database seeding completed successfully!")
+if __name__ == "__main__":
+    from app.core.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        seed_db(db)
+    finally:
+        db.close()

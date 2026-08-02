@@ -1,0 +1,206 @@
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from app.services.inventory_service import adjust_stock
+from datetime import datetime, date
+
+
+from app.models.models import (
+    Batch,
+    Production,
+    Product,
+    Recipe,
+    InventoryTransaction,
+    AuditLog,
+)
+
+def consume_recipe(
+    db: Session,
+    organization_id: int,
+    recipe_id: int,
+    servings: float,
+    user_id: int,
+):
+    recipe = (
+        db.query(Recipe)
+        .filter(
+            Recipe.id == recipe_id,
+            Recipe.organization_id == organization_id,
+        )
+        .first()
+    )
+
+    if not recipe:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recipe not found",
+        )
+
+    for ingredient in recipe.ingredients:
+
+        required = ingredient.quantity_required * servings
+
+        adjust_stock(
+            db=db,
+            organization_id=organization_id,
+            product_id=ingredient.product_id,
+            quantity=required,
+            transaction_type="STOCK_OUT",
+            notes=f"Recipe consumption: {recipe.name}",
+            user_id=user_id,
+        )
+
+    return True
+
+def produce_recipe(
+    db: Session,
+    organization_id: int,
+    recipe_id: int,
+    quantity_produced: float,
+    batch_number: str,
+    expiry_date,
+    user_id: int,
+):
+    recipe = (
+        db.query(Recipe)
+        .filter(
+            Recipe.id == recipe_id,
+            Recipe.organization_id == organization_id,
+        )
+        .first()
+    )
+
+    if not recipe:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recipe not found",
+        )
+        
+    for ingredient in recipe.ingredients:
+
+        required = (
+            ingredient.quantity_required *
+            quantity_produced
+        )
+
+        available = (
+            db.query(
+                func.coalesce(
+                    func.sum(Batch.remaining_quantity),
+                    0,
+                )
+            ) 
+            .filter(
+                Batch.organization_id == organization_id,
+                Batch.product_id == ingredient.product_id,
+                Batch.remaining_quantity > 0,
+            )
+            .scalar()
+        )
+
+        if available < required:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Insufficient stock for "
+                    f"{ingredient.product.name}"
+                ),
+            )
+
+    for ingredient in recipe.ingredients:
+
+        required = (
+            ingredient.quantity_required *
+            quantity_produced
+        )
+
+        adjust_stock(
+            db=db,
+            organization_id=organization_id,
+            product_id=ingredient.product_id,
+            quantity=required,
+            transaction_type="STOCK_OUT",
+            notes=f"Production of {recipe.name}",
+            user_id=user_id,
+        )
+
+    production = Production(
+        organization_id=organization_id,
+        recipe_id=recipe.id,
+        quantity_produced=quantity_produced,
+        batch_number=batch_number,
+        expiry_date=expiry_date,
+        produced_by=user_id,
+    )
+
+    db.add(production)
+    db.flush()
+
+    finished_batch = Batch(
+        organization_id=organization_id,
+        product_id=recipe.finished_product_id,
+        batch_number=batch_number,
+        expiry_date=expiry_date,
+        quantity=quantity_produced,
+        remaining_quantity=quantity_produced,
+    )
+
+    db.add(finished_batch)
+    db.flush()
+
+    finished_product = (
+        db.query(Product)
+        .filter(
+            Product.id == recipe.finished_product_id,
+            Product.organization_id == organization_id,
+        )
+        .first()
+    ) 
+
+    if finished_product is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Recipe finished product not found.",
+        )
+    
+    print("Recipe:", recipe.id)
+    print("Finished Product ID:", recipe.finished_product_id)
+
+    finished_product = (
+        db.query(Product)
+        .filter(
+            Product.id == recipe.finished_product_id,
+            Product.organization_id == organization_id,
+        )
+        .first()
+    )
+
+    print("Finished Product:", finished_product)
+    finished_product.current_stock += quantity_produced
+        
+    transaction = InventoryTransaction(
+        organization_id=organization_id,
+        product_id=finished_product.id,
+        batch_id=finished_batch.id,
+        created_by=user_id,
+        transaction_type="STOCK_IN",
+        quantity=quantity_produced,
+        notes=f"Production #{production.id}",
+    )
+
+    db.add(transaction)
+
+    audit = AuditLog(
+        organization_id=organization_id,
+        user_id=user_id,
+        action="PRODUCE_RECIPE",
+        entity_type="production",
+        entity_id=production.id,
+    )
+
+    db.add(audit)
+
+    db.commit()
+    db.refresh(production)
+
+    return production

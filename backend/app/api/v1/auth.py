@@ -14,6 +14,7 @@ from app.models.models import Organization, User, AuditLog, Product, Recipe, Bat
 from app.schemas.schemas import (
     RegisterOrgOwnerRequest,
     LoginRequest,
+    RefreshTokenRequest,
     Token,
     UserOut,
     SubscriptionUpgradeRequest,
@@ -27,56 +28,72 @@ def register_organization_and_owner(
     req: RegisterOrgOwnerRequest,
     db: Session = Depends(get_db)
 ):
-    # Check if user email already exists
-    existing_user = db.query(User).filter(User.email == req.owner_email).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this email already exists."
+    try:
+        # Check if user email already exists
+        existing_user = db.query(User).filter(
+            User.email == req.owner_email
+        ).first()
+
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A user with this email already exists."
+            )
+
+        # Create Organization
+        org = Organization(name=req.organization_name)
+        db.add(org)
+        db.flush()
+
+        # Create Owner User
+        hashed_password = get_password_hash(req.owner_password)
+
+        owner = User(
+            organization_id=org.id,
+            full_name=req.owner_name,
+            email=req.owner_email,
+            hashed_password=hashed_password,
+            role="Owner",
+            is_active=True
+        )
+        db.add(owner)
+        db.flush()
+
+        # Create Audit Log
+        audit = AuditLog(
+            organization_id=org.id,
+            user_id=owner.id,
+            action="REGISTER_ORG_AND_OWNER",
+            entity_type="organization",
+            entity_id=org.id
+        )
+        db.add(audit)
+
+        db.commit()
+        db.refresh(owner)
+
+        # Generate Tokens
+        access_token = create_access_token(subject=owner.id)
+        refresh_token = create_refresh_token(subject=owner.id)
+
+        return Token(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            role=owner.role,
+            organization_id=owner.organization_id,
+            user_name=owner.full_name
         )
 
-    # 1. Create Organization
-    org = Organization(name=req.organization_name)
-    db.add(org)
-    db.flush()  # Populates org.id
+    except HTTPException:
+        db.rollback()
+        raise
 
-    # 2. Create Owner User
-    hashed_password = get_password_hash(req.owner_password)
-    owner = User(
-        organization_id=org.id,
-        full_name=req.owner_name,
-        email=req.owner_email,
-        hashed_password=hashed_password,
-        role="Owner",
-        is_active=True
-    )
-    db.add(owner)
-    db.flush()
-
-    # 3. Create Audit Log
-    audit = AuditLog(
-        organization_id=org.id,
-        user_id=owner.id,
-        action="REGISTER_ORG_AND_OWNER",
-        entity_type="organization",
-        entity_id=org.id
-    )
-    db.add(audit)
-    db.commit()
-    db.refresh(owner)
-
-    # 4. Generate Tokens
-    access_token = create_access_token(subject=owner.id)
-    refresh_token = create_refresh_token(subject=owner.id)
-
-    return Token(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        role=owner.role,
-        organization_id=owner.organization_id,
-        user_name=owner.full_name
-    )
-
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Registration failed: {str(e)}"
+        )
 
 @router.post("/login", response_model=Token)
 def login(
@@ -122,10 +139,10 @@ def login(
 
 @router.post("/refresh", response_model=Token)
 def refresh_token(
-    refresh_token: str,
+    req: RefreshTokenRequest,
     db: Session = Depends(get_db)
 ):
-    payload = decode_token(refresh_token)
+    payload = decode_token(req.refresh_token)
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -2,7 +2,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-
+from app.services.audit_service import AuditService
 from app.core.deps import get_db, get_current_user, require_manager, require_staff
 from app.models.models import Product, Category, User, AuditLog, Organization
 from app.schemas.schemas import (
@@ -114,16 +114,17 @@ def create_product(
     db.add(product)
     db.flush()
 
-    audit = AuditLog(
+    db.commit()
+    db.refresh(product)
+
+    AuditService.log(
+        db=db,
         organization_id=current_user.organization_id,
         user_id=current_user.id,
         action="CREATE_PRODUCT",
-        entity_type="product",
-        entity_id=product.id
+        entity_type="Product",
+        entity_id=product.id,
     )
-    db.add(audit)
-    db.commit()
-    db.refresh(product)
     
     return product
 
@@ -208,17 +209,18 @@ def update_product(
     for field, value in req.model_dump(exclude_unset=True).items():
         setattr(product, field, value)
 
-    audit = AuditLog(
-        organization_id=current_user.organization_id,
-        user_id=current_user.id,
-        action="UPDATE_PRODUCT",
-        entity_type="product",
-        entity_id=product.id
-    )
-    db.add(audit)
     db.commit()
     db.refresh(product)
-    
+
+    AuditService.log(
+        db=db,
+        organization_id=current_user.organization_id,
+        user_id=current_user.id,
+        action="UPDATE",
+        entity_type="Product",
+        entity_id=product.id,
+    )
+
     return product
 
 
@@ -241,14 +243,15 @@ def delete_product(
 
     db.delete(product)
     
-    audit = AuditLog(
+    db.commit()
+
+    AuditService.log(
+        db=db,
         organization_id=current_user.organization_id,
         user_id=current_user.id,
-        action="DELETE_PRODUCT",
-        entity_type="product",
-        entity_id=product_id
+        action="DELETE",
+        entity_type="Product",
+        entity_id=product_id,
     )
-    db.add(audit)
-    db.commit()
     
     return

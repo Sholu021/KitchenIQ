@@ -5,13 +5,13 @@ from sqlalchemy import or_
 
 from app.core.deps import get_db, get_current_user, require_manager, require_staff
 from app.models.models import Supplier, User, AuditLog
-from app.schemas.schemas import SupplierCreate, SupplierOut
+from app.schemas.schemas import SupplierCreate, SupplierUpdate, SupplierOut
 
 router = APIRouter(prefix="/suppliers", tags=["Suppliers"])
 
 @router.post("", response_model=SupplierOut, status_code=status.HTTP_201_CREATED)
 def create_supplier(
-    req: SupplierCreate,
+    req: SupplierUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager)
 ):
@@ -44,7 +44,9 @@ def create_supplier(
         entity_type="supplier",
         entity_id=supplier.id
     )
+
     db.add(audit)
+    
     db.commit()
     db.refresh(supplier)
     

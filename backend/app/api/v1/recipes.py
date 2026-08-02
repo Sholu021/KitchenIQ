@@ -2,7 +2,11 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_db, get_current_user, require_manager, require_staff
+from app.core.deps import (
+    get_db,
+    require_manager,
+    require_staff,
+)
 from app.models.models import Recipe, User, AuditLog, Organization
 from app.schemas.schemas import RecipeCreate, RecipeOut
 from app.services.recipe_service import create_recipe, calculate_recipe_cost
@@ -43,59 +47,84 @@ def create_new_recipe(
         organization_id=current_user.organization_id,
         name=req.name,
         description=req.description,
+        yield_quantity=req.yield_quantity,
+        yield_unit=req.yield_unit,
+        selling_price=req.selling_price,
         ingredients_data=ingredients_data,
-        user_id=current_user.id
+        user_id=current_user.id,
     )
 
     # Convert to schema with computed cost
-    cost = calculate_recipe_cost(db, current_user.organization_id, recipe.id)
-    
+    cost = calculate_recipe_cost(
+        db=db,
+        recipe_id=recipe.id,
+    )
+
     out = RecipeOut.model_validate(recipe)
-    out.cost_price = cost
+    out.cost_price = cost["total_cost"]
     return out
 
 
 @router.get("", response_model=List[RecipeOut])
 def list_recipes(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_staff)
+    current_user: User = Depends(require_staff),
 ):
-    recipes = db.query(Recipe).filter(
-        Recipe.organization_id == current_user.organization_id
-    ).order_by(Recipe.name.asc()).all()
+    recipes = (
+        db.query(Recipe)
+        .filter(
+            Recipe.organization_id == current_user.organization_id
+        )
+        .order_by(Recipe.name.asc())
+        .all()
+    )
 
     output = []
-    for r in recipes:
-        cost = calculate_recipe_cost(db, current_user.organization_id, r.id)
-        schema_out = RecipeOut.model_validate(r)
-        schema_out.cost_price = cost
-        output.append(schema_out)
-        
-    return output
 
+    for recipe in recipes:
+
+        cost = calculate_recipe_cost(
+            db=db,
+            recipe_id=recipe.id,
+        )
+
+        schema_out = RecipeOut.model_validate(recipe)
+        schema_out.cost_price = cost["total_cost"]
+
+        output.append(schema_out)
+
+    return output
 
 @router.get("/{recipe_id}", response_model=RecipeOut)
 def get_recipe(
     recipe_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_staff)
+    current_user: User = Depends(require_staff),
 ):
-    recipe = db.query(Recipe).filter(
-        Recipe.id == recipe_id,
-        Recipe.organization_id == current_user.organization_id
-    ).first()
+    recipe = (
+        db.query(Recipe)
+        .filter(
+            Recipe.id == recipe_id,
+            Recipe.organization_id == current_user.organization_id,
+        )
+        .first()
+    )
 
     if not recipe:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Recipe not found"
+            detail="Recipe not found",
         )
-        
-    cost = calculate_recipe_cost(db, current_user.organization_id, recipe.id)
-    out = RecipeOut.model_validate(recipe)
-    out.cost_price = cost
-    return out
 
+    cost = calculate_recipe_cost(
+        db=db,
+        recipe_id=recipe.id,
+    )
+
+    out = RecipeOut.model_validate(recipe)
+    out.cost_price = cost["total_cost"]
+
+    return out
 
 @router.delete("/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_recipe(
@@ -126,3 +155,14 @@ def delete_recipe(
     db.add(audit)
     db.commit()
     return
+
+@router.get("/{recipe_id}/cost")
+def recipe_cost(
+    recipe_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff),
+):
+    return calculate_recipe_cost(
+        db=db,
+        recipe_id=recipe_id,
+    )

@@ -62,3 +62,12 @@ class RoleChecker:
 require_owner = RoleChecker(["owner"])
 require_manager = RoleChecker(["owner", "manager"])
 require_staff = RoleChecker(["owner", "manager", "staff"])
+
+def require_roles(*roles: str):
+    """
+    Example:
+        Depends(require_roles("owner"))
+        Depends(require_roles("owner", "manager"))
+        Depends(require_roles("manager", "staff"))
+    """
+    return RoleChecker(list(roles))

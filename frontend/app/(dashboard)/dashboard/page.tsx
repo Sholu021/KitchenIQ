@@ -416,7 +416,6 @@ export default function DashboardPage() {
               <span className="font-mono text-slate-900">6%</span>
             </div>
           </div>
-        </div>
 
       </div>
 

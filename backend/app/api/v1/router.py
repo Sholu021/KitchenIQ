@@ -12,6 +12,16 @@ from app.api.v1.ai import router as ai_router
 from app.api.v1.wastage import router as wastage_router
 from app.api.v1.analytics import router as analytics_router
 from app.api.v1.users import router as users_router
+from app.api.v1.production import router as production_router
+from app.api.v1.export import router as export_router
+from app.api.v1.scheduled_reports import (
+    router as scheduled_reports_router,
+)
+from app.api.v1.notifications import (
+    router as notifications_router,
+)
+from app.api.v1.audit import router as audit_router
+
 
 router = APIRouter()
 
@@ -27,3 +37,8 @@ router.include_router(ai_router)
 router.include_router(wastage_router)
 router.include_router(analytics_router)
 router.include_router(users_router)
+router.include_router(production_router)
+router.include_router(export_router)
+router.include_router(scheduled_reports_router)
+router.include_router(notifications_router)
+router.include_router(audit_router)
