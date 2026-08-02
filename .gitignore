@@ -70,3 +70,17 @@ Thumbs.db
 # =========================
 dist/
 build/
+
+# Local AI tooling
+.claude/
+.agents/
+
+# Vercel local metadata
+.vercel/
+
+# Claude AI
+.claude/
+.agents/
+
+# Vercel
+.vercel/
