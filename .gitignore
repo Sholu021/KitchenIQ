@@ -1,28 +1,72 @@
-# Byte-compiled / optimized / DLL files
+# =========================
+# Python
+# =========================
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
-.pytest_cache/
+*.so
+*.egg-info/
 
-# Databases
-*.db
-kitcheniq.db
+# Virtual environments
+.venv/
+venv/
+env/
 
-# Environments & secrets
+# Environment variables
 .env
-.env.local
-.env.*.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
 
-# Node (Frontend build folders)
-node_modules/
-.next/
-out/
-build/
-frontend/.next/
+# =========================
+# Backend
+# =========================
+backend/__pycache__/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/.coverage
+backend/htmlcov/
+backend/reports/
+backend/uploads/
+
+# SQLite
+*.db
+*.sqlite3
+
+# =========================
+# Frontend (Next.js)
+# =========================
 frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
 
-.vercel
+# =========================
+# AI Gateway
+# =========================
+ai-gateway/.venv/
+ai-gateway/__pycache__/
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Build
+# =========================
+dist/
+build/
