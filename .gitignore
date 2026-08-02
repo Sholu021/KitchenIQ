@@ -84,3 +84,9 @@ build/
 
 # Vercel
 .vercel/
+
+# AI tooling
+skills-lock.json
+
+# Node dependencies
+node_modules/
