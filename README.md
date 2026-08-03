@@ -1,5 +1,12 @@
 # KitchenIQ
 
+![Python](https://img.shields.io/badge/Python-3.14-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-Latest-009688)
+![Next.js](https://img.shields.io/badge/Next.js-15-black)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Tests](https://img.shields.io/badge/Tests-21%20Passing-success)
+
 AI-powered ERP and Inventory Management System for Restaurants, Cafés, Bakeries, and Cloud Kitchens.
 
 ## Features
