@@ -31,15 +31,6 @@ def upgrade() -> None:
         ),
     )
     op.add_column(
-        "batches", 
-        sa.Column(
-            "purchase_price",
-            sa.Float(),
-            nullable=False,
-            server_default="0",
-        ),
-    )
-    op.add_column(
         "batches",
         sa.Column(
             "purchase_price",
@@ -48,6 +39,7 @@ def upgrade() -> None:
             server_default="0",
         ),
     )
+
     op.add_column('batches', sa.Column('received_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False))
     op.add_column('inventory_transactions', sa.Column('purchase_order_id', sa.Integer(), nullable=True))
     op.add_column('inventory_transactions', sa.Column('batch_id', sa.Integer(), nullable=True))
