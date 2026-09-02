@@ -18,7 +18,7 @@ def seed_db(db: Session):
 
     # 2. Create Users (Owner, Manager, Staff)
     hashed_pwd = get_password_hash("password123")
-    
+
     owner = User(
         organization_id=org.id,
         full_name="Alice Owner",
@@ -134,12 +134,62 @@ def seed_db(db: Session):
         cost_price=0.15,
         selling_price=0.45
     )
-    db.add_all([p_beans, p_milk, p_syrup, p_croissant, p_tea])
+
+    # Finished products used by recipes
+    p_vanilla_latte = Product(
+        organization_id=org.id,
+        category_id=cat_beverage.id,
+        name="Vanilla Latte",
+        sku="FIN-LATTE-VAN",
+        unit="serving",
+        current_stock=0.0,
+        reorder_level=0.0,
+        cost_price=1.34,
+        selling_price=3.49,
+        is_finished_product=True,
+    )
+
+    p_espresso = Product(
+        organization_id=org.id,
+        category_id=cat_beverage.id,
+        name="Espresso Double",
+        sku="FIN-ESPRESSO-2X",
+        unit="serving",
+        current_stock=0.0,
+        reorder_level=0.0,
+        cost_price=0.54,
+        selling_price=1.44,
+        is_finished_product=True,
+    )
+
+    p_matcha_latte = Product(
+        organization_id=org.id,
+        category_id=cat_beverage.id,
+        name="Matcha Latte",
+        sku="FIN-MATCHA-LATTE",
+        unit="serving",
+        current_stock=0.0,
+        reorder_level=0.0,
+        cost_price=1.40,
+        selling_price=3.95,
+        is_finished_product=True,
+    )
+
+    db.add_all([
+        p_beans,
+        p_milk,
+        p_syrup,
+        p_croissant,
+        p_tea,
+        p_vanilla_latte,
+        p_espresso,
+        p_matcha_latte,
+    ])
     db.flush()
 
     # 6. Create Batches
     today = date.today()
-    
+
     # Milk batches (Expiring soon and fresh)
     b_milk_1 = Batch(
         organization_id=org.id,
@@ -155,7 +205,7 @@ def seed_db(db: Session):
         expiry_date=today + timedelta(days=10),
         quantity=4000.0
     )
-    
+
     # Coffee beans batch (long shelf life)
     b_beans = Batch(
         organization_id=org.id,
@@ -164,7 +214,7 @@ def seed_db(db: Session):
         expiry_date=today + timedelta(days=90),
         quantity=2500.0
     )
-    
+
     # Syrup batch
     b_syrup = Batch(
         organization_id=org.id,
@@ -173,7 +223,7 @@ def seed_db(db: Session):
         expiry_date=today + timedelta(days=180),
         quantity=1500.0
     )
-    
+
     # Croissant batches (already expired, and fresh)
     b_crois_expired = Batch(
         organization_id=org.id,
@@ -189,7 +239,7 @@ def seed_db(db: Session):
         expiry_date=today + timedelta(days=1),
         quantity=10.0
     )
-    
+
     # Matcha batch
     b_matcha = Batch(
         organization_id=org.id,
@@ -212,30 +262,91 @@ def seed_db(db: Session):
     db.flush()
 
     # 8. Create Recipes
+
     # Vanilla Latte Recipe
-    r_latte = Recipe(organization_id=org.id, name="Vanilla Latte", description="Classic 12oz iced or hot vanilla latte")
+    r_latte = Recipe(
+        organization_id=org.id,
+        name="Vanilla Latte",
+        description="Classic 12oz iced or hot vanilla latte",
+        yield_quantity=1,
+        yield_unit="serving",
+        selling_price=3.49,
+        finished_product_id=p_vanilla_latte.id,
+    )
     db.add(r_latte)
     db.flush()
-    ing_latte_beans = RecipeIngredient(recipe_id=r_latte.id, product_id=p_beans.id, quantity_required=18.0)  # 18g espresso
-    ing_latte_milk = RecipeIngredient(recipe_id=r_latte.id, product_id=p_milk.id, quantity_required=250.0)  # 250ml milk
-    ing_latte_syrup = RecipeIngredient(recipe_id=r_latte.id, product_id=p_syrup.id, quantity_required=20.0)  # 20ml syrup
-    db.add_all([ing_latte_beans, ing_latte_milk, ing_latte_syrup])
+
+    ing_latte_beans = RecipeIngredient(
+        recipe_id=r_latte.id,
+        product_id=p_beans.id,
+        quantity_required=18.0,
+    )
+    ing_latte_milk = RecipeIngredient(
+        recipe_id=r_latte.id,
+        product_id=p_milk.id,
+        quantity_required=250.0,
+    )
+    ing_latte_syrup = RecipeIngredient(
+        recipe_id=r_latte.id,
+        product_id=p_syrup.id,
+        quantity_required=20.0,
+    )
+
+    db.add_all([
+        ing_latte_beans,
+        ing_latte_milk,
+        ing_latte_syrup,
+    ])
 
     # Espresso Shot Recipe
-    r_espresso = Recipe(organization_id=org.id, name="Espresso Double", description="Double shot of signature roast")
+    r_espresso = Recipe(
+        organization_id=org.id,
+        name="Espresso Double",
+        description="Double shot of signature roast",
+        yield_quantity=1,
+        yield_unit="serving",
+        selling_price=1.44,
+        finished_product_id=p_espresso.id,
+    )
     db.add(r_espresso)
     db.flush()
-    ing_esp_beans = RecipeIngredient(recipe_id=r_espresso.id, product_id=p_beans.id, quantity_required=18.0)
+
+    ing_esp_beans = RecipeIngredient(
+        recipe_id=r_espresso.id,
+        product_id=p_beans.id,
+        quantity_required=18.0,
+    )
     db.add(ing_esp_beans)
 
     # Matcha Latte Recipe
-    r_matcha = Recipe(organization_id=org.id, name="Matcha Latte", description="Organic stone-ground green tea latte")
+    r_matcha = Recipe(
+        organization_id=org.id,
+        name="Matcha Latte",
+        description="Organic stone-ground green tea latte",
+        yield_quantity=1,
+        yield_unit="serving",
+        selling_price=3.95,
+        finished_product_id=p_matcha_latte.id,
+    )
     db.add(r_matcha)
     db.flush()
-    ing_matcha_powder = RecipeIngredient(recipe_id=r_matcha.id, product_id=p_tea.id, quantity_required=6.0)  # 6g powder
-    ing_matcha_milk = RecipeIngredient(recipe_id=r_matcha.id, product_id=p_milk.id, quantity_required=250.0)
-    db.add_all([ing_matcha_powder, ing_matcha_milk])
-    
+
+    ing_matcha_powder = RecipeIngredient(
+        recipe_id=r_matcha.id,
+        product_id=p_tea.id,
+        quantity_required=6.0,
+    )
+    ing_matcha_milk = RecipeIngredient(
+        recipe_id=r_matcha.id,
+        product_id=p_milk.id,
+        quantity_required=250.0,
+    )
+
+    db.add_all([
+        ing_matcha_powder,
+        ing_matcha_milk,
+    ])
+
     db.flush()
 
     # 9. Create Historical Sales (last 5 days)
@@ -244,7 +355,7 @@ def seed_db(db: Session):
     # Day -2: 15 Lattes, 10 Espressos
     # Day -1: 20 Lattes, 12 Espressos, 2 Matcha Lattes
     # Today: 8 Lattes, 4 Espressos
-    
+
     # We will simulate sales using DB records. Note: we are NOT deducting stock for historical seeds so that current_stock remains high and populated.
     # But we calculate the total amount correctly:
     # Vanilla Latte cost = 18*0.03 + 250*0.002 + 20*0.015 = 0.54 + 0.50 + 0.30 = $1.34 cost
@@ -264,13 +375,13 @@ def seed_db(db: Session):
 
     for days_ago, items in sales_history:
         sale_time = datetime.now(UTC) - timedelta(days=days_ago)
-        
+
         # Calculate total price
         total = 0.0
         for recipe, qty in items.items():
             price = sum(ing.product.selling_price * ing.quantity_required for ing in recipe.ingredients)
             total += price * qty
-            
+
         sale = Sale(
             organization_id=org.id,
             sale_date=sale_time,
@@ -278,7 +389,7 @@ def seed_db(db: Session):
         )
         db.add(sale)
         db.flush()
-        
+
         for recipe, qty in items.items():
             s_item = SaleItem(
                 sale_id=sale.id,
