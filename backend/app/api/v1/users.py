@@ -28,6 +28,25 @@ def add_team_member(
     current_user: User = Depends(require_manager)
 ):
     org_id = current_user.organization_id
+    requested_role = req.role.strip().lower()
+
+    if requested_role not in {"owner", "manager", "staff"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid role. Allowed roles: Owner, Manager, Staff.",
+        )
+
+    if requested_role == "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot create an Owner account.",
+        )
+
+    if requested_role == "manager" and current_user.role.lower() != "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Owners can create Manager accounts.",
+        )
 
     # Check email uniqueness globally
     existing = db.query(User).filter(User.email == req.email).first()
@@ -38,16 +57,6 @@ def add_team_member(
         )
 
     # Enforce role logic: Only Owner can create Managers
-    if req.role == "Manager" and current_user.role != "Owner":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only Owners can create Manager accounts."
-        )
-    if req.role == "Owner":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot create additional Owner accounts."
-        )
 
     hashed_pw = get_password_hash(req.password)
     user = User(
@@ -55,7 +64,7 @@ def add_team_member(
         full_name=req.full_name,
         email=req.email,
         hashed_password=hashed_pw,
-        role=req.role,
+        role=req.role.strip().title(),
         is_active=req.is_active
     )
     db.add(user)
@@ -79,76 +88,134 @@ def update_team_member(
     user_id: int,
     req: UserUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_manager)
+    current_user: User = Depends(require_manager),
 ):
     org_id = current_user.organization_id
 
-    # Fetch user to update
-    user = db.query(User).filter(
-        User.id == user_id,
-        User.organization_id == org_id
-    ).first()
+    # Fetch target user inside the current organization
+    user = (
+        db.query(User)
+        .filter(
+            User.id == user_id,
+            User.organization_id == org_id,
+        )
+        .first()
+    )
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found in your organization"
+            detail="User not found in your organization",
         )
 
-    # Restrictions
-    if user.role == "Owner" and current_user.role != "Owner":
+    current_role = current_user.role.strip().lower()
+    target_role = user.role.strip().lower()
+
+    # Managers cannot manage other Managers.
+    if (
+        target_role == "manager"
+        and current_role != "owner"
+        and user.id != current_user.id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the Owner can update their own account."
+            detail="Only Owners can manage Manager accounts.",
         )
 
-    if req.role and req.role != user.role:
-        if current_user.role != "Owner":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only Owners can change user roles."
-            )
-        if user.role == "Owner" and req.role != "Owner":
+    # Only the Owner may manage the Owner account.
+    if target_role == "owner" and current_role != "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the Owner can manage the Owner account.",
+        )
+
+    # ---------------------------------------------------------
+    # Role update
+    # ---------------------------------------------------------
+    if req.role is not None:
+        requested_role = req.role.strip().lower()
+
+        if requested_role not in {"owner", "manager", "staff"}:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot demote the primary Owner role."
+                detail="Invalid role. Allowed roles: Owner, Manager, Staff.",
             )
 
-    # Apply updates
+        # No second Owner can be created/promoted.
+        if requested_role == "owner" and target_role != "owner":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cannot promote another user to Owner.",
+            )
+
+        # The primary Owner cannot be demoted.
+        if target_role == "owner" and requested_role != "owner":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot demote the primary Owner role.",
+            )
+
+        # Only Owners can change roles.
+        if requested_role != target_role and current_role != "owner":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only Owners can change user roles.",
+            )
+
+        user.role = requested_role.title()
+
+    # ---------------------------------------------------------
+    # Email
+    # ---------------------------------------------------------
     if req.email and req.email != user.email:
-        existing = db.query(User).filter(User.email == req.email).first()
+        existing = (
+            db.query(User)
+            .filter(User.email == req.email)
+            .first()
+        )
+
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email is already in use."
+                detail="Email is already in use.",
             )
+
         user.email = req.email
 
+    # ---------------------------------------------------------
+    # Other fields
+    # ---------------------------------------------------------
     if req.full_name is not None:
         user.full_name = req.full_name
-    if req.role is not None:
-        user.role = req.role
+
     if req.is_active is not None:
         if user.id == current_user.id and not req.is_active:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot deactivate your own account."
+                detail="Cannot deactivate your own account.",
             )
+
         user.is_active = req.is_active
+
     if req.password is not None:
         user.hashed_password = get_password_hash(req.password)
 
+    # ---------------------------------------------------------
+    # Audit
+    # ---------------------------------------------------------
     audit = AuditLog(
         organization_id=org_id,
         user_id=current_user.id,
         action="UPDATE_USER",
         entity_type="user",
-        entity_id=user.id
+        entity_id=user.id,
     )
+
     db.add(audit)
     db.commit()
     db.refresh(user)
-    return user
 
+    return user
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_team_member(
@@ -205,16 +272,34 @@ def get_audit_logs(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_staff)
 ):
-    logs = db.query(
-        AuditLog.id,
-        AuditLog.action,
-        AuditLog.entity_type,
-        AuditLog.entity_id,
-        AuditLog.created_at,
-        User.full_name.label("user_name")
-    ).outerjoin(User, AuditLog.user_id == User.id).filter(
-        AuditLog.organization_id == current_user.organization_id
-    ).order_by(desc(AuditLog.created_at)).limit(50).all()
+    logs = (
+        db.query(
+            AuditLog.id,
+            AuditLog.action,
+            AuditLog.entity_type,
+            AuditLog.entity_id,
+            AuditLog.created_at,
+            User.full_name.label("user_name"),
+        )
+        .outerjoin(
+            User,
+            (
+                AuditLog.user_id == User.id
+            )
+            & (
+                User.organization_id == current_user.organization_id
+            ),
+        )
+        .filter(
+            AuditLog.organization_id == current_user.organization_id
+        )
+        .order_by(
+            desc(AuditLog.created_at)
+        )
+        .limit(50)
+        .all()
+    )
+
 
     result = []
     for item in logs:

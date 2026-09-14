@@ -34,6 +34,10 @@ class CashFlowService:
             or Decimal("0")
         )
 
+        # Normalize numeric types before arithmetic
+        total_sales = Decimal(str(total_sales))
+        total_purchases = Decimal(str(total_purchases))
+
         # Net Cash Flow
         net_cash_flow = total_sales - total_purchases
 

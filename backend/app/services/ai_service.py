@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, UTC
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-
+from app.services.forecast_service import calculate_product_forecast
 from app.models.models import Product, Batch, Sale, SaleItem, Recipe, Supplier
 from app.schemas.schemas import AIInsightsResponse
 
@@ -104,40 +104,87 @@ def generate_mock_insights(db: Session, organization_id: int) -> Dict[str, Any]:
             expiring_month_batches.append(b)
 
     # 1. Health Summary
-    waste_risk_cost = sum(b["quantity"] * next((p["cost_price"] for p in products if p["name"] == b["product_name"]), 0.0) for b in expired_batches + expiring_soon_batches)
-    
+
+    expired_waste_value = sum(
+        b["quantity"]
+        * next(
+            (p["cost_price"] for p in products if p["name"] == b["product_name"]),
+            0.0,
+        )
+        for b in expired_batches
+     )
+
+    expiring_soon_waste_value = sum(
+        b["quantity"]
+        * next(
+            (p["cost_price"] for p in products if p["name"] == b["product_name"]),
+            0.0,
+        )
+        for b in expiring_soon_batches
+    )
+
+    total_waste_exposure = (
+        expired_waste_value + expiring_soon_waste_value
+    )
+
     health_status = "Good"
+
     if out_of_stock or expired_batches:
         health_status = "Critical"
     elif low_stock or expiring_soon_batches:
         health_status = "Warning"
-        
+
+    # AI Operational Recommendations
+    recommendations = []
+
+    if out_of_stock:
+        out_of_stock_names = ", ".join(
+            item["name"] for item in out_of_stock
+        )
+
+        recommendations.append(
+            f"Immediate Action: Replenish out-of-stock items: "
+            f"{out_of_stock_names}."
+        )
+
+    if expiring_soon_batches:
+        expiring_names = ", ".join(
+            f"{item['product_name']} (Qty: {item['quantity']})"
+            for item in expiring_soon_batches[:3]
+        )
+
+        recommendations.append(
+            f"Waste Prevention: Prioritize usage of expiring batches: "
+            f"{expiring_names}."
+        )
+
+    if low_stock:
+        low_stock_names = ", ".join(
+            item["name"] for item in low_stock
+        )
+
+        recommendations.append(
+            f"Inventory Health: Create Purchase Orders for low-stock items: "
+            f"{low_stock_names}."
+        )
+
     summary_text = (
         f"KitchenIQ Health is currently evaluated as '{health_status}'. "
-        f"We found {len(out_of_stock)} items completely out of stock, {len(low_stock)} items below reorder thresholds, "
-        f"and {len(expired_batches)} expired batches requiring disposal."
+        f"We found {len(out_of_stock)} items completely out of stock, "
+        f"{len(low_stock)} items below reorder thresholds, and "
+        f"{len(expired_batches)} expired batches requiring disposal. "
+        f"There are {len(expiring_soon_batches)} batches expiring in the next 7 days, "
+        f"representing a near-term waste risk of "
+        f"${expiring_soon_waste_value:.2f}. "
+        f"Total waste exposure including expired stock is "
+        f"${total_waste_exposure:.2f}."
     )
-    if expiring_soon_batches:
-        summary_text += f" There are {len(expiring_soon_batches)} batches expiring in the next 7 days, representing a waste risk of ${waste_risk_cost:.2f}."
-
-    recommendations = []
-    if out_of_stock:
-        names = ", ".join([p["name"] for p in out_of_stock[:3]])
-        recommendations.append(f"Immediate Action: Replenish out-of-stock items: {names}.")
-    if expiring_soon_batches:
-        names = ", ".join([f"{b['product_name']} (Qty: {b['quantity']})" for b in expiring_soon_batches[:2]])
-        recommendations.append(f"Waste Prevention: Prioritize usage of expiring batches: {names}.")
-    if low_stock:
-        names = ", ".join([p["name"] for p in low_stock[:3]])
-        recommendations.append(f"Inventory Health: Create Purchase Orders for low-stock items: {names}.")
-    if not recommendations:
-        recommendations.append("All stock levels are optimal. Continue monitoring weekly trends.")
 
     health_summary = {
         "status": health_status,
         "summary": summary_text,
         "recommendations": recommendations,
-        "waste_risk_value": round(waste_risk_cost, 2)
+        "waste_risk_value": round(total_waste_exposure, 2),
     }
 
     # 2. Reorder Suggestions
@@ -161,7 +208,15 @@ def generate_mock_insights(db: Session, organization_id: int) -> Dict[str, Any]:
             "unit": p["unit"],
             "priority": priority,
             "estimated_cost": round(suggested_qty * p["cost_price"], 2),
-            "reason": f"Stock is {p['current_stock']} {p['unit']}, which is below the reorder level of {p['reorder_level']} {p['unit']}."
+            "reason": (
+                f"Stock is 0 {p['unit']} and the item is out of stock."
+                if p["current_stock"] <= 0
+                else (
+                    f"Stock is {p['current_stock']} {p['unit']}, "
+                    f"which is below the reorder level of "
+                    f"{p['reorder_level']} {p['unit']}."
+                )
+            ),
         })
 
     # 3. Waste Analysis
@@ -174,7 +229,6 @@ def generate_mock_insights(db: Session, organization_id: int) -> Dict[str, Any]:
             # For mock simplicity, let's just make a mock list of slow moving items based on current stock high values.
             pass
 
-    # A simple heuristic for slow moving stock (stock > 50 and selling_price > 0)
     for p in products:
         if p["current_stock"] > p["reorder_level"] * 3 and p["current_stock"] > 20:
             dead_stock.append({
@@ -182,14 +236,14 @@ def generate_mock_insights(db: Session, organization_id: int) -> Dict[str, Any]:
                 "current_stock": p["current_stock"],
                 "unit": p["unit"],
                 "value": round(p["current_stock"] * p["cost_price"], 2),
-                "reason": "High stock level with low relative monthly velocity."
+                "reason": "High stock level relative to the configured reorder threshold."
             })
 
     waste_analysis = {
-        "expired_batches_value": round(sum(b["quantity"] * next((p["cost_price"] for p in products if p["name"] == b["product_name"]), 0.0) for b in expired_batches), 2),
-        "expiring_30_days_value": round(sum(b["quantity"] * next((p["cost_price"] for p in products if p["name"] == b["product_name"]), 0.0) for b in expiring_month_batches), 2),
+        "expired_batches_value": round(expired_waste_value, 2),
+        "expiring_7_days_value": round(expiring_soon_waste_value, 2),
         "expired_items_list": expired_batches[:5],
-        "dead_stock_recommendations": dead_stock[:3]
+        "dead_stock_recommendations": dead_stock[:3],
     }
 
     return {
@@ -279,35 +333,215 @@ def ask_ai_copilot(db: Session, organization_id: int, question: str) -> str:
         
         today = date.today()
         expiring_batches = []
+        expired_batches = []
+
         for b in batches:
             if not b["expiry_date"]:
                 continue
-            exp_date = date.fromisoformat(b["expiry_date"])
-            if exp_date < today or exp_date <= today + timedelta(days=7):
-                expiring_batches.append(f"{b['product_name']} (Batch: {b['batch_number']}, Expires: {b['expiry_date']})")
 
+            exp_date = date.fromisoformat(b["expiry_date"])
+
+            batch_text = (
+                f"{b['product_name']} "
+                f"(Batch: {b['batch_number']}, "
+                f"Expires: {b['expiry_date']})"
+            )
+
+            if exp_date < today:
+                expired_batches.append(batch_text)
+
+            elif exp_date <= today + timedelta(days=7):
+                expiring_batches.append(batch_text)
+        
         # 1. Answer reorder questions
         if "reorder" in q or "buy" in q or "purchase" in q:
-            if not low_stock_names:
-                return "Good news! All inventory levels are above reorder thresholds. There is no immediate need to reorder anything."
-            return f"You should reorder: {', '.join(low_stock_names)}. These items have fallen below their reorder safety thresholds."
+            low_stock_products = [
+               p for p in products
+               if p["current_stock"] > 0
+               and p["current_stock"] <= p["reorder_level"]
+            ]
+
+            out_of_stock_products = [
+                p for p in products
+                if p["current_stock"] <= 0
+            ]
+
+            recommendations = []
+
+            if out_of_stock_products:
+                recommendations.append(
+                    "Out of stock: "
+                    + ", ".join(
+                        f"{p['name']} ({p['unit']})"
+                        for p in out_of_stock_products
+                    )
+                )
+
+            if low_stock_products:
+                recommendations.append(
+                    "Below reorder level: "
+                    + ", ".join(
+                        f"{p['name']} ({p['current_stock']} {p['unit']})"
+                        for p in low_stock_products
+                    )
+                )
+
+            if not recommendations:
+                return (
+                    "Good news! No products are currently out of stock "
+                    "or below their reorder levels."
+                )
+
+            return "Reorder attention needed:\n- " + "\n- ".join(recommendations)
+        
+        # 2. Answer currently empty / out-of-stock questions
+        elif "empty" in q or "out of stock" in q:
+            out_of_stock_products = [
+                p for p in products
+                if p["current_stock"] <= 0
+            ]
+
+            if not out_of_stock_products:
+                return "There are currently no products with zero stock."
+
+            return (
+                "The following products are currently out of stock: "
+                + ", ".join(
+                    f"{p['name']} ({p['unit']})"
+                    for p in out_of_stock_products
+                )
+                + "."
+            )
+
+        # 3. Answer projected run-out questions
+        elif (
+            "run out" in q
+            or "running out" in q
+            or "depleted" in q
+        ):
+            forecast_risks = []
+
+            for p in products:
+                forecast = calculate_product_forecast(
+                    db=db,
+                    organization_id=organization_id,
+                    product_id=p["id"],
+                    days=30,
+                )
+
+                days_remaining = forecast.get("days_remaining")
+
+                if (
+                    days_remaining is not None
+                    and days_remaining <= 7
+                    and forecast["current_stock"] > 0
+                ):
+                    forecast_risks.append(forecast)
+
+            forecast_risks.sort(
+                key=lambda item: item["days_remaining"]
+            )
+
+            if not forecast_risks:
+                return (
+                    "Based on the last 30 days of consumption, "
+                    "no currently stocked products are projected "
+                    "to run out within the next 7 days."
+                )
+
+            lines = []
+
+            for item in forecast_risks[:5]:
+                lines.append(
+                    f"- {item['product_name']}: "
+                    f"{item['current_stock']} units available, "
+                    f"about {item['days_remaining']} days of stock remaining "
+                    f"at an average usage of "
+                    f"{item['avg_daily_usage']} per day."
+                )
+
+            return (
+                "The following products are projected to run out "
+                "within the next 7 days based on recent consumption:\n"
+                + "\n".join(lines)
+            )
             
-        # 2. Answer running out questions
-        elif "run out" in q or "depleted" in q or "empty" in q:
-            if not out_of_stock_names and not low_stock_names:
-                return "No items are currently running out. Stock levels are stable."
-            out_str = f"completely empty: {', '.join(out_of_stock_names)}" if out_of_stock_names else ""
-            low_str = f"running low: {', '.join(low_stock_names)}" if low_stock_names else ""
-            connector = " and " if (out_str and low_str) else ""
-            return f"The following items are {out_str}{connector}{low_str}. Consider placing a supplier order soon."
+        # 4. Answer running out questions
+        elif "run out" in q or "running out" in q or "depleted" in q:
+            forecast_risks = []
 
-        # 3. Answer expiring soon questions
-        elif "expire" in q or "expiry" in q or "spoil" in q:
+            for p in products:
+                forecast = calculate_product_forecast(
+                    db=db,
+                    organization_id=organization_id,
+                    product_id=p["id"],
+                    days=30,
+                )
+
+                days_remaining = forecast.get("days_remaining")
+
+                if (
+                    days_remaining is not None
+                    and days_remaining <= 7
+                    and forecast["current_stock"] > 0
+                ):
+                    forecast_risks.append(forecast)
+
+            forecast_risks.sort(
+                key=lambda item: item["days_remaining"]
+            )
+
+            if not forecast_risks:
+                return (
+                    "Based on the last 30 days of consumption, "
+                    "no currently stocked products are projected "
+                    "to run out within the next 7 days."
+                )
+
+            lines = []
+
+            for item in forecast_risks[:5]:
+                lines.append(
+                    f"- {item['product_name']}: "
+                    f"{item['current_stock']} units available, "
+                    f"about {item['days_remaining']} days of stock remaining "
+                    f"at an average usage of "
+                    f"{item['avg_daily_usage']} per day."
+                )
+
+            return (
+                "The following products are projected to run out "
+                "within the next 7 days based on recent consumption:\n"
+                + "\n".join(lines)
+            )
+        # 5. Answer expiring soon questions
+        elif "expir" in q or "spoil" in q:
+
+            if "expired" in q or "already expired" in q:
+                if not expired_batches:
+                    return "There are currently no expired batches."
+
+                return (
+                    "The following batches are already expired:\n"
+                    + "\n".join(
+                        f"- {b}" for b in expired_batches[:5]
+                    )
+                )
+
             if not expiring_batches:
-                return "We scanned your active batches and found no products expired or expiring within the next 7 days."
-            return f"The following batches are expired or expiring this week:\n" + "\n".join([f"- {b}" for b in expiring_batches[:5]])
+                return (
+                    "We scanned your active batches and found no products "
+                    "expiring within the next 7 days."
+                )
 
-        # 4. Answer waste questions
+            return (
+                "The following batches are expiring within the next 7 days:\n"
+                + "\n".join(
+                    f"- {b}" for b in expiring_batches[:5]
+                )
+            )
+            
+        # 6. Answer waste questions
         elif "waste" in q or "loss" in q or "dead" in q:
             expired_cost = sum(b["quantity"] * next((p["cost_price"] for p in products if p["name"] == b["product_name"]), 0.0) for b in batches if b["expiry_date"] and date.fromisoformat(b["expiry_date"]) < today)
             return (

@@ -1,8 +1,11 @@
+import logging
+
+logger = logging.getLogger(__name__)
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_db, get_current_user
+from app.core.deps import get_db, get_current_user, require_owner
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -88,11 +91,12 @@ def register_organization_and_owner(
         db.rollback()
         raise
 
-    except Exception as e:
+    except Exception:
         db.rollback()
+        logger.exception("Organization registration failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Registration failed: {str(e)}"
+            detail="Registration failed. Please try again.",
         )
 
 @router.post("/login", response_model=Token)
@@ -150,13 +154,26 @@ def refresh_token(
         )
     
     user_id = payload.get("sub")
-    if not user_id:
+
+    if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token subject"
+            detail="Invalid token subject",
         )
 
-    user = db.query(User).filter(User.id == int(user_id)).first()
+    try:
+        user_id_int = int(user_id)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token subject",
+        )
+
+    user = (
+        db.query(User)
+        .filter(User.id == user_id_int)
+        .first()
+    )
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -225,14 +242,9 @@ def get_organization_details(
 def update_subscription(
     req: SubscriptionUpgradeRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_owner)
 ):
     # Only Owners can manage subscriptions
-    if current_user.role != "Owner":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the Organization Owner can modify billing and subscription tiers."
-        )
     
     tier = req.tier
     if tier not in ["Free", "Pro", "Enterprise"]:
@@ -250,19 +262,19 @@ def update_subscription(
     
     org.subscription_tier = tier
     org.subscription_status = "active"
-    db.commit()
-    db.refresh(org)
 
-    # Log Audit Log
     audit = AuditLog(
         organization_id=org.id,
         user_id=current_user.id,
-        action=f"UPGRADE_SUBSCRIPTION_{tier.upper()}",
+        action=f"CHANGE_SUBSCRIPTION_{tier.upper()}",
         entity_type="organization",
-        entity_id=org.id
+        entity_id=org.id,
     )
+
     db.add(audit)
+
     db.commit()
+    db.refresh(org)
 
     # Compute usage counts
     products_count = db.query(Product).filter(Product.organization_id == org.id).count()

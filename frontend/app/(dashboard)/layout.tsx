@@ -19,6 +19,7 @@ import {
   Users,
   Sparkles,
   Settings,
+  Factory,
   LogOut,
   Menu,
   X,
@@ -106,6 +107,7 @@ export default function DashboardLayout({
     { name: "Team Members", href: "/team", icon: Users },
     { name: "AI Insights", href: "/ai-insights", icon: Sparkles },
     { name: "Settings", href: "/settings", icon: Settings },
+    { name: "Production", href: "/production", icon: Factory },
   ];
 
   const handleLogout = () => {

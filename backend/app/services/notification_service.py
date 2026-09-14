@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-
+from fastapi import HTTPException, status
 from app.models.models import Notification
 
 
@@ -11,7 +11,6 @@ def create_notification(
     message: str,
     notification_type: str,
 ):
-
     existing = (
         db.query(Notification)
         .filter(
@@ -34,11 +33,9 @@ def create_notification(
     )
 
     db.add(notification)
-    db.commit()
-    db.refresh(notification)
+    db.flush()
 
     return notification
-
 
 def list_notifications(
     db: Session,
@@ -101,9 +98,14 @@ def mark_as_read(
         .first()
     )
 
-    if notification:
-        notification.is_read = True
-        db.commit()
+    if not notification:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notification not found",
+        )
+
+    notification.is_read = True
+    db.flush()
 
     return notification
 
@@ -119,11 +121,12 @@ def mark_all_as_read(
             Notification.is_read == False,
         )
         .update(
-            {"is_read": True}
+            {"is_read": True},
+            synchronize_session=False,
         )
     )
 
-    db.commit()
+    db.flush()
 
 
 def delete_notification(
@@ -140,8 +143,13 @@ def delete_notification(
         .first()
     )
 
-    if notification:
-        db.delete(notification)
-        db.commit()
+    if not notification:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Notification not found",
+        )
+
+    db.delete(notification)
+    db.flush()
 
     return notification

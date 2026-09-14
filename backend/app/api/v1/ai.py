@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends
 
 from app.core.deps import get_db, get_current_user, require_staff
-from app.models.models import User
+from app.models.models import User, Product
 from app.schemas.schemas import AICopilotRequest, AICopilotResponse, AIInsightsResponse
 from app.services.ai_service import get_ai_insights, ask_ai_copilot
 from sqlalchemy.orm import Session
+from app.services.analytics_service import get_low_stock_products
 
 router = APIRouter(prefix="/ai", tags=["AI Copilot & Recommendations"])
 
@@ -27,58 +28,81 @@ def get_insights(
     return insights_data
 
 @router.post("/copilot", response_model=AICopilotResponse)
+@router.post("/copilot")
 def chat_copilot(
     request: AICopilotRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_staff),
 ):
-    products = get_low_stock_products(...)
+    question = request.question.strip()
+    question_lower = question.lower()
 
-    if not products:
+    organization_id = current_user.organization_id
+
+    # ---------------------------------------------------------
+    # 1. Out-of-stock questions
+    # ---------------------------------------------------------
+    if (
+        "out of stock" in question_lower
+        or "out-of-stock" in question_lower
+        or "zero stock" in question_lower
+    ):
+        products = (
+            db.query(Product)
+            .filter(
+                Product.organization_id == organization_id,
+                Product.current_stock <= 0,
+            )
+            .order_by(Product.name.asc())
+            .all()
+        )
+
+        if not products:
+            return {
+                "question": question,
+                "answer": "There are currently no products out of stock.",
+                "data": [],
+            }
+
+        data = [
+            {
+                "product_id": product.id,
+                "product_name": product.name,
+                "current_stock": float(product.current_stock or 0),
+                "unit": product.unit,
+                "reorder_level": float(product.reorder_level or 0),
+                "is_finished_product": bool(
+                    product.is_finished_product
+                ),
+            }
+            for product in products
+        ]
+
+        names = ", ".join(
+            f"{item['product_name']} ({item['current_stock']} {item['unit']})"
+            for item in data
+        )
+
         return {
             "question": question,
-            "answer": "No products are below their reorder level."
+            "answer": (
+                f"{len(data)} product(s) are currently out of stock: "
+                f"{names}."
+            ),
+            "data": data,
         }
 
-    return {
-        "question": question,
-        "answer": (
-            f"You currently have "
-            f"{len(products)} products below their reorder level."
-        ),
-        "data": products
-    }
-
-    batches = get_expiring_batches(...)
-
-    if not batches:
-        return {
-            "question": question,
-            "answer": "No inventory is expiring soon."
-        }
-
-    return {
-        "question": question,
-        "answer": (
-            f"{len(batches)} batches will expire soon."
-        ),
-        "data": batches
-    }
-
-    supplier = suppliers["suppliers"][0]
-
-    return {
-        "question": question,
-        "answer": (
-            f"{supplier['supplier_name']} "
-            f"is your top supplier with "
-            f"₹{supplier['total_spend']} in purchases."
-        ),
-        "data": suppliers
-    }
-
-    return ask_ai_copilot(
+    # ---------------------------------------------------------
+    # 2. Other Copilot questions
+    # ---------------------------------------------------------
+    copilot_answer = ask_ai_copilot(
         db=db,
-        organization_id=current_user.organization_id,
-        question=request.question,
+        organization_id=organization_id,
+        question=question,
     )
+
+    return {
+        "question": question,
+        "answer": copilot_answer,
+        "data": [],
+    }

@@ -34,7 +34,7 @@ export default function AIInsightsPage() {
       return res.data;
     }
   });
-
+  
   // Copilot Mutation
   const copilotMutation = useMutation({
     mutationFn: async (question: string) => {
@@ -79,6 +79,16 @@ export default function AIInsightsPage() {
 
   if (isLoading) {
     return (
+      <div className="min-h-[400px] flex items-center justify-center">
+        <div className="text-sm font-medium text-slate-500">
+          Loading AI Insights...
+        </div>
+      </div>
+    );
+  }
+  
+  if (isLoading) {
+    return (
       <div className="space-y-6 animate-pulse">
         <div className="space-y-2">
           <div className="h-9 w-64 bg-slate-200 rounded-xl"></div>
@@ -107,7 +117,21 @@ export default function AIInsightsPage() {
     );
   }
 
-  const { health_summary, reorder_suggestions, waste_analysis } = insights;
+  const {
+    health_summary = {
+      status: "Loading",
+      summary: "",
+      recommendations: [],
+      waste_risk_value: 0,
+    },
+    reorder_suggestions = [],
+    waste_analysis = {
+      expired_batches_value: 0,
+      expiring_7_days_value: 0,
+      expired_items_list: [],
+      dead_stock_recommendations: [],
+    },
+  } = insights ?? {};
 
   return (
     <div className="space-y-8">
@@ -289,7 +313,7 @@ export default function AIInsightsPage() {
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Expiring within 30 Days</span>
-                    <span className="text-sm font-extrabold text-amber-600 font-mono">${waste_analysis.expiring_30_days_value.toFixed(2)}</span>
+                    <span className="text-sm font-extrabold text-amber-600 font-mono">${waste_analysis.expiring_7_days_value.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

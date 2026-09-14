@@ -188,7 +188,6 @@ def supplier_performance(
     return {
         "count": len(suppliers),
         "suppliers": suppliers,
-        "last_purchase": row.last_purchase,
     }
 
 def inventory_ledger(

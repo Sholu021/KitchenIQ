@@ -58,6 +58,7 @@ def create_new_recipe(
     cost = calculate_recipe_cost(
         db=db,
         recipe_id=recipe.id,
+        organization_id=current_user.organization_id,
     )
 
     out = RecipeOut.model_validate(recipe)
@@ -86,6 +87,7 @@ def list_recipes(
         cost = calculate_recipe_cost(
             db=db,
             recipe_id=recipe.id,
+            organization_id=current_user.organization_id,
         )
 
         schema_out = RecipeOut.model_validate(recipe)
@@ -119,6 +121,7 @@ def get_recipe(
     cost = calculate_recipe_cost(
         db=db,
         recipe_id=recipe.id,
+        organization_id=current_user.organization_id,
     )
 
     out = RecipeOut.model_validate(recipe)
@@ -165,4 +168,5 @@ def recipe_cost(
     return calculate_recipe_cost(
         db=db,
         recipe_id=recipe_id,
+        organization_id=current_user.organization_id,
     )

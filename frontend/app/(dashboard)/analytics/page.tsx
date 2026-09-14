@@ -158,7 +158,7 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={288} minWidth={0}>
               <AreaChart data={sales_trend} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorSalesAnalytics" x1="0" y1="0" x2="0" y2="1">
@@ -191,7 +191,7 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={288} minWidth={0}>
               <AreaChart data={wastage_trend} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorWastageAnalytics" x1="0" y1="0" x2="0" y2="1">
@@ -235,7 +235,7 @@ export default function AnalyticsPage() {
           ) : (
             <div className="flex flex-col items-center justify-center space-y-6">
               <div className="h-48 w-48 relative">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={192} minWidth={0}>
                   <PieChart>
                     <Pie
                       data={category_breakdown}
@@ -287,7 +287,7 @@ export default function AnalyticsPage() {
             </div>
           ) : (
             <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={256} minWidth={0}>
                 <BarChart data={inventory_velocity} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                   <CartesianGrid stroke="#f1f5f9" strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="product_name" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />

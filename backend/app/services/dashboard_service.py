@@ -7,6 +7,7 @@ from app.models.models import (
     Recipe,
     Product,
     PurchaseOrder,
+    Batch,
 )
 
 from app.services.analytics_service import (
@@ -108,51 +109,33 @@ def dashboard_overview(
         },
     }
 
-def get_top_selling_products(
+def get_top_selling_recipes(
     db: Session,
     organization_id: int,
 ):
-    
-    top_products = (
+    results = (
         db.query(
-            SaleItem.recipe_id,
             Recipe.name.label("recipe_name"),
             func.sum(SaleItem.quantity).label("quantity_sold"),
             func.sum(SaleItem.revenue).label("revenue"),
         )
-        .join(
-            Sale,
-            Sale.id == SaleItem.sale_id,
-        )
-        .join(
-            Recipe,
-            Recipe.id == SaleItem.recipe_id,
-        )
-
-        .filter(
-            Sale.organization_id == organization_id,
-        )
-        .group_by(
-            SaleItem.recipe_id,
-            Recipe.name,
-        )
-        .order_by(
-            func.sum(SaleItem.quantity).desc(),
-        )
-        .limit(10)
+        .join(SaleItem, SaleItem.recipe_id == Recipe.id)
+        .join(Sale, Sale.id == SaleItem.sale_id)
+        .filter(Sale.organization_id == organization_id)
+        .group_by(Recipe.id, Recipe.name)
+        .order_by(func.sum(SaleItem.quantity).desc())
+        .limit(5)
         .all()
     )
 
     return [
         {
-            "recipe_id": row.recipe_id,
-            "recipe_name": row.recipe_name,
-            "quantity_sold": int(row.quantity_sold),
-            "revenue": round(float(row.revenue), 2),
+            "recipe_name": r.recipe_name,
+            "quantity_sold": float(r.quantity_sold or 0),
+            "revenue": float(r.revenue or 0),
         }
-        for row in top_products
+        for r in results
     ]
-
 def get_top_profitable_items(
     db: Session,
     organization_id: int,
@@ -202,3 +185,177 @@ def get_top_profitable_items(
         ],
     }
  
+def get_top_selling_products(
+    db: Session,
+    organization_id: int,
+    limit: int = 5,
+):
+    rows = (
+        db.query(
+            Recipe.id.label("product_id"),
+            Recipe.name.label("product_name"),
+            func.sum(SaleItem.quantity).label("quantity_sold"),
+        )
+        .join(SaleItem, SaleItem.recipe_id == Recipe.id)
+        .filter(Recipe.organization_id == organization_id)
+        .group_by(Recipe.id, Recipe.name)
+        .order_by(func.sum(SaleItem.quantity).desc())
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        {
+            "product_id": row.product_id,
+            "product_name": row.product_name,
+            "quantity_sold": int(row.quantity_sold or 0),
+        }
+        for row in rows
+    ]
+
+def get_low_stock_items(
+    db: Session,
+    organization_id: int,
+):
+    products = (
+        db.query(Product)
+        .filter(
+            Product.organization_id == organization_id,
+            Product.current_stock <= Product.reorder_level,
+        )
+        .order_by(Product.current_stock.asc())
+        .all()
+    )
+
+    return [
+        {
+            "id": p.id,
+            "name": p.name,
+            "stock": float(p.current_stock),
+            "unit": p.unit,
+            "reorder_level": float(p.reorder_level),
+        }
+        for p in products
+    ]
+
+def get_expiring_items(
+    db: Session,
+    organization_id: int,
+):
+    from datetime import date
+
+    batches = (
+        db.query(Batch)
+        .join(Product, Product.id == Batch.product_id)
+        .filter(
+            Batch.organization_id == organization_id,
+            Batch.remaining_quantity > 0,
+            Batch.expiry_date.isnot(None),
+)
+        .order_by(Batch.expiry_date.asc())
+        .limit(10)
+        .all()
+    )
+
+    today = date.today()
+
+    result = []
+
+    for batch in batches:
+        days_left = (batch.expiry_date - today).days
+
+        result.append(
+            {
+                "id": batch.id,
+                "name": batch.product.name,
+                "quantity": float(batch.remaining_quantity),
+                "unit": batch.product.unit,
+                "expiry_date": batch.expiry_date,
+                "days_left": days_left,
+            }
+        )
+
+    return result
+
+def get_inventory_value_trend(
+    db: Session,
+    organization_id: int,
+    days: int = 30,
+):
+    start_date = datetime.utcnow() - timedelta(days=days)
+
+    rows = (
+        db.query(
+            func.date(Batch.created_at).label("date"),
+            func.sum(
+                Batch.remaining_quantity * Batch.purchase_price
+            ).label("inventory_value"),
+        )
+        .filter(
+            Batch.organization_id == organization_id,
+            Batch.created_at >= start_date,
+            Batch.remaining_quantity > 0,
+        )
+        .group_by(func.date(Batch.created_at))
+        .order_by(func.date(Batch.created_at))
+        .all()
+    )
+
+    return [
+        {
+            "date": str(row.date),
+            "inventory_value": round(
+                float(row.inventory_value or 0),
+                2,
+            ),
+        }
+        for row in rows
+    ]
+
+def get_inventory_turnover(
+    db: Session,
+    organization_id: int,
+):
+    # Total COGS
+    total_cogs = (
+        db.query(
+            func.coalesce(
+                func.sum(Sale.cost_of_goods_sold),
+                0.0,
+            )
+        )
+        .filter(
+            Sale.organization_id == organization_id,
+        )
+        .scalar()
+    )
+
+    # Current inventory value
+    inventory_value = (
+        db.query(
+            func.coalesce(
+                func.sum(
+                    Batch.remaining_quantity
+                    * Batch.purchase_price
+                ),
+                0.0,
+            )
+        )
+        .filter(
+            Batch.organization_id == organization_id,
+            Batch.remaining_quantity > 0,
+        )
+        .scalar()
+    )
+
+    turnover = (
+        round(float(total_cogs) / float(inventory_value), 2)
+        if inventory_value > 0
+        else 0
+    )
+
+    return {
+        "inventory_turnover": turnover,
+        "total_cogs": round(float(total_cogs), 2),
+        "inventory_value": round(float(inventory_value), 2),
+    }

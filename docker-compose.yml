@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: kitcheniq_password
       POSTGRES_DB: kitcheniq_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -29,8 +29,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://kitcheniq_user:kitcheniq_password@db:5432/kitcheniq_db
-      - JWT_SECRET=supersecretjwtsecretkeykitcheniqai2026!
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
       - JWT_ALGORITHM=HS256
       - ACCESS_TOKEN_EXPIRE_MINUTES=60
       - REFRESH_TOKEN_EXPIRE_DAYS=7

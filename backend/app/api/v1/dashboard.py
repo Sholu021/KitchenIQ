@@ -14,11 +14,21 @@ from app.models.models import (
     RecipeIngredient,
     InventoryTransaction,
     PurchaseOrder,
+    WastageLog,
 )
 from app.services.executive_dashboard_service import (
     executive_dashboard,
 )
-from app.services.dashboard_service import dashboard_overview, get_top_selling_products
+from app.services.dashboard_service import (
+    dashboard_overview,
+    get_top_selling_products,
+    get_top_selling_recipes,
+    get_low_stock_items,
+    get_expiring_items,
+    get_inventory_value_trend,
+    get_inventory_turnover,
+)
+from app.services.business_health_service import BusinessHealthService
 from app.services.report_service import sales_trend, abc_inventory_analysis, supplier_performance, inventory_ledger
 from app.services.customer_report_service import customer_dashboard
 from app.services.sales_report_service import sales_dashboard
@@ -397,7 +407,12 @@ def get_inventory_summary(
         )
         .scalar()
     )
-
+    
+    business_health = BusinessHealthService.business_health(
+        db=db,
+        organization_id=org_id,
+    )
+    
     return {
         "total_products": int(total_products),
         "total_stock_value": float(total_stock_value),
@@ -407,6 +422,8 @@ def get_inventory_summary(
         "expiring_7_days": int(expiring_7_days),
         "expiring_30_days": int(expiring_30_days),
         "inventory_value_at_risk": float(inventory_value_at_risk),
+        "ai_score": business_health["score"],
+        "business_grade": business_health["grade"],
     }
 
 @router.get("/reorder-insights", response_model=dict)
@@ -717,11 +734,40 @@ def executive_summary(
         .scalar()
     )
 
+    # Total Orders
+    total_orders = (
+        db.query(func.count(Sale.id))
+        .filter(Sale.organization_id == org_id)
+        .scalar()
+    )
+
+    average_order_value = (
+        round(revenue / total_orders, 2)
+        if total_orders > 0
+        else 0
+    )
+
     # Profit
     profit = (
         db.query(func.coalesce(func.sum(Sale.gross_profit), 0.0))
         .filter(Sale.organization_id == org_id)
         .scalar()
+    )
+    gross_margin_percentage = (
+        round((profit / revenue) * 100, 2)
+        if revenue > 0
+        else 0
+    )
+    # Total Cost of Goods Sold
+    food_cost = (
+        db.query(func.coalesce(func.sum(Sale.cost_of_goods_sold), 0.0))
+        .filter(Sale.organization_id == org_id)
+        .scalar()
+    )
+    food_cost_percentage = (
+        round((food_cost / revenue) * 100, 2)
+        if revenue > 0
+        else 0
     )
 
     # Inventory Value
@@ -739,6 +785,25 @@ def executive_summary(
             Batch.remaining_quantity > 0,
         )
         .scalar()
+    )
+    
+    # Today's Waste Cost
+    today = datetime.utcnow().date()
+
+    waste_today = (
+        db.query(
+            func.coalesce(func.sum(WastageLog.cost_loss), 0.0)
+        )
+        .filter(
+            WastageLog.organization_id == org_id,
+            func.date(WastageLog.created_at) == today,
+        )
+        .scalar()
+    )
+    waste_percentage = (
+        round((waste_today / inventory_value) * 100, 2)
+        if inventory_value > 0
+        else 0
     )
 
     # Products
@@ -773,19 +838,42 @@ def executive_summary(
         db.query(func.count(PurchaseOrder.id))
         .filter(
             PurchaseOrder.organization_id == org_id,
-            PurchaseOrder.status == "DRAFT",
+            PurchaseOrder.status.in_([
+                "DRAFT",
+                "PENDING_APPROVAL",
+                "SENT",
+            ]),
         )
         .scalar()
+    )
+    
+    business_health = BusinessHealthService.business_health(
+        db=db,
+        organization_id=org_id,
+    )
+    inventory_turnover_data = get_inventory_turnover(
+        db=db,
+        organization_id=org_id,
     )
 
     return {
         "revenue": round(revenue, 2),
         "profit": round(profit, 2),
+        "gross_margin_percentage": gross_margin_percentage,
         "inventory_value": round(inventory_value, 2),
+        "food_cost_percentage": food_cost_percentage,
+        "waste_today": round(waste_today, 2),
+        "waste_percentage": waste_percentage,
         "total_products": total_products,
         "active_batches": active_batches,
         "low_stock_products": low_stock,
+        "total_orders": total_orders,
+        "average_order_value": average_order_value,
+        "inventory_turnover": inventory_turnover_data["inventory_turnover"],
         "pending_purchase_orders": pending_po,
+        "ai_score": business_health["score"],
+        "business_grade": business_health["grade"],
+        "business_status": business_health["status"],
     }
 
 @router.get("/inventory-value")
@@ -794,6 +882,15 @@ def get_inventory_value(
     current_user: User = Depends(require_staff),
 ):
     return calculate_inventory_value(
+        db=db,
+        organization_id=current_user.organization_id,
+    )
+@router.get("/inventory-value-trend", response_model=list)
+def inventory_value_trend(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff),
+):
+    return get_inventory_value_trend(
         db=db,
         organization_id=current_user.organization_id,
     )
@@ -828,6 +925,36 @@ def get_sales_trend(
         db=db,
         organization_id=current_user.organization_id,
         days=days,
+    )
+
+@router.get("/low-stock")
+def low_stock(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff),
+):
+    return get_low_stock_items(
+        db=db,
+        organization_id=current_user.organization_id,
+    )
+
+@router.get("/expiring-items")
+def expiring_items(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff),
+):
+    return get_expiring_items(
+        db=db,
+        organization_id=current_user.organization_id,
+    )
+    
+@router.get("/top-selling-recipes")
+def top_selling_recipes(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_top_selling_recipes(
+        db=db,
+        organization_id=current_user.organization_id,
     )
 
 @router.get("/abc-analysis")

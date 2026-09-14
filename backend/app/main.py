@@ -48,7 +48,6 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing database tables...")
 
     logger.info("=" * 80)
-    logger.info("DATABASE_URL: %s", DATABASE_URL)
     logger.info("TABLES: %s", list(Base.metadata.tables.keys()))
     logger.info("=" * 80)
 
@@ -114,15 +113,24 @@ origins = [
     "http://127.0.0.1:3000",
     "https://kitcheniq-frontend.vercel.app",
 ]
+
 env_origins = os.getenv("ALLOWED_ORIGINS")
+
 if env_origins:
-    origins.extend([o.strip() for o in env_origins.split(",") if o.strip()])
+    origins.extend(
+        [
+            origin.strip()
+            for origin in env_origins.split(",")
+            if origin.strip()
+        ]
+    )
+
+# Remove duplicates while preserving order
+origins = list(dict.fromkeys(origins))
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-    ],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -140,7 +148,6 @@ def on_startup():
     logger.info("Initializing database tables...")
 
     logger.info("=" * 80)
-    logger.info("DATABASE_URL: %s", DATABASE_URL)
     logger.info("TABLES: %s", list(Base.metadata.tables.keys()))
     logger.info("=" * 80)
 

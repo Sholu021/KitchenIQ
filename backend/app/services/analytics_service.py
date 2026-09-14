@@ -254,12 +254,12 @@ def get_low_stock_products(
                 "unit": product.unit,
             }
         )
-    if low_stock:
+    if result:
         create_notification(
             db=db,
             organization_id=organization_id,
             title="Low Stock Alert",
-            message=f"{len(low_stock)} product(s) are below the reorder level.",
+            message=f"{len(result)} product(s) are below the reorder level.",
             notification_type="WARNING",
         )
 
@@ -465,5 +465,27 @@ def inventory_health(
                 "status": status,
             }
         )
+        
+    health_candidates = [
+        item
+        for item in results
+        if item["status"] != "NO CONSUMPTION"
+    ] 
 
-    return results
+    if health_candidates:
+        healthy_count = sum(
+            1
+            for item in health_candidates
+            if item["status"] == "OK"
+        )
+
+        health_score = round(
+            (healthy_count / len(health_candidates)) * 100
+        )
+    else:
+        health_score = 100
+
+    return {
+        "health_score": health_score,
+        "products": results,
+    }

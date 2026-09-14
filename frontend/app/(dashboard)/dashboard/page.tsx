@@ -29,23 +29,27 @@ import {
   ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from "next/navigation";
 import {
   getExecutiveSummary,
   getProfitSummary,
+  getSalesTrend,
+  getTopSellingRecipes,
+  getLowStockItems,
+  getExpiringItems,
+  getRecentActivity,
+  getAIInsights,
 } from "@/lib/dashboard";
+
 export default function DashboardPage() {
+  const router = useRouter();
+
   const userName = useAuthStore((state) => state.userName);
   const [poStatus, setPoStatus] = useState<string | null>(null);
   const [chartFilter, setChartFilter] = useState<'today' | '7days' | '30days' | '12months'>('7days');
 
   // Interactive tasks checklist state
-  const [tasks, setTasks] = useState([
-    { id: 1, text: "Order Tomatoes", checked: false, action: "Reorder", link: "/products" },
-    { id: 2, text: "Receive Fresh Farms delivery", checked: false, action: "Receive", link: "/purchase-orders" },
-    { id: 3, text: "Check Milk expiry", checked: false, action: "Inspect", link: "/inventory" },
-    { id: 4, text: "Update Chicken stock", checked: false, action: "Update", link: "/products" },
-    { id: 5, text: "Review purchase invoices", checked: false, action: "Review", link: "/purchase-orders" }
-  ]);
+  
 
   const toggleTask = (id: number) => {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, checked: !t.checked } : t));
@@ -74,10 +78,16 @@ export default function DashboardPage() {
   };
 
   // Fetch Dashboard Summary
-  const { data, isLoading, isError, error } = useQuery({
+  const {
+    data: executive,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ["executive-summary"],
     queryFn: getExecutiveSummary,
   });
+
   const {
     data: profitSummary,
     isLoading: profitLoading,
@@ -87,6 +97,32 @@ export default function DashboardPage() {
     queryKey: ["profit-summary"],
     queryFn: getProfitSummary,
   });
+
+  const { data: topSellingRecipesData } = useQuery({
+    queryKey: ["top-selling-recipes"],
+    queryFn: getTopSellingRecipes,
+  });
+
+  const { data: salesTrendData } = useQuery({
+    queryKey: ["sales-trend"],
+    queryFn: getSalesTrend,
+  });
+  
+  const { data: aiInsightsData = [] } = useQuery({
+    queryKey: ["ai-insights"],
+    queryFn: getAIInsights,
+  });
+
+  const { data: lowStockData = [] } = useQuery({
+    queryKey: ["low-stock"],
+    queryFn: getLowStockItems,
+  });
+
+  const { data: expiringItemsData = [] } = useQuery({
+    queryKey: ["expiring-items"],
+    queryFn: getExpiringItems,
+  });
+
   console.log("Loading:", profitLoading);
   console.log("Error:", profitError);
   console.log("Error Details:", profitErrorDetails);
@@ -119,66 +155,41 @@ export default function DashboardPage() {
       </div>
     );
   }
-  const cards = data?.cards ?? {};
+  const cards = executive ?? {};
 
-  const topSellingRecipes = Array.isArray(data?.top_selling_recipes)
-    ? data.top_selling_recipes
-    : [];
-  const recipes = data?.top_selling_recipes ?? [];
-  const salesTrend = Array.isArray(data?.sales_trend)
-    ? data.sales_trend
-    : [];
-  const lowStockItems = Array.isArray(data?.low_stock_items)
-  ? data.low_stock_items
-  : [];
-
-  const expiringItems = Array.isArray(data?.expiring_items)
-    ? data.expiring_items
+  // Temporary placeholders.
+  // We'll replace these with real API queries one by one.
+  const topSellingRecipes = Array.isArray(topSellingRecipesData)
+    ? topSellingRecipesData
     : [];
 
-  const recentActivity = Array.isArray(data?.recent_activity)
-    ? data.recent_activity
+  const recipes = topSellingRecipes;
+
+  const lowStockItems = Array.isArray(lowStockData)
+    ? lowStockData
     : [];
 
-  const aiInsights = [];
+  const expiringItems = Array.isArray(expiringItemsData)
+    ? expiringItemsData
+    : [];
 
-  if (lowStockItems.length > 0) {
-    aiInsights.push({
-      color: "rose",
-      text: `${lowStockItems[0].name} is below its reorder level. Only ${lowStockItems[0].stock} ${lowStockItems[0].unit} remaining.`
-    });
-  }
+  const expiringSoonItems = expiringItems.filter(
+    (item: any) => item.days_left <= 7
+  );
 
-  if (expiringItems.length > 0) {
-    const item = expiringItems[0];
+  const expiringSoonCount = expiringSoonItems.length;
 
-    aiInsights.push({
-      color: "amber",
-      text:
-        item.days_left <= 0
-          ? `${item.name} has expired. Remove it from inventory immediately.`
-          : `${item.name} expires in ${item.days_left} day${item.days_left > 1 ? "s" : ""}.`
-   });
-  }
 
-  if (topSellingRecipes.length > 0) {
-    aiInsights.push({
-      color: "emerald",
-      text: `${topSellingRecipes[0].recipe_name} is today's best-selling recipe (${topSellingRecipes[0].quantity_sold} sold).`
-    });
-  }
 
-  if (cards?.inventory_health >= 90) {
-    aiInsights.push({
-      color: "blue",
-      text: "Inventory health is excellent."
-    });
-  } else {
-    aiInsights.push({
-      color: "blue",
-      text: `Inventory health is ${cards?.inventory_health}% and needs attention.`
-    });
-  }
+  const salesTrend = Array.isArray(salesTrendData)
+    ? salesTrendData.map((item: any) => ({
+        date: item.date,
+        revenue: Number(item.revenue ?? 0),
+        profit: Number(item.profit ?? 0),
+      }))
+    : [];
+  const aiInsights = aiInsightsData?.insights ?? [];
+
   const recipe1 = topSellingRecipes[0];
   const recipe2 = topSellingRecipes[1];
   const recipe3 = topSellingRecipes[2];
@@ -189,13 +200,14 @@ export default function DashboardPage() {
     month: 'short',
     day: 'numeric'
   });
-  const inventoryHealth = cards?.inventory_health ?? 0;
+  
+  const healthColor =
+    (cards?.inventory_health ?? 0) >= 90
+      ? "#10b981" // Green
+      : (cards?.inventory_health ?? 0) >= 75
+      ? "#f59e0b" // Amber
+      : "#ef4444"; // Red
 
-  const unhealthy = 100 - inventoryHealth;
-
-  const critical = Math.round(unhealthy * 0.4);
-
-  const warning = unhealthy - critical;
   return (
     <div className="space-y-8">
 
@@ -232,7 +244,7 @@ export default function DashboardPage() {
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Today's Sales</span>
             <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">
-              ₹{Math.round((cards?.revenue_today ?? 0) * 80).toLocaleString('en-IN')}
+              ₹{Math.round((cards?.revenue ?? 0) * 80).toLocaleString('en-IN')}
             </span>
           </div>
           <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100/50 rounded px-1.5 py-0.5 mt-4 self-start">
@@ -245,10 +257,10 @@ export default function DashboardPage() {
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Inventory Value</span>
             <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">
-              ₹{Math.round((cards?.inventory_value ?? 0) * 80).toLocaleString('en-IN')}
+              ₹{Math.round(cards?.inventory_value ?? 0).toLocaleString("en-IN")}
             </span>
             <span className="text-2xl font-black text-slate-800">
-              {cards.inventory_health}%
+              N/A
             </span>
           
           </div>
@@ -257,16 +269,95 @@ export default function DashboardPage() {
           </span>
         </div>
 
+        {/* Card: Pending Purchase Orders */}
+        <div className="bg-white border border-slate-200/85 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200">
+          <div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+              Pending Purchase Orders
+            </span>
+
+            <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">
+              {cards?.pending_purchase_orders ?? 0}
+            </span>
+          </div>
+
+          <span
+            className={`text-[10px] font-bold rounded px-1.5 py-0.5 mt-4 self-start ${
+              (cards?.pending_purchase_orders ?? 0) > 0
+                ? "text-amber-600 bg-amber-50 border border-amber-100/50"
+                : "text-emerald-600 bg-emerald-50 border border-emerald-100/50"
+            }`}
+          >
+            {(cards?.pending_purchase_orders ?? 0) > 0
+              ? "Action required"
+              : "All clear"}
+          </span>
+        </div>
+
         {/* Card 3: Food Cost */}
         <div className="bg-white border border-slate-200/85 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200">
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Food Cost</span>
             <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">
-              28%
+              {(cards?.food_cost_percentage ?? 0).toFixed(2)}%
             </span>
           </div>
-          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100/50 rounded px-1.5 py-0.5 mt-4 self-start">
-            Target &lt;30%
+          <span
+            className={`text-[10px] font-bold rounded px-1.5 py-0.5 mt-4 self-start ${
+              (cards?.food_cost_percentage ?? 0) <= 30
+                ? "text-emerald-600 bg-emerald-50 border border-emerald-100"
+                : "text-rose-600 bg-rose-50 border border-rose-100"
+            }`}
+          >
+            {(cards?.food_cost_percentage ?? 0) <= 30
+              ? "Within Target"
+              : "Above Target"}
+          </span>
+        </div>
+        
+        {/* Card: Average Order Value */}
+        <div className="bg-white border border-slate-200/85 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200">
+          <div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+              Average Order Value
+            </span>
+
+            <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">
+              ₹{(cards?.average_order_value ?? 0).toFixed(2)}
+            </span>
+          </div>
+
+          <span className="text-[10px] font-semibold text-slate-400 mt-4 block">
+            {cards?.total_orders ?? 0} orders
+          </span>
+        </div>
+        
+        {/* Card: Gross Margin */}
+        <div className="bg-white border border-slate-200/85 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200">
+          <div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+              Gross Margin
+            </span>
+
+            <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">
+              {(cards?.gross_margin_percentage ?? 0).toFixed(2)}%
+            </span>
+          </div>
+
+          <span
+            className={`text-[10px] font-bold rounded px-1.5 py-0.5 mt-4 self-start ${
+              (cards?.gross_margin_percentage ?? 0) >= 60
+                ? "text-emerald-600 bg-emerald-50 border border-emerald-100"
+                : (cards?.gross_margin_percentage ?? 0) >= 45
+                ? "text-amber-600 bg-amber-50 border border-amber-100"
+                : "text-rose-600 bg-rose-50 border border-rose-100"
+            }`}
+          >
+            {(cards?.gross_margin_percentage ?? 0) >= 60
+              ? "Healthy Margin"
+              : (cards?.gross_margin_percentage ?? 0) >= 45
+              ? "Monitor Margin"
+              : "Low Margin"}
           </span>
         </div>
 
@@ -295,11 +386,19 @@ export default function DashboardPage() {
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Expiring Soon</span>
             <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">
-              {cards?.expiring_products ?? 0}
+              {expiringSoonCount}
             </span>
           </div>
-          <span className="text-[10px] font-semibold text-slate-400 mt-4 block">
-            Within 7 days
+          <span
+            className={`text-[10px] font-bold rounded px-1.5 py-0.5 mt-4 self-start ${
+              expiringSoonCount > 0
+                ? "text-amber-600 bg-amber-50 border border-amber-100/50"
+                : "text-emerald-600 bg-emerald-50 border border-emerald-100/50"
+            }`}
+          >
+            {expiringSoonCount > 0
+              ? `${expiringSoonCount} item${expiringSoonCount > 1 ? "s" : ""} need attention`
+              : "No items expiring soon"}
           </span>
         </div>
 
@@ -308,11 +407,17 @@ export default function DashboardPage() {
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Waste Today</span>
             <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">
-              ₹1,250
+              ₹{(cards?.waste_today ?? 0).toFixed(2)}
             </span>
           </div>
-          <span className="text-[10px] font-semibold text-slate-400 mt-4 block">
-            2.3% of inventory
+          <span
+            className={`text-[10px] font-semibold mt-4 block ${
+              (cards?.waste_percentage ?? 0) > 5
+                ? "text-rose-600"
+                : "text-slate-400"
+            }`}
+          >
+            {(cards?.waste_percentage ?? 0).toFixed(2)}% of inventory
           </span>
         </div>
 
@@ -329,7 +434,7 @@ export default function DashboardPage() {
                 📋 Today's Tasks
               </h3>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                {tasks.filter(t => t.checked).length}/{tasks.length} Completed
+                {lowStockItems.length} Action{lowStockItems.length === 1 ? "" : "s"}
               </span>
             </div>
 
@@ -399,17 +504,25 @@ export default function DashboardPage() {
                 <div
                   key={index}
                   className={`flex items-start gap-3 p-3 rounded-xl border ${
-                    item.color === "rose"
+                    item.type === "danger"
                       ? "bg-rose-50 border-rose-100 text-rose-700"
-                      : item.color === "amber"
+                      : item.type === "warning"
                       ? "bg-amber-50 border-amber-100 text-amber-700"
-                      : item.color === "emerald"
+                      : item.type === "success"
                       ? "bg-emerald-50 border-emerald-100 text-emerald-700"
                       : "bg-blue-50 border-blue-100 text-blue-700"
                   }`}
-               >
+                >
                   <Bot size={16} />
-                  <p className="text-xs font-medium">{item.text}</p>
+                  <div>
+                    <div className="font-bold text-xs">
+                      {item.title}
+                    </div>
+
+                    <div className="text-xs mt-1">
+                      {item.message}
+                    </div>
+                  </div>
                 </div>
 
               ))}
@@ -467,7 +580,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="h-60 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={230} minWidth={0}>
               <AreaChart
                 data={salesTrend}
                 margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
@@ -498,7 +611,7 @@ export default function DashboardPage() {
                   fontSize={10}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(v) => `₹${Math.round(v * 80)}`}
+                  tickFormatter={(v) => `₹${Math.round(v).toLocaleString("en-IN")}`}
                 />
 
                 <Tooltip
@@ -506,21 +619,33 @@ export default function DashboardPage() {
                     background: "#ffffff",
                     borderColor: "#e5e7eb",
                     borderRadius: "12px",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
                   }}
-                  formatter={(value: any) => [
-                    `₹${Math.round(value * 80).toLocaleString("en-IN")}`,
-                    "Revenue"
+                  formatter={(value: number, name: string) => [
+                    `₹${Number(value).toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`,
+                    name === "revenue" ? "Revenue" : "Profit",
                   ]}
                 />
 
                 <Area
                   type="monotone"
-                  dataKey="amount"
+                  dataKey="revenue"
                   stroke="#10b981"
                   strokeWidth={3}
                   fillOpacity={1}
                   fill="url(#colorSales)"
+                />
+                
+                <Area
+                  type="monotone"
+                  dataKey="profit"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  fillOpacity={0}
+                  fill="none"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -536,19 +661,46 @@ export default function DashboardPage() {
 
           <div className="flex flex-col items-center justify-center py-4 relative">
             {/* Custom circular segmented/donut visual simulator */}
-            <div className="w-32 h-32 rounded-full border-8 border-slate-100 flex items-center justify-center relative">
-              {/* Healthy indicator track */}
-              <div className="absolute inset-0 rounded-full border-8 border-emerald-500 border-t-transparent border-r-transparent rotate-45"></div>
-              {/* Low stock indicator track */}
-              <div className="absolute inset-0 rounded-full border-8 border-amber-500 border-b-transparent border-l-transparent rotate-12"></div>
-              {/* Critical indicator track */}
-              <div className="absolute inset-0 rounded-full border-8 border-rose-500 border-b-transparent border-t-transparent -rotate-45"></div>
-              <div className="text-center">
-                <span className="text-2xl font-black text-slate-800">
+            <div className="relative w-32 h-32 flex items-center justify-center">
+
+              <svg className="absolute w-32 h-32 -rotate-90">
+
+                <circle
+                  cx="64"
+                  cy="64"
+                  r="54"
+                  stroke="#e5e7eb"
+                  strokeWidth="10"
+                  fill="none"
+                />
+
+                <circle
+                  cx="64"
+                  cy="64"
+                  r="54"
+                  stroke={healthColor}
+                  strokeWidth="10"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeDasharray={339.3}
+                  strokeDashoffset={
+                    339.3 -
+                    (339.3 * (cards?.inventory_health ?? 0)) / 100
+                  }
+                />
+
+              </svg>
+
+              <div className="text-center z-10">
+                <div className="text-2xl font-black text-slate-800">
                   {cards?.inventory_health ?? 0}%
-                </span>
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mt-0.5">Healthy</span>
+                </div>
+
+                <div className="text-[10px] font-bold text-slate-500 uppercase">
+                  Health
+                </div>
               </div>
+
             </div>
           </div>
 
@@ -727,7 +879,7 @@ export default function DashboardPage() {
             
            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-              {expiringItems.length === 0 ? (
+              {expiringSoonItems.length === 0 ? (
 
                 <div className="col-span-2 text-center py-8 text-slate-400">
                   No expiring batches 🎉
@@ -735,61 +887,63 @@ export default function DashboardPage() {
 
               ) : (
 
-              expiringItems.map((item: any) => (
+              expiringSoonItems.map((item: any) => (
 
-                 <div
-                   key={item.id}
-                   className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3"
-                 >
+                <div
+                  key={item.id}
+                  className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3"
+                >
 
-                   <div>
+                  <div>
 
-                     <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between">
 
-                       <span className="font-bold text-slate-800">
-                         {item.name}
-                       </span>
+                      <span className="font-bold text-slate-800">
+                        {item.name}
+                      </span>
 
-                       <span
-                         className={`text-[10px] font-bold px-2 py-1 rounded-full ${
-                           item.days_left <= 0
-                             ? "bg-red-100 text-red-700"
-                             : item.days_left <= 2
-                             ? "bg-amber-100 text-amber-700"
-                             : "bg-blue-100 text-blue-700"
-                         }`}
-                       >
-                         {item.days_left <= 0
-                           ? "Expired"
-                           : `${item.days_left} day${item.days_left > 1 ? "s" : ""} left`}
-                       </span>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-1 rounded-full ${
+                          item.days_left <= 0
+                            ? "bg-red-100 text-red-700"
+                            : item.days_left <= 2
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-blue-100 text-blue-700"
+                        }`}
+                      >
+                        {item.days_left <= 0
+                          ? "Expired"
+                          : `${item.days_left} day${item.days_left > 1 ? "s" : ""} left`}
+                      </span>
 
-                     </div>
+                    </div>
 
-                     <span className="text-slate-500 text-xs block mt-2">
-                       Qty: {item.quantity} {item.unit}
-                     </span>
+                    <span className="text-slate-500 text-xs block mt-2">
+                      Qty: {item.quantity} {item.unit}
+                    </span>
 
-                     <span className="text-slate-400 text-xs">
-                       Exp: {new Date(item.expiry_date).toLocaleDateString()}
-                     </span>
+                    <span className="text-slate-400 text-xs">
+                      Exp: {new Date(item.expiry_date).toLocaleDateString()}
+                    </span>
 
-                   </div>
+                  </div>
 
-                   <button
-                     className="py-2 rounded-lg bg-emerald-500 text-white text-xs font-bold"
-                   >
-                     Use First
-                   </button>
+                  <button
+                    onClick={() => router.push("/inventory")}
+                    className="py-2 rounded-lg bg-emerald-500 text-white text-xs font-bold hover:bg-emerald-600 transition-colors"
+                  >
+                    Use First
+                  </button>
+                  
+                </div>
 
-                 </div>
+              ))
 
-               ))
+            )}
 
-              )}
-
-             </div>
+            </div>
         </div>
+
           {/* Recent Activity */}
           <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
@@ -801,73 +955,11 @@ export default function DashboardPage() {
 
             <div className="space-y-4 text-xs font-semibold text-slate-700">
 
-              {recentActivity.length === 0 ? (
-
-                <div className="text-center py-8 text-slate-400">
-                  No recent activity
-                </div>
-
-              ) : (
-
-                recentActivity.map((activity: any, index: number) => (
-
-                  <div
-                    key={index}
-                    className="flex items-start justify-between gap-4 p-3 bg-slate-50 border border-slate-200 rounded-xl"
-                  >
-
-                  <div>
-
-                    <div className="font-bold text-slate-800">
-                      {activity.title}
-                    </div>
-
-                    <div className="text-xs text-slate-500">
-                      {activity.subtitle}
-                    </div>
-
-                    <div className="text-[10px] text-slate-400 mt-1">
-                      {new Date(activity.time).toLocaleString()}
-                    </div>
-
-                  </div>
-
-                  <div className="font-bold">
-
-                    {activity.type === "sale" && (
-                      <span className="text-emerald-600">
-                        ₹{activity.amount}
-                      </span>
-                    )}
-
-                    {activity.type === "purchase" && (
-                      <span className="text-blue-600">
-                        ₹{activity.amount}
-                      </span>
-                    )}
-
-                    {activity.type === "inventory" && (
-                      <span
-                        className={
-                          activity.amount > 0
-                            ? "text-blue-600"
-                            : "text-amber-600"
-                        }
-                      >
-                        {activity.amount}
-                      </span>
-                    )}
-
-                  </div>
-
-                </div>
-
-              ))
-
-            )}
-
+              <div className="text-center py-8 text-slate-400">
+                Recent activity is not available yet.
+              </div>
+            </div>
           </div>
-        </div>
       </div>
 
         {/* 11. Quick Actions Row (Always Visible) */}
@@ -920,12 +1012,31 @@ export default function DashboardPage() {
 
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-150">
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Inventory Health</span>
-              <span className="text-base font-extrabold text-slate-800 block mt-1 font-mono">91%</span>
+              <span className="text-base font-extrabold text-slate-800 block mt-1 font-mono">
+                {cards?.inventory_health ?? 0}%
+              </span>
             </div>
 
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-150">
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">AI Score</span>
-              <span className="text-base font-extrabold text-emerald-650 block mt-1 font-mono">96/100</span>
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">
+                Business Health
+              </span>
+
+              <span
+                className={`text-base font-extrabold block mt-1 font-mono ${
+                  cards?.business_grade === "A"
+                    ? "text-emerald-600"
+                    : cards?.business_grade === "B"
+                    ? "text-amber-600"
+                    : "text-rose-600"
+                }`}
+              >
+                {cards?.business_grade ?? "N/A"}
+              </span>
+
+              <span className="text-[9px] font-semibold text-slate-400 block mt-0.5">
+                {cards?.business_status ?? "Unknown"}
+              </span>
             </div>
           </div>
         </div>

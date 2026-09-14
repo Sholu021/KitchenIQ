@@ -101,7 +101,7 @@ export default function Home() {
       a: "KitchenIQ AI is fully equipped with an intelligent, data-driven analytical fallback engine. If no OpenAI key is configured, the platform reads your actual database metrics to compile custom health summaries, reorder alerts, and contextual copilot answers. It remains fully functional during testing!"
     }
   ];
-
+   
   return (
     <div className="min-h-screen grid-bg text-slate-100 flex flex-col justify-between overflow-x-hidden">
       

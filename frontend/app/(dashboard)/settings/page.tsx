@@ -45,11 +45,17 @@ export default function SettingsPage() {
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['org-details'] });
-      queryClient.invalidateQueries({ queryKey: ['ai-insights'] });
-      setPaymentModalOpen(false);
-      setIsProcessingPayment(false);
-    },
+      queryClient.invalidateQueries({
+      queryKey: ["org-details-layout"],
+    });
+
+    queryClient.invalidateQueries({
+      queryKey: ["ai-insights"],
+    });
+
+    setPaymentModalOpen(false);
+    setIsProcessingPayment(false);
+  },
     onError: (err: any) => {
       alert(err.response?.data?.detail || 'Upgrade failed. Only Owners can adjust billing.');
       setIsProcessingPayment(false);

@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 from typing import List, Optional
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
@@ -32,23 +32,31 @@ def list_batches(
 def adjust_batch_stock(
     req: BatchAdjustment,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_staff)
+    current_user: User = Depends(require_staff),
 ):
+    transaction_type = req.transaction_type.upper()
+
+    if transaction_type not in {"STOCK_IN", "STOCK_OUT"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Manual stock adjustments only support STOCK_IN or STOCK_OUT.",
+        )
+
     adjust_stock(
         db=db,
         organization_id=current_user.organization_id,
         product_id=req.product_id,
         quantity=abs(req.quantity),
-        transaction_type=req.transaction_type,
+        transaction_type=transaction_type,
         notes=req.notes,
         batch_number=req.batch_number,
         expiry_date=req.expiry_date,
-        user_id=current_user.id
+        user_id=current_user.id,
     )
 
-    db.commit()  # Commit the transaction after adjusting stock
-    return {"message": "Stock adjusted successfully"}
+    db.commit()
 
+    return {"message": "Stock adjusted successfully"}
 
 @router.get("/alerts", response_model=dict)
 def get_batch_expiry_alerts(
@@ -194,6 +202,170 @@ def get_inventory_value(
         ),
     }
 
+@router.get("/products/{product_id}/ledger")
+def get_product_inventory_ledger(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff),
+):
+    # Verify product belongs to current organization
+    product = (
+        db.query(Product)
+        .filter(
+            Product.id == product_id,
+            Product.organization_id == current_user.organization_id,
+        )
+        .first()
+    )
+
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product not found",
+        )
+
+    transactions = (
+        db.query(InventoryTransaction)
+        .filter(
+            InventoryTransaction.product_id == product_id,
+            InventoryTransaction.organization_id
+            == current_user.organization_id,
+        )
+        .order_by(
+            InventoryTransaction.created_at.desc(),
+            InventoryTransaction.id.desc(),
+        )
+        .all()
+    )
+
+    ledger = []
+
+    running_balance = product.current_stock
+
+    for transaction in transactions:
+
+        batch = None
+
+        if transaction.batch_id:
+            batch = (
+                db.query(Batch)
+                .filter(
+                    Batch.id == transaction.batch_id,
+                    Batch.organization_id == current_user.organization_id,
+                )
+                .first()
+            )
+
+        created_by_name = None
+        user = None
+
+        if transaction.created_by:
+            user = (
+                db.query(User)
+                .filter(
+                    User.id == transaction.created_by,
+                    User.organization_id == current_user.organization_id,
+                )
+                .first()
+            )
+
+        if user:
+            created_by_name = (
+                getattr(user, "name", None)
+                or getattr(user, "full_name", None)
+                or getattr(user, "username", None)
+                or getattr(user, "email", None)
+            )
+  
+        balance_after = running_balance
+
+        ledger.append(
+            {
+                "id": transaction.id,
+                "product_id": transaction.product_id,
+                "batch_id": transaction.batch_id,
+                "batch_number": (
+                    batch.batch_number
+                    if batch
+                    else None
+                ),
+                "expiry_date": (
+                    batch.expiry_date.isoformat()
+                    if batch and batch.expiry_date
+                    else None
+                ),
+                "transaction_type": transaction.transaction_type,
+                "quantity": transaction.quantity,
+                "balance": balance_after,
+                "notes": transaction.notes,
+                "reference": transaction.reference,
+                "purchase_order_id": transaction.purchase_order_id,
+                "created_by": transaction.created_by,
+                "created_by_name": created_by_name,
+                "created_at": (
+                    transaction.created_at.isoformat()
+                    if transaction.created_at
+                    else None
+                ),
+            }
+        )
+
+        # Move backwards through the ledger
+        # because transactions are newest -> oldest.
+        running_balance -= transaction.quantity
+
+
+    return {
+        "product_id": product.id,
+        "product_name": product.name,
+        "current_stock": product.current_stock,
+        "unit": product.unit,
+        "transactions": ledger,
+    }
+
+@router.get("/transactions/recent")
+def get_recent_inventory_transactions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff),
+):
+    transactions = (
+        db.query(InventoryTransaction)
+        .filter(
+            InventoryTransaction.organization_id
+            == current_user.organization_id,
+        )
+        .order_by(
+            InventoryTransaction.created_at.desc(),
+            InventoryTransaction.id.desc(),
+        )
+        .limit(10)
+        .all()
+    )
+
+    return [
+        {
+            "id": transaction.id,
+            "product_id": transaction.product_id,
+            "product_name": (
+                transaction.product.name
+                if transaction.product
+                else "Unknown Product"
+            ),
+            "transaction_type": transaction.transaction_type,
+            "quantity": transaction.quantity,
+            "notes": transaction.notes,
+            "reference": transaction.reference,
+            "purchase_order_id": transaction.purchase_order_id,
+            "created_by": transaction.created_by,
+            "created_at": (
+                transaction.created_at.isoformat()
+                if transaction.created_at
+                else None
+            ),
+        }
+        for transaction in transactions
+    ]
+    
 @router.get("/{batch_id}/history")
 def get_batch_history(
     batch_id: int,
@@ -215,7 +387,9 @@ def get_batch_history(
     transactions = (
         db.query(InventoryTransaction)
         .filter(
-            InventoryTransaction.batch_id == batch.id
+            InventoryTransaction.batch_id == batch.id,
+            InventoryTransaction.organization_id
+            == current_user.organization_id,
         )
         .order_by(InventoryTransaction.created_at)
         .all()

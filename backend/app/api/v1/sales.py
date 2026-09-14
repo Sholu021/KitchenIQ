@@ -9,21 +9,6 @@ from app.services.sales_service import create_sale
 
 router = APIRouter(prefix="/sales", tags=["Sales"])
 
-@router.post("", response_model=SaleOut, status_code=status.HTTP_201_CREATED)
-def record_sale(
-    req: SaleCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_staff)
-):
-    items_data = [item.model_dump() for item in req.items]
-    return create_sale(
-        db=db,
-        organization_id=current_user.organization_id,
-        items_data=items_data,
-        user_id=current_user.id
-    )
-
-
 @router.get("", response_model=List[SaleOut])
 def list_sales(
     db: Session = Depends(get_db),
@@ -33,3 +18,22 @@ def list_sales(
         Sale.organization_id == current_user.organization_id
     ).order_by(Sale.sale_date.desc()).all()
     return sales
+
+@router.post("/", response_model=SaleOut, status_code=status.HTTP_201_CREATED)
+def record_sale(
+    payload: SaleCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff),
+):
+    return create_sale(
+        db=db,
+        organization_id=current_user.organization_id,
+        items_data=[
+            {
+                "recipe_id": item.recipe_id,
+                "quantity": item.quantity,
+            }
+            for item in payload.items
+        ],
+        user_id=current_user.id,
+    )

@@ -114,9 +114,6 @@ def create_product(
     db.add(product)
     db.flush()
 
-    db.commit()
-    db.refresh(product)
-
     AuditService.log(
         db=db,
         organization_id=current_user.organization_id,
@@ -125,7 +122,10 @@ def create_product(
         entity_type="Product",
         entity_id=product.id,
     )
-    
+
+    db.commit()
+    db.refresh(product)
+
     return product
 
 
@@ -209,8 +209,7 @@ def update_product(
     for field, value in req.model_dump(exclude_unset=True).items():
         setattr(product, field, value)
 
-    db.commit()
-    db.refresh(product)
+    db.flush()
 
     AuditService.log(
         db=db,
@@ -220,6 +219,9 @@ def update_product(
         entity_type="Product",
         entity_id=product.id,
     )
+
+    db.commit()
+    db.refresh(product)
 
     return product
 
@@ -241,9 +243,9 @@ def delete_product(
             detail="Product not found"
         )
 
+    product_id_for_audit = product.id
+
     db.delete(product)
-    
-    db.commit()
 
     AuditService.log(
         db=db,
@@ -251,7 +253,9 @@ def delete_product(
         user_id=current_user.id,
         action="DELETE",
         entity_type="Product",
-        entity_id=product_id,
+        entity_id=product_id_for_audit,
     )
-    
+
+    db.commit()
+
     return

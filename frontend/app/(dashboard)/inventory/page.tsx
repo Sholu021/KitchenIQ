@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import {
@@ -26,25 +27,39 @@ import {
   YAxis
 } from 'recharts';
 
+const BASE_TO_INR_RATE = 80;
+
 export default function InventoryPage() {
   const queryClient = useQueryClient();
+  
+  const searchParams = useSearchParams();
+  const batchIdParam = searchParams.get('batch_id');
 
   // Search & Filter state
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
+  const [inventoryHealth, setInventoryHealth] = useState(100);
 
   // Drawer states
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [adjustingProduct, setAdjustingProduct] = useState<any | null>(null);
 
+  const [ledgerProduct, setLedgerProduct] = useState<any | null>(null);
+  const [ledgerFilter, setLedgerFilter] = useState("ALL");
+  const [exportSuccess, setExportSuccess] = useState(false);
+  const [ledgerDateFrom, setLedgerDateFrom] = useState("");
+  const [ledgerDateTo, setLedgerDateTo] = useState("");
+
   // Expanded batches state (accordion)
   const [expandedProducts, setExpandedProducts] = useState<Record<number, boolean>>({});
+  const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
 
   // Adjustment Form State (inside drawer)
   const [form, setForm] = useState({
     transaction_type: 'STOCK_IN',
     quantity: '',
+    batch_id: null as number | null,
     batch_number: '',
     expiry_date: '',
     notes: ''
@@ -59,21 +74,183 @@ export default function InventoryPage() {
       return res.data.items;
     }
   });
+   
+  const {
+    data: ledgerData,
+    isLoading: ledgerLoading,
+  } = useQuery({
+    queryKey: ['inventory-ledger', ledgerProduct?.id],
+    queryFn: async () => {
+      if (!ledgerProduct?.id) return null;
+
+      const res = await apiClient.get(
+        `/batches/products/${ledgerProduct.id}/ledger`
+      );
+
+      return res.data;
+    },
+    enabled: !!ledgerProduct?.id,
+  });
+  const {
+    data: aiInsightsData,
+    isLoading: aiInsightsLoading,
+  } = useQuery({
+    queryKey: ["ai-insights"],
+    queryFn: async () => {
+      const res = await apiClient.get("/dashboard/ai-insights");
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const {
+    data: inventoryHealthData,
+    isLoading: inventoryHealthLoading,
+  } = useQuery({
+    queryKey: ["inventory-health"],
+    queryFn: async () => {
+      const res = await apiClient.get("/analytics/inventory-health");
+      return res.data;
+    },
+  });
+  
+  const filteredLedgerTransactions =
+    ledgerData?.transactions?.filter((transaction: any) => {
+      if (
+        ledgerFilter !== "ALL" &&
+        transaction.transaction_type !== ledgerFilter
+      ) {
+        return false;
+      }
+
+      const transactionDate = transaction.created_at
+        ? new Date(transaction.created_at)
+        : null;
+
+      if (ledgerDateFrom && transactionDate) {
+        const fromDate = new Date(`${ledgerDateFrom}T00:00:00`);
+
+        if (transactionDate < fromDate) {
+          return false;
+        }
+      }
+
+      if (ledgerDateTo && transactionDate) {
+        const toDate = new Date(`${ledgerDateTo}T23:59:59.999`);
+
+        if (transactionDate > toDate) {
+          return false;
+        }
+      }
+
+      return true;
+    }) ?? [];
+
+  const ledgerSummary = filteredLedgerTransactions.reduce(
+    (
+      summary: {
+        stockIn: number;
+        stockOut: number;
+        net: number;
+      },
+      transaction: any
+    ) => {
+      const quantity = Number(transaction.quantity ?? 0);
+
+      if (quantity > 0) {
+        summary.stockIn += quantity;
+      } else if (quantity < 0) {
+        summary.stockOut += Math.abs(quantity);
+      }
+
+      summary.net += quantity;
+
+      return summary;
+    },
+    {
+      stockIn: 0,
+      stockOut: 0,
+      net: 0,
+    }
+  );
+  
+  const {
+    data: recentInventoryTransactions = [],
+    isLoading: recentInventoryTransactionsLoading,
+  } = useQuery({
+    queryKey: ["recent-inventory-transactions"],
+    queryFn: async () => {
+      const res = await apiClient.get("/batches/transactions/recent");
+      return res.data;
+    },
+  });
+
+  const {
+    data: selectedProductLedger,
+    isLoading: selectedProductLedgerLoading,
+  } = useQuery({
+    queryKey: ["product-stock-history", selectedProduct?.id],
+    queryFn: async () => {
+      if (!selectedProduct?.id) return null;
+
+      const res = await apiClient.get(
+        `/batches/products/${selectedProduct.id}/ledger`
+      );
+
+      return res.data;
+    },
+    enabled: !!selectedProduct?.id,
+  });
+  
+  const selectedProductStockHistory =
+    selectedProductLedger?.transactions
+      ?.slice()
+      .reverse()
+      .slice(-7)
+      .map((transaction: any) => ({
+        day: transaction.created_at
+          ? new Date(transaction.created_at).toLocaleDateString("en-IN", {
+              day: "2-digit",
+              month: "short",
+            })
+          : "Unknown",
+        stock: Number(transaction.balance ?? 0),
+      })) ?? [];
 
   const { data: batches = [] } = useQuery({
     queryKey: ["batches"],
     queryFn: async () => {
       const res = await apiClient.get("/batches");
 
-      console.log("Batch Response:", res);
-      console.log("Batch Data:", res.data);
-
       return res.data;
     },
   });
-  console.log("Products:", products);
-  console.log("Batches:", batches);
+  useEffect(() => {
+    if (
+      !batchIdParam ||
+      !Array.isArray(batches) ||
+      batches.length === 0
+    ) {
+      return;
+    }
+
+    const batch = batches.find(
+      (b: any) => String(b.id) === String(batchIdParam)
+    );
+
+    if (!batch) {
+      return;
+    }
+
+    setSelectedBatchId(batch.id);
+
+    setExpandedProducts((prev) => ({
+      ...prev,
+      [batch.product_id]: true,
+    }));
+  }, [batchIdParam, batches]);
+
   console.log(Array.isArray(batches));
+
   const { data: alerts = { expired: [], expiring_7: [], expiring_30: [] } } = useQuery({
     queryKey: ['batch-alerts'],
     queryFn: async () => {
@@ -105,6 +282,7 @@ export default function InventoryPage() {
     setForm({
       transaction_type: 'STOCK_IN',
       quantity: '',
+      batch_id: null,
       batch_number: '',
       expiry_date: '',
       notes: ''
@@ -129,8 +307,9 @@ export default function InventoryPage() {
       quantity: qty,
       transaction_type: form.transaction_type,
       notes: form.notes || null,
+      batch_id: form.batch_id,
       batch_number: form.batch_number || null,
-      expiry_date: form.expiry_date || null
+      expiry_date: form.expiry_date || null,
     };
 
     adjustMutation.mutate(payload);
@@ -143,22 +322,101 @@ export default function InventoryPage() {
     }));
   };
 
+  const handleExportLedger = () => {
+    if (!ledgerProduct || !filteredLedgerTransactions.length) {
+      return;
+    }
+
+    const headers = [
+      "Date",
+      "Transaction Type",
+      "Batch",
+      "Expiry Date",
+      "Quantity",
+      "Balance",
+      "Notes",
+      "User",
+      "Purchase Order",
+      "Reference",
+    ];
+
+    const rows = filteredLedgerTransactions.map((transaction: any) => [
+      transaction.created_at
+        ? new Date(transaction.created_at).toLocaleString("en-IN")
+        : "",
+      transaction.transaction_type,
+      transaction.batch_number || "",
+      transaction.expiry_date || "",
+      transaction.quantity,
+      transaction.balance ?? "",
+      transaction.notes || "",
+      transaction.created_by_name || "",
+      transaction.purchase_order_id || "",
+      transaction.reference || "",
+    ]);
+
+    const csv = [
+      headers,
+      ...rows,
+    ]
+      .map((row) =>
+        row
+          .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+          .join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob([csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    const dateSuffix =
+      ledgerDateFrom || ledgerDateTo
+        ? `_${ledgerDateFrom || "start"}_to_${ledgerDateTo || "end"}`
+        : "";
+
+    link.download = `${ledgerProduct.name.replace(/\s+/g, "_")}_ledger${dateSuffix}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+
+    setExportSuccess(true);
+
+    setTimeout(() => {
+      setExportSuccess(false);
+    }, 2500);
+  };
+
   // 1. Calculate values for summary cards dynamically
   const totalIngredientsCount = products.length || 248;
 
   const totalValuation = products.reduce(
-    (acc: number, p: any) => acc + (p.current_stock * p.cost_price), 0
-  ) || 3072.5;
-
+    (acc: number, p: any) => acc + (p.current_stock * p.cost_price),
+    0
+  );
+  
   const lowStockCount = products.filter(
     (p: any) => p.current_stock > 0 && p.current_stock <= p.reorder_level
-  ).length || 12;
+  ).length;
 
   const outOfStockCount = products.filter(
     (p: any) => p.current_stock === 0
-  ).length || 3;
+  ).length;
 
-  const expiringCount = (alerts.expiring_7?.length || 0) + (alerts.expiring_30?.length || 0) || 8;
+  const expiringCount =
+    (alerts.expiring_7?.length || 0) +
+    (alerts.expiring_30?.length || 0);
+
+  const expiredCount = alerts.expired?.length || 0;
+  const expiredValue = Number(alerts.expired_value || 0);
+  const expiring30Value = Number(alerts.expiring_30_value || 0);
 
   // Client-side list filters
   const filteredProducts = products.filter((p: any) => {
@@ -176,12 +434,7 @@ export default function InventoryPage() {
     const isHealthy = p.current_stock > p.reorder_level;
 
     const productBatches = batches.filter((b: any) => {
-      console.log(
-        "Comparing:",
-        b.product_id,
-        p.id,
-        b.product_id === p.id
-      );
+
       return b.product_id === p.id;
     });
     const hasExpiringBatch = productBatches.some((b: any) => {
@@ -203,15 +456,7 @@ export default function InventoryPage() {
   });
 
   // Stock history mock chart data
-  const mockStockHistory = [
-    { day: 'Mon', stock: 12 },
-    { day: 'Tue', stock: 19 },
-    { day: 'Wed', stock: 15 },
-    { day: 'Thu', stock: 24 },
-    { day: 'Fri', stock: 22 },
-    { day: 'Sat', stock: 30 },
-    { day: 'Sun', stock: 28 },
-  ];
+  
 
   return (
     <div className="space-y-8 relative">
@@ -244,14 +489,14 @@ export default function InventoryPage() {
       </div>
 
       {/* Inventory Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4">
         <div className="bg-white border border-slate-200/85 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Total Ingredients</span>
           <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">{totalIngredientsCount}</span>
         </div>
         <div className="bg-white border border-slate-200/85 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Inventory Value</span>
-          <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">₹{(totalValuation * 80).toLocaleString('en-IN')}</span>
+          <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">₹{(totalValuation * BASE_TO_INR_RATE).toLocaleString('en-IN')}</span>
         </div>
         <div className="bg-white border border-slate-200/85 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Low Stock</span>
@@ -259,9 +504,30 @@ export default function InventoryPage() {
           <span className="text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-100/50 rounded px-1.5 py-0.5 mt-2 self-start">Attention</span>
         </div>
         <div className="bg-white border border-slate-200/85 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Expiring Soon</span>
-          <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">{expiringCount}</span>
-          <span className="text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-100/50 rounded px-1.5 py-0.5 mt-2 self-start">Critical</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+            Expiring Soon
+          </span>
+
+          <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">
+            {expiringCount}
+          </span>
+
+          <span className="text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-100/50 rounded px-1.5 py-0.5 mt-2 self-start">
+            ₹{expiring30Value.toLocaleString("en-IN")} at risk
+          </span>
+        </div>
+        <div className="bg-white border border-slate-200/85 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+            Expired Stock
+          </span>
+
+          <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">
+            {expiredCount}
+          </span>
+
+          <span className="text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-100/50 rounded px-1.5 py-0.5 mt-2 self-start">
+            ₹{expiredValue.toLocaleString("en-IN")} at risk
+          </span>
         </div>
         <div className="bg-white border border-slate-200/85 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Out of Stock</span>
@@ -270,12 +536,49 @@ export default function InventoryPage() {
         <div className="bg-white border border-slate-200/85 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Inventory Health</span>
           <div className="flex items-center gap-2 mt-2">
-            <div className="w-8 h-8 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"></div>
-            <span className="text-xl font-extrabold text-slate-800">91%</span>
+            <div
+              className={`w-8 h-8 rounded-full border-4 ${
+                (inventoryHealthData?.health_score ?? inventoryHealth) >= 80
+                  ? "border-emerald-500"
+                  : (inventoryHealthData?.health_score ?? inventoryHealth) >= 60
+                  ? "border-amber-500"
+                  : "border-rose-500"
+              }`}
+            ></div>
+            <span
+              className={`text-xl font-extrabold ${
+                (inventoryHealthData?.health_score ?? inventoryHealth) >= 80
+                  ? "text-emerald-600"
+                  : (inventoryHealthData?.health_score ?? inventoryHealth) >= 60
+                  ? "text-amber-600"
+                  : "text-rose-600"
+              }`}
+            >
+              {inventoryHealthLoading
+                ? "..."
+                : `${inventoryHealthData?.health_score ?? inventoryHealth}%`}
+            </span>
           </div>
+          <span
+            className={`text-[9px] font-bold rounded px-1.5 py-0.5 mt-2 self-start ${
+              (inventoryHealthData?.health_score ?? inventoryHealth) >= 80
+                ? "text-emerald-600 bg-emerald-50 border border-emerald-100/50"
+                : (inventoryHealthData?.health_score ?? inventoryHealth) >= 60
+                ? "text-amber-600 bg-amber-50 border border-amber-100/50"
+                : "text-rose-600 bg-rose-50 border border-rose-100/50"
+            }`}
+          >
+            {inventoryHealthLoading
+              ? "Calculating"
+              : (inventoryHealthData?.health_score ?? inventoryHealth) >= 80
+              ? "Healthy"
+              : (inventoryHealthData?.health_score ?? inventoryHealth) >= 60
+              ? "Needs Attention"
+              : "Critical"}
+          </span> 
         </div>
       </div>
-
+      
       {/* Main Table, Filters, and AI Assistant Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
@@ -362,7 +665,7 @@ export default function InventoryPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                     {filteredProducts.map((p: any) => {
-                      console.log("Product ID:", p.id);
+                      
 
                       const isExpanded = !!expandedProducts[p.id];
                       const isOutOfStock = p.current_stock === 0;
@@ -436,7 +739,7 @@ export default function InventoryPage() {
                               </Link>
                             </td>
                             <td className="px-6 py-4 text-right font-mono text-slate-900 text-xs">
-                              ₹{(p.cost_price * 80).toFixed(0)}/{p.unit}
+                              ₹{(p.cost_price * BASE_TO_INR_RATE).toFixed(0)}/{p.unit}
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center justify-center gap-1.5">
@@ -446,6 +749,14 @@ export default function InventoryPage() {
                                   title="View details"
                                 >
                                   <Eye size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setLedgerProduct(p)}
+                                  className="p-2 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                                  title="View inventory ledger"
+                                >
+                                  <FileText size={15} />
                                 </button>
                                 <button
                                   onClick={() => {
@@ -476,7 +787,11 @@ export default function InventoryPage() {
                                       return (
                                         <div
                                           key={b.id}
-                                          className="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between"
+                                          className={`border rounded-xl p-4 flex items-center justify-between transition-all ${
+                                            selectedBatchId === b.id
+                                              ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200 shadow-sm"
+                                              : "bg-white border-slate-200"
+                                          }`}
                                         >
                                           <div>
                                             <p className="font-bold text-slate-900">
@@ -488,14 +803,37 @@ export default function InventoryPage() {
                                             </p>
                                           </div>
 
-                                          <div className="text-right">
-                                            <p className="font-bold text-emerald-600">
-                                              {b.remaining_quantity} {p.unit}
-                                            </p>
+                                          <div className="text-right flex flex-col items-end gap-2">
+                                            <div>
+                                              <p className="font-bold text-emerald-600">
+                                                {b.remaining_quantity} {p.unit}
+                                              </p>
 
-                                            <p className="text-xs text-slate-400">
-                                              Remaining
-                                            </p>
+                                              <p className="text-xs text-slate-400">
+                                                Remaining
+                                              </p>
+                                            </div>
+
+                                            {selectedBatchId === b.id && (
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  setAdjustingProduct(p);
+
+                                                  setForm({
+                                                    transaction_type: 'STOCK_OUT',
+                                                    quantity: '',
+                                                    batch_id: b.id,
+                                                    batch_number: b.batch_number || '',
+                                                    expiry_date: b.expiry_date || '',
+                                                    notes: 'FEFO usage',
+                                                  });
+                                                }}
+                                                className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold transition-colors"
+                                              >
+                                                Use This Batch
+                                              </button>
+                                            )}
                                           </div>
                                         </div>
                                       );
@@ -521,28 +859,461 @@ export default function InventoryPage() {
             </h3>
 
             <div className="space-y-4 text-xs font-semibold text-slate-700">
-              <div className="flex items-start gap-4">
-                <span className="text-[10px] font-bold text-slate-400 shrink-0 mt-0.5 font-mono">Today 10:42</span>
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5"></div>
-                <p className="text-slate-700">Added <span className="font-bold text-slate-900">20 kg Tomatoes</span> (Batch replenishment)</p>
-              </div>
+              {recentInventoryTransactionsLoading ? (
+                <div className="py-4 text-center text-slate-400">
+                  Loading recent movements...
+                </div>
+              ) : recentInventoryTransactions.length === 0 ? (
+                <div className="py-4 text-center text-slate-400">
+                  No recent inventory movements.
+                </div>
+              ) : (
+                recentInventoryTransactions.slice(0, 5).map((transaction: any) => {
+                  const isStockIn = transaction.transaction_type === "STOCK_IN";
+                  const isStockOut = transaction.transaction_type === "STOCK_OUT";
 
-              <div className="flex items-start gap-4">
-                <span className="text-[10px] font-bold text-slate-400 shrink-0 mt-0.5 font-mono">Today 09:30</span>
-                <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0 mt-1.5"></div>
-                <p className="text-slate-700">Removed <span className="font-bold text-slate-900">5 kg Cheese</span> (Recipe batch depletion)</p>
-              </div>
+                  return (
+                    <div
+                      key={transaction.id}
+                      className="flex items-start gap-4"
+                    >
+                      <span className="text-[10px] font-bold text-slate-400 shrink-0 mt-0.5 font-mono">
+                        {transaction.created_at
+                          ? new Date(transaction.created_at).toLocaleString("en-IN", {
+                              day: "2-digit",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "Unknown"}
+                      </span>
 
-              <div className="flex items-start gap-4">
-                <span className="text-[10px] font-bold text-slate-400 shrink-0 mt-0.5 font-mono">Yesterday</span>
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-1.5"></div>
-                <p className="text-slate-700">Stock Adjustment logged for <span className="font-bold text-slate-900">Chicken</span> (Spoilage count adjustment)</p>
-              </div>
+                      <div
+                        className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 ${
+                          isStockIn
+                            ? "bg-emerald-500"
+                            : isStockOut
+                            ? "bg-rose-500"
+                            : "bg-blue-500"
+                        }`}
+                      ></div>
+
+                      <p className="text-slate-700">
+                        {isStockIn
+                          ? "Added"
+                          : isStockOut
+                          ? "Removed"
+                          : "Adjusted"}{" "}
+                        <span className="font-bold text-slate-900">
+                          {Math.abs(Number(transaction.quantity)).toLocaleString("en-IN")}{" "}
+                          {transaction.product_name}
+                        </span>
+                        {transaction.notes && (
+                          <span className="text-slate-400">
+                            {" "}
+                            ({transaction.notes})
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 
         </div>
+        {/* Ledger Drawer */}
+        {ledgerProduct && (
+          <div className="fixed inset-0 z-50 flex justify-end">
 
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm"
+              onClick={() => {
+                setLedgerProduct(null);
+                setLedgerFilter("ALL");
+                setLedgerDateFrom("");
+                setLedgerDateTo("");
+                setExportSuccess(false);
+              }}
+            />
+
+            {/* Drawer */}
+            <div className="relative w-full max-w-2xl h-full bg-white shadow-2xl overflow-y-auto">
+
+              {/* Header */}
+              <div className="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-5">
+
+                <div className="flex items-start justify-between gap-4">
+
+                  <div>
+                    <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
+                      Inventory Ledger
+                    </p>
+
+                    <h2 className="text-xl font-extrabold text-slate-900 mt-1">
+                      {ledgerProduct.name}
+                    </h2>
+
+                    <p className="text-xs text-slate-500 mt-1">
+                      {filteredLedgerTransactions.length} shown ·{" "}
+                      {ledgerData?.transactions?.length ?? 0} total movements
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+
+                    <button
+                      type="button"
+                      onClick={handleExportLedger}
+                      disabled={ledgerLoading || !filteredLedgerTransactions.length}
+                      className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={
+                        ledgerLoading
+                          ? "Loading ledger"
+                          : !filteredLedgerTransactions.length
+                          ? "No transactions to export"
+                          : "Export ledger"
+                      }
+                    >
+                      <Download size={18} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLedgerProduct(null);
+                        setLedgerFilter("ALL");
+                        setLedgerDateFrom("");
+                        setLedgerDateTo("");
+                        setExportSuccess(false);
+                      }}
+                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"
+                      title="Close ledger"
+                    >
+                      <X size={18} />
+                    </button>
+
+                  </div>
+
+                </div>
+
+                {/* Summary */}
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-5">
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                      Current Stock
+                    </span>
+
+                    <p className="text-lg font-extrabold text-slate-900 mt-1 font-mono">
+                      {ledgerData?.current_stock ??
+                        ledgerProduct.current_stock ??
+                        0}{" "}
+                      {ledgerData?.unit ?? ledgerProduct.unit ?? ""}
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                      Transactions
+                    </span>
+
+                    <p className="text-lg font-extrabold text-slate-900 mt-1 font-mono">
+                      {ledgerData?.transactions?.length ?? 0}
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                      Stock In
+                    </span>
+
+                    <p className="text-lg font-extrabold text-emerald-600 mt-1 font-mono">
+                      +{Number(ledgerSummary.stockIn).toLocaleString("en-IN")}{" "}
+                      {ledgerData?.unit ?? ledgerProduct.unit ?? ""}
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                      Stock Out
+                    </span>
+
+                    <p className="text-lg font-extrabold text-rose-600 mt-1 font-mono">
+                      -{Number(ledgerSummary.stockOut).toLocaleString("en-IN")}{" "}
+                      {ledgerData?.unit ?? ledgerProduct.unit ?? ""}
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                      {ledgerFilter === "ALL" && !ledgerDateFrom && !ledgerDateTo
+                        ? "Net Movement"
+                        : "Filtered Net"}
+                    </span>
+
+                    <p
+                      className={`text-lg font-extrabold mt-1 font-mono ${
+                        ledgerSummary.net > 0
+                          ? "text-emerald-600"
+                          : ledgerSummary.net < 0
+                          ? "text-rose-600"
+                          : "text-slate-600"
+                      }`}
+                    >
+                      {ledgerSummary.net > 0 ? "+" : ""}
+                      {Number(ledgerSummary.net).toLocaleString("en-IN")}{" "}
+                      {ledgerData?.unit ?? ledgerProduct.unit ?? ""}
+                    </p>
+                  </div>
+
+                </div>
+
+              </div>
+
+              {/* Transactions */}
+              <div className="p-6">
+
+                {ledgerLoading ? (
+                  <div className="text-center py-12 text-sm text-slate-400">
+                    Loading inventory history...
+                  </div>
+                ) : !filteredLedgerTransactions.length ? (
+                  <div className="text-center py-12 text-sm text-slate-400">
+                    No {ledgerFilter === "ALL"
+                      ? "inventory transactions"
+                      : ledgerFilter.replace("_", " ").toLowerCase()} found.
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {["ALL", "STOCK_IN", "STOCK_OUT", "ADJUSTMENT"].map((filter) => (
+                        <button
+                          key={filter}
+                          type="button"
+                          onClick={() => setLedgerFilter(filter)}
+                          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors ${
+                            ledgerFilter === filter
+                              ? "bg-emerald-500 text-white"
+                              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          }`}
+                        >
+                          {filter === "ALL"
+                            ? `All (${ledgerData?.transactions?.length ?? 0})`
+                            : `${filter.replace("_", " ")} (${
+                                ledgerData?.transactions?.filter(
+                                  (transaction: any) =>
+                                    transaction.transaction_type === filter
+                                ).length ?? 0
+                              })`}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 mb-4">
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                          From
+                        </label>
+
+                        <input
+                          type="date"
+                          value={ledgerDateFrom}
+                          onChange={(e) => setLedgerDateFrom(e.target.value)}
+                          className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                          To
+                        </label>
+
+                        <input
+                          type="date"
+                          value={ledgerDateTo}
+                          onChange={(e) => setLedgerDateTo(e.target.value)}
+                          className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        />
+                      </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLedgerFilter("ALL");
+                        setLedgerDateFrom("");
+                        setLedgerDateTo("");
+                      }}
+                      className="px-3 py-2 mt-5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 text-[10px] font-bold transition-colors"
+                    >
+                      Clear Filters
+                    </button>
+                    </div>
+
+                    <div className="space-y-3">
+
+                      {filteredLedgerTransactions.map((transaction: any) => {
+
+                        const isStockIn =
+                          transaction.transaction_type === 'STOCK_IN';
+
+                        const isStockOut =
+                          transaction.transaction_type === 'STOCK_OUT';
+
+                        return (
+                          <div
+                            key={transaction.id}
+                            className="border border-slate-200 rounded-xl p-4 bg-white hover:bg-slate-50 transition-colors"
+                          >
+
+                            <div className="flex items-start justify-between gap-4">
+
+                              {/* Transaction information */}
+                              <div className="min-w-0">
+
+                                <div className="flex items-center gap-2">
+
+                                  <span
+                                    className={`text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${
+                                      isStockIn
+                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                        : isStockOut
+                                        ? 'bg-rose-50 text-rose-700 border border-rose-100'
+                                        : 'bg-amber-50 text-amber-700 border border-amber-100'
+                                    }`}
+                                  >
+                                    {transaction.transaction_type.replace(
+                                      '_',
+                                      ' '
+                                    )}
+                                  </span>
+
+                                  <span className="text-[10px] text-slate-400">
+                                    #{transaction.id}
+                                  </span>
+
+                                </div>
+
+                                {/* Batch */}
+                                <div className="mt-3">
+
+                                  <p className="text-xs font-bold text-slate-800">
+                                    {transaction.batch_number
+                                      ? `Batch ${transaction.batch_number}`
+                                      : 'No batch assigned'}
+                                  </p>
+
+                                  {transaction.expiry_date && (
+                                    <p className="text-[10px] text-slate-400 mt-1">
+                                      Expires:{' '}
+                                      {new Date(
+                                        transaction.expiry_date
+                                      ).toLocaleDateString('en-IN')}
+                                    </p>
+                                  )}
+
+                                </div>
+
+                                {/* Source / Notes */}
+                                <div className="mt-2 space-y-1">
+
+                                  {transaction.notes && (
+                                    <p className="text-[10px] text-slate-500">
+                                      {transaction.notes}
+                                    </p>
+                                  )}
+
+                                  {transaction.purchase_order_id && (
+                                    <p className="text-[10px] text-slate-400">
+                                      Purchase Order #{transaction.purchase_order_id}
+                                    </p>
+                                  )}
+
+                                  {transaction.reference && (
+                                    <p className="text-[10px] text-slate-400">
+                                      Reference: {transaction.reference}
+                                    </p>
+                                  )}
+
+                                  {transaction.created_by_name ? (
+                                    <p className="text-[10px] text-slate-400">
+                                      By {transaction.created_by_name}
+                                    </p>
+                                  ) : transaction.created_by ? (
+                                    <p className="text-[10px] text-slate-400">
+                                      User #{transaction.created_by}
+                                    </p>
+                                  ) : null}
+
+                                </div>
+
+                                {/* Date */}
+                                <p className="text-[10px] text-slate-400 mt-2">
+                                  {transaction.created_at
+                                    ? new Date(
+                                        transaction.created_at
+                                      ).toLocaleString('en-IN')
+                                    : 'Unknown date'}
+                                </p>
+
+                              </div>
+
+                              {/* Quantity + Balance */}
+                              <div className="flex gap-5 shrink-0">
+
+                                {/* Quantity */}
+                                <div className="text-right">
+                                  <p className="text-[9px] text-slate-400 uppercase tracking-wider">
+                                    Quantity
+                                  </p>
+
+                                  <p
+                                    className={`text-base font-extrabold font-mono ${
+                                      transaction.quantity > 0
+                                        ? 'text-emerald-600'
+                                        : transaction.quantity < 0
+                                        ? 'text-rose-600'
+                                        : 'text-slate-600'
+                                    }`}
+                                  >
+                                    {transaction.quantity > 0 ? '+' : ''}
+                                    {Number(transaction.quantity).toLocaleString('en-IN')}
+                                  </p>
+
+                                  <p className="text-[9px] text-slate-400 mt-1">
+                                    {ledgerData?.unit ?? ledgerProduct.unit ?? ''}
+                                  </p>
+                                </div>
+
+                                {/* Balance */}
+                                <div className="text-right">
+                                  <p className="text-[9px] text-slate-400 uppercase tracking-wider">
+                                    Balance
+                                  </p>
+
+                                  <p className="text-base font-extrabold text-slate-900 font-mono">
+                                    {Number(transaction.balance ?? 0).toLocaleString('en-IN')}
+                                  </p>
+
+                                  <p className="text-[9px] text-slate-400 mt-1">
+                                    {ledgerData?.unit ?? ledgerProduct.unit ?? ''}
+                                  </p>
+                                </div>
+
+                              </div>
+
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Right Column: AI Assistant Widget */}
         <div className="space-y-6">
 
@@ -557,43 +1328,101 @@ export default function InventoryPage() {
 
               <div className="space-y-3 font-semibold text-xs leading-normal">
                 <div className="p-3.5 bg-slate-50 border border-slate-200/60 rounded-xl relative flex flex-col justify-between gap-3">
-                  <p className="text-slate-700">Order Tomatoes tomorrow to avoid safety stock exhaustion.</p>
+                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
+                  {aiInsightsLoading
+                    ? "AI INSIGHT"
+                    : aiInsightsData?.insights?.[0]?.title ?? "AI INSIGHT"}
+                </p>
+                  <p className="text-slate-700">
+                    {aiInsightsLoading
+                      ? "Analyzing inventory..."
+                      : aiInsightsData?.insights?.[0]?.message ??
+                        "No AI insight available."}
+                  </p>
+                  <div className="flex items-center gap-2 self-end">
+                    <button
+                      type="button"
+                      disabled
+                      className="py-1 px-2.5 bg-emerald-500/40 text-white font-bold rounded-lg text-[9px] cursor-not-allowed"
+                    >
+                      Apply
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled
+                      className="py-1 px-2.5 bg-white border border-slate-200 text-slate-400 font-bold rounded-lg text-[9px] cursor-not-allowed"
+                    >
+                      Ignore
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 border border-slate-200/60 rounded-xl relative flex flex-col justify-between gap-3">
+                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
+                  {aiInsightsLoading
+                    ? "AI INSIGHT"
+                    : aiInsightsData?.insights?.[1]?.title ?? "AI INSIGHT"}
+                </p>  
+                  <p className="text-slate-700">
+                    {aiInsightsLoading
+                      ? "Analyzing inventory..."
+                      : aiInsightsData?.insights?.[1]?.message ??
+                        "No second AI insight available."}
+                  </p>
+                  <div className="flex items-center gap-2 self-end">
+                    <button
+                      type="button"
+                      disabled
+                      className="py-1 px-2.5 bg-emerald-500/40 text-white font-bold rounded-lg text-[9px] cursor-not-allowed"
+                    >
+                      Apply
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled
+                      className="py-1 px-2.5 bg-white border border-slate-200 text-slate-400 font-bold rounded-lg text-[9px] cursor-not-allowed"
+                    >
+                      Ignore
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 border border-slate-200/60 rounded-xl relative flex flex-col justify-between gap-3">
+                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
+                  {aiInsightsLoading
+                    ? "AI INSIGHT"
+                    : aiInsightsData?.insights?.[2]?.title ?? "AI INSIGHT"}
+                </p>
+                  <p className="text-slate-700">
+                    {aiInsightsLoading
+                      ? "Analyzing inventory..."
+                      : aiInsightsData?.insights?.[2]?.message ??
+                        "No third AI insight available."}
+                    </p>
                   <div className="flex items-center gap-2 self-end">
                     <button onClick={() => alert("Suggestion applied")} className="py-1 px-2.5 bg-emerald-500 text-white font-bold rounded-lg text-[9px] shadow-sm">Apply</button>
                     <button onClick={() => alert("Suggestion ignored")} className="py-1 px-2.5 bg-white border border-slate-200 text-slate-500 font-bold rounded-lg text-[9px]">Ignore</button>
                   </div>
                 </div>
 
-                <div className="p-3.5 bg-slate-50 border border-slate-200/60 rounded-xl relative flex flex-col justify-between gap-3">
-                  <p className="text-slate-700">Milk batch LOT-A expires in 2 days. Use immediately.</p>
-                  <div className="flex items-center gap-2 self-end">
-                    <button onClick={() => alert("Suggestion applied")} className="py-1 px-2.5 bg-emerald-500 text-white font-bold rounded-lg text-[9px] shadow-sm">Apply</button>
-                    <button onClick={() => alert("Suggestion ignored")} className="py-1 px-2.5 bg-white border border-slate-200 text-slate-500 font-bold rounded-lg text-[9px]">Ignore</button>
-                  </div>
+                <div className="p-3.5 bg-slate-50 border border-slate-200/60 rounded-xl">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    No additional AI insight
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    KitchenIQ currently has {aiInsightsData?.count ?? 0} active insights.
+                  </p>
                 </div>
 
-                <div className="p-3.5 bg-slate-50 border border-slate-200/60 rounded-xl relative flex flex-col justify-between gap-3">
-                  <p className="text-slate-700">Cheese consumption velocity increased by 14% this week.</p>
-                  <div className="flex items-center gap-2 self-end">
-                    <button onClick={() => alert("Suggestion applied")} className="py-1 px-2.5 bg-emerald-500 text-white font-bold rounded-lg text-[9px] shadow-sm">Apply</button>
-                    <button onClick={() => alert("Suggestion ignored")} className="py-1 px-2.5 bg-white border border-slate-200 text-slate-500 font-bold rounded-lg text-[9px]">Ignore</button>
-                  </div>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 border border-slate-200/60 rounded-xl relative flex flex-col justify-between gap-3">
-                  <p className="text-slate-700">Chicken stock will finish Friday if velocity continues.</p>
-                  <div className="flex items-center gap-2 self-end">
-                    <button onClick={() => alert("Suggestion applied")} className="py-1 px-2.5 bg-emerald-500 text-white font-bold rounded-lg text-[9px] shadow-sm">Apply</button>
-                    <button onClick={() => alert("Suggestion ignored")} className="py-1 px-2.5 bg-white border border-slate-200 text-slate-500 font-bold rounded-lg text-[9px]">Ignore</button>
-                  </div>
-                </div>
-
-                <div className="p-3.5 bg-slate-50 border border-slate-200/60 rounded-xl relative flex flex-col justify-between gap-3">
-                  <p className="text-slate-700">Reduce potato purchase orders: overstock warning issued.</p>
-                  <div className="flex items-center gap-2 self-end">
-                    <button onClick={() => alert("Suggestion applied")} className="py-1 px-2.5 bg-emerald-500 text-white font-bold rounded-lg text-[9px] shadow-sm">Apply</button>
-                    <button onClick={() => alert("Suggestion ignored")} className="py-1 px-2.5 bg-white border border-slate-200 text-slate-500 font-bold rounded-lg text-[9px]">Ignore</button>
-                  </div>
+                <div className="p-3.5 bg-slate-50 border border-slate-200/60 rounded-xl">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    AI status
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Insights are generated from the current business data.
+                  </p>
                 </div>
               </div>
             </div>
@@ -625,13 +1454,18 @@ export default function InventoryPage() {
               <div className="space-y-4 font-semibold text-xs text-slate-600">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/50">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Current Stock</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">
+                      Current Stock
+                    </span>
                     <span className="text-base font-extrabold text-slate-800 font-mono mt-1 block">
                       {selectedProduct.current_stock} {selectedProduct.unit}
                     </span>
                   </div>
+
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/50">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Min Level</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">
+                      Min Level
+                    </span>
                     <span className="text-base font-extrabold text-slate-800 font-mono mt-1 block">
                       {selectedProduct.reorder_level} {selectedProduct.unit}
                     </span>
@@ -641,49 +1475,109 @@ export default function InventoryPage() {
                 <div className="space-y-2.5 pt-4 border-t border-slate-100">
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">Reserved Stock</span>
-                    <span className="text-slate-800 font-mono">0.0 {selectedProduct.unit}</span>
+                    <span className="text-slate-400 font-mono">
+                      Not available
+                    </span>
                   </div>
+
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">Incoming Stock</span>
-                    <span className="text-slate-800 font-mono">10.0 {selectedProduct.unit}</span>
+                    <span className="text-slate-400 font-mono">
+                      Not available
+                    </span>
                   </div>
+
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">Avg. Daily Usage</span>
-                    <span className="text-slate-800 font-mono">1.2 {selectedProduct.unit}</span>
+                    <span className="text-slate-400 font-mono">
+                      Not available
+                    </span>
                   </div>
+
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">Supplier</span>
-                    <Link href="/suppliers" className="text-emerald-600 hover:text-emerald-700 font-bold">
-                      Fresh Farms
-                    </Link>
+                    <span className="text-slate-400 font-mono">
+                      Not available
+                    </span>
                   </div>
+
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">Purchase Price</span>
-                    <span className="text-slate-800 font-mono">₹{(selectedProduct.cost_price * 80).toFixed(0)}</span>
+                    <span className="text-slate-800 font-mono">
+                      ₹{(selectedProduct.cost_price * BASE_TO_INR_RATE).toFixed(0)}
+                    </span>
                   </div>
+
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">Selling Price</span>
-                    <span className="text-slate-800 font-mono">₹{(selectedProduct.selling_price * 80).toFixed(0)}</span>
+                    <span className="text-slate-800 font-mono">
+                      ₹{(selectedProduct.selling_price * BASE_TO_INR_RATE).toFixed(0)}
+                    </span>
                   </div>
                 </div>
 
                 {/* Stock History mini Chart */}
                 <div className="pt-6 border-t border-slate-100 space-y-3">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Stock Levels (7 Days)</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                    Stock Levels (7 Days)
+                  </span>
+
                   <div className="h-32 w-full bg-slate-50 border border-slate-150 rounded-xl p-2">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={mockStockHistory} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="miniSales" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <XAxis dataKey="day" stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
-                        <YAxis stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
-                        <Area type="monotone" dataKey="stock" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#miniSales)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                    {selectedProductLedgerLoading ? (
+                      <div className="h-full flex items-center justify-center text-[10px] text-slate-400">
+                        Loading stock history...
+                      </div>
+                    ) : selectedProductStockHistory.length === 0 ? (
+                      <div className="h-full flex items-center justify-center text-[10px] text-slate-400">
+                        No stock history available.
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={112} minWidth={0}>
+                        <AreaChart
+                          data={selectedProductStockHistory}
+                          margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
+                        >
+                          <defs>
+                            <linearGradient id="miniSales" x1="0" y1="0" x2="0" y2="1">
+                              <stop
+                                offset="5%"
+                                stopColor="#10b981"
+                                stopOpacity={0.15}
+                              />
+                              <stop
+                                offset="95%"
+                                stopColor="#10b981"
+                                stopOpacity={0}
+                              />
+                            </linearGradient>
+                          </defs>
+
+                          <XAxis
+                            dataKey="day"
+                            stroke="#94a3b8"
+                            fontSize={9}
+                            tickLine={false}
+                            axisLine={false}
+                          />
+
+                          <YAxis
+                            stroke="#94a3b8"
+                            fontSize={9}
+                            tickLine={false}
+                            axisLine={false}
+                          />
+
+                          <Area
+                            type="monotone"
+                            dataKey="stock"
+                            stroke="#10b981"
+                            strokeWidth={2}
+                            fillOpacity={1}
+                            fill="url(#miniSales)"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
                 </div>
               </div>

@@ -160,17 +160,17 @@ def create_sale(
         total_cogs += recipe_cogs
         
         # Deduct ingredient inventory (FEFO)
-        for prod_id, total_needed in needed_ingredients.items():
+    for prod_id, total_needed in needed_ingredients.items():
 
-            adjust_stock(
-                db=db,
-                organization_id=organization_id,
-                product_id=prod_id,
-                quantity=total_needed,
-                transaction_type="STOCK_OUT",
-                notes=f"Auto recipe deduction for Sale #{sale.id}",
-                user_id=user_id,
-            )
+        adjust_stock(
+            db=db,
+            organization_id=organization_id,
+            product_id=prod_id,
+            quantity=total_needed,
+            transaction_type="STOCK_OUT",
+            notes=f"Auto recipe deduction for Sale #{sale.id}",
+            user_id=user_id,
+        )
 
     sale.total_amount = total_sale_amount
     sale.cost_of_goods_sold = round(total_cogs, 2)

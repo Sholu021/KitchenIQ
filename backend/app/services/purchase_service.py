@@ -76,10 +76,6 @@ def create_purchase_order(
         batch_number = item.get("batch_number")
         expiry_date = item.get("expiry_date")
 
-        print("ITEM RECEIVED:", item)
-        print("Batch:", batch_number)
-        print("Expiry:", expiry_date)
-
         prod = db.query(Product).filter(
             Product.id == prod_id,
             Product.organization_id == organization_id
@@ -117,9 +113,6 @@ def create_purchase_order(
             notification_type="INFO",
         )
 
-    db.commit()
-    db.refresh(po)
-    
     AuditService.log(
         db=db,
         organization_id=po.organization_id,
@@ -128,6 +121,10 @@ def create_purchase_order(
         entity_type="Purchase Order",
         entity_id=po.id,
     )
+
+    db.commit()
+    db.refresh(po)
+
     return po
 
 def update_po_status(
@@ -224,9 +221,7 @@ def update_po_status(
             detail=f"Cannot change status from {po.status} to {new_status}",
         )
 
-    db.commit()
-    db.refresh(po)
-
+    # Use:
     AuditService.log(
         db=db,
         organization_id=po.organization_id,
@@ -235,6 +230,9 @@ def update_po_status(
         entity_type="Purchase Order",
         entity_id=po.id,
     )
+
+    db.commit()
+    db.refresh(po)
 
     return po
 
@@ -461,9 +459,6 @@ def approve_purchase_order_service(
     po.approved_by = user_id
     po.approved_at = now
 
-    db.commit()
-    db.refresh(po)
-
     AuditService.log(
         db=db,
         organization_id=po.organization_id,
@@ -472,6 +467,10 @@ def approve_purchase_order_service(
         entity_type="Purchase Order",
         entity_id=po.id,
     )
+
+    db.commit()
+    db.refresh(po)
+
     return po
 
 def create_supplier_invoice(
@@ -552,9 +551,6 @@ def create_supplier_invoice(
             notification_type="SUCCESS",
         )
 
-    db.commit()
-    db.refresh(invoice)
-
     AuditService.log(
         db=db,
         organization_id=organization_id,
@@ -563,5 +559,8 @@ def create_supplier_invoice(
         entity_type="Supplier Invoice",
         entity_id=invoice.id,
     )
+
+    db.commit()
+    db.refresh(invoice)
 
     return invoice

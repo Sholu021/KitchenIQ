@@ -31,35 +31,27 @@ from app.services.inventory_service import adjust_stock
 
 router = APIRouter(prefix="/purchase-orders", tags=["Purchase Orders"])
 
-@router.post("", response_model=PurchaseOrderOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=PurchaseOrderOut,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_po(
     req: PurchaseOrderCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_manager)
+    current_user: User = Depends(require_manager),
 ):
-    print("REQUEST:")
-    print(req.model_dump())
-
-    items_data = [item.model_dump() for item in req.items]
-
-    print("ITEMS:")
-    print(items_data)
+    items_data = [
+        item.model_dump()
+        for item in req.items
+    ]
 
     return create_purchase_order(
         db=db,
         organization_id=current_user.organization_id,
         supplier_id=req.supplier_id,
         items_data=items_data,
-        user_id=current_user.id
-    )
-    
-    items_data = [item.model_dump() for item in req.items]
-    return create_purchase_order(
-        db=db,
-        organization_id=current_user.organization_id,
-        supplier_id=req.supplier_id,
-        items_data=items_data,
-        user_id=current_user.id
+        user_id=current_user.id,
     )
 
 
@@ -171,7 +163,7 @@ def receive_purchase_order(
         item.purchase_order_item_id: item
         for item in request.items
     }
-    print("REQUEST ITEMS:", items_lookup)
+
     po_items = (
         db.query(PurchaseOrderItem)
         .filter(PurchaseOrderItem.purchase_order_id == po.id)
@@ -179,9 +171,7 @@ def receive_purchase_order(
     )
 
     for po_item in po_items:
-        print("PO ITEM ID:", po_item.id)
         received = items_lookup.get(po_item.id)
-        print("MATCH:", received)
         if not received:
             raise HTTPException(
                 status_code=400,
@@ -202,19 +192,22 @@ def receive_purchase_order(
                     f"Only {remaining_qty} remaining."
                 ),
             )
+
         product = (
             db.query(Product)
-            .filter(Product.id == po_item.product_id)
+            .filter(
+                Product.id == po_item.product_id,
+                Product.organization_id == org_id,
+            )
             .first()
         )
 
         if not product:
-            continue
-        print("PO Item:", po_item.id)
-        print("Received batch_number:", received.batch_number)
-        print("Received expiry_date:", received.expiry_date)
-        print("Quantity:", po_item.quantity)
-        print("Unit price:", po_item.unit_price)
+            raise HTTPException(
+                status_code=404,
+                detail=f"Product {po_item.product_id} not found in your organization.",
+            )
+
         db.flush()
 
         # Update current stock

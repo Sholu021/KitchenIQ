@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from app.services.inventory_service import adjust_stock
 from datetime import datetime, date
 
@@ -89,11 +89,15 @@ def produce_recipe(
                     func.sum(Batch.remaining_quantity),
                     0,
                 )
-            ) 
+            )
             .filter(
                 Batch.organization_id == organization_id,
                 Batch.product_id == ingredient.product_id,
                 Batch.remaining_quantity > 0,
+                or_(
+                    Batch.expiry_date.is_(None),
+                    Batch.expiry_date >= date.today(),
+                ),
             )
             .scalar()
         )
@@ -106,7 +110,18 @@ def produce_recipe(
                     f"{ingredient.product.name}"
                 ),
             )
+    production_unit_cost = 0.0
 
+    for ingredient in recipe.ingredients:
+        production_unit_cost += calculate_fefo_cost(
+            db=db,
+            organization_id=organization_id,
+            product_id=ingredient.product_id,
+            quantity=ingredient.quantity_required,
+        )
+
+    production_unit_cost = round(production_unit_cost, 2)
+    
     for ingredient in recipe.ingredients:
 
         required = (
@@ -143,6 +158,7 @@ def produce_recipe(
         expiry_date=expiry_date,
         quantity=quantity_produced,
         remaining_quantity=quantity_produced,
+        purchase_price=production_unit_cost,
     )
 
     db.add(finished_batch)
@@ -163,19 +179,6 @@ def produce_recipe(
             detail="Recipe finished product not found.",
         )
     
-    print("Recipe:", recipe.id)
-    print("Finished Product ID:", recipe.finished_product_id)
-
-    finished_product = (
-        db.query(Product)
-        .filter(
-            Product.id == recipe.finished_product_id,
-            Product.organization_id == organization_id,
-        )
-        .first()
-    )
-
-    print("Finished Product:", finished_product)
     finished_product.current_stock += quantity_produced
         
     transaction = InventoryTransaction(

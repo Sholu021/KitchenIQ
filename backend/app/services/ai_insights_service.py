@@ -79,7 +79,7 @@ def generate_ai_insights(
         insights.append({
             "type": "success",
             "title": "Best Seller",
-            "message": f"{product['recipe_name']} is your highest selling menu item."
+            "message": f"{product['product_name']} is your highest selling menu item."
         })
 
     if top_profit["items"]:

@@ -71,6 +71,8 @@ def read_notification(
         organization_id=current_user.organization_id,
     )
 
+    db.commit()
+
     return {
         "message": "Notification marked as read",
         "notification": notification,
@@ -85,6 +87,8 @@ def read_all_notifications(
         db=db,
         organization_id=current_user.organization_id,
     )
+    
+    db.commit()
 
     return {
         "message": "All notifications marked as read"
@@ -102,6 +106,8 @@ def remove_notification(
         organization_id=current_user.organization_id,
     )
 
+    db.commit()
+    
     return {
         "message": "Notification deleted"
     }

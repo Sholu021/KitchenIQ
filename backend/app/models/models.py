@@ -179,7 +179,7 @@ class InventoryTransaction(Base):
         Integer,
         ForeignKey("purchase_orders.id", ondelete="SET NULL"),
         nullable=True,
-    )
+    ) 
     
     batch_id: Mapped[Optional[int]] = mapped_column(
         Integer,

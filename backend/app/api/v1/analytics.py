@@ -10,7 +10,10 @@ from app.services.analytics_service import calculate_inventory_value, get_dead_s
 from app.services.forecast_service import calculate_product_forecast, calculate_all_forecasts, calculate_reorder_recommendations
 from app.services.supplier_analytics_service import get_supplier_summary, get_supplier_details
 
-router = APIRouter(prefix="/analytics", tags=["Analytics & Reporting"])
+router = APIRouter(
+    prefix="/analytics",
+    tags=["Analytics & Reporting"]
+)
 
 @router.get("/executive-summary")
 def executive_summary(
@@ -66,7 +69,7 @@ def executive_summary(
     )
 
     return {
-        "inventory_value": round(inventory_value, 2),
+        "inventory_value": round(inventory, 2),
         "monthly_sales": round(sales, 2),
         "gross_profit": round(gross_profit, 2),
         "wastage_cost": round(wastage, 2),

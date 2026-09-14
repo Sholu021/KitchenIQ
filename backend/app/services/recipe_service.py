@@ -32,8 +32,8 @@ def get_unit_conversion_factor(recipe_unit: str, product_unit: str) -> float:
 def calculate_recipe_cost(
     db: Session,
     organization_id: int,
-    recipe_id: int
-) -> float:
+    recipe_id: int,
+) -> dict:
     recipe = (
         db.query(Recipe)
         .filter(
@@ -108,9 +108,12 @@ def create_recipe(
     yield_unit: str,
     selling_price: float,
     description: Optional[str] = None,
-    ingredients_data: List[dict] = [],
+    ingredients_data: Optional[List[dict]] = None,
     user_id: Optional[int] = None,
 ) -> Recipe:
+
+    if ingredients_data is None:
+        ingredients_data = []
 
     # 1. Create finished product
     finished_product = Product(

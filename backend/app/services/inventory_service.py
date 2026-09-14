@@ -1,8 +1,9 @@
 from datetime import date
+from sqlalchemy import or_
 from typing import Optional
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from app.models.models import Product, InventoryTransaction, Batch, AuditLog
+from app.models.models import Product, InventoryTransaction, Batch, AuditLog, Organization
 from app.models.models import Organization
 
 def calculate_fefo_cost(
@@ -10,15 +11,27 @@ def calculate_fefo_cost(
     organization_id: int,
     product_id: int,
     quantity: float,
+    allow_expired: bool = False,
 ) -> float:
-
-    batches = (
+    query = (
         db.query(Batch)
         .filter(
             Batch.organization_id == organization_id,
             Batch.product_id == product_id,
             Batch.remaining_quantity > 0,
         )
+    )
+
+    if not allow_expired:
+        query = query.filter(
+            or_(
+                Batch.expiry_date.is_(None),
+                Batch.expiry_date >= date.today(),
+            )
+        )
+
+    batches = (
+        query
         .order_by(
             Batch.expiry_date.asc().nullslast(),
             Batch.received_at.asc(),
@@ -30,14 +43,12 @@ def calculate_fefo_cost(
     total_cost = 0.0
 
     for batch in batches:
-
         if remaining <= 0:
             break
 
         used = min(batch.remaining_quantity, remaining)
 
         total_cost += used * batch.purchase_price
-
         remaining -= used
 
     if remaining > 0:
@@ -55,12 +66,15 @@ def adjust_stock(
     quantity: float,
     transaction_type: str,
     notes: Optional[str] = None,
+    batch_id: Optional[int] = None,
     batch_number: Optional[str] = None,
     expiry_date: Optional[date] = None,
     user_id: Optional[int] = None,
     purchase_price: Optional[float] = None,
     purchase_order_id: Optional[int] = None,
-) -> InventoryTransaction:
+    reference: Optional[str] = None,
+    allow_expired: bool = False,
+    ) -> InventoryTransaction:
     product = db.query(Product).filter(
         Product.id == product_id,
         Product.organization_id == organization_id
@@ -75,24 +89,28 @@ def adjust_stock(
     # Determine net stock change direction
     # STOCK_IN increases stock
     # STOCK_OUT decreases stock
-    # ADJUSTMENT quantity can represent absolute delta (if quantity > 0 we treat as input, else output)
+    # ADJUSTMENT quantity can be positive or negative
     if transaction_type == "STOCK_IN":
         net_change = quantity
     elif transaction_type == "STOCK_OUT":
         net_change = -quantity
     elif transaction_type == "ADJUSTMENT":
-        net_change = quantity  # can be positive or negative
+        net_change = quantity
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid transaction type: {transaction_type}"
+            detail=f"Invalid transaction type: {transaction_type}",
         )
 
     # Prevent negative inventory
     if product.current_stock + net_change < 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Insufficient inventory for product '{product.name}'. Available: {product.current_stock}, Requested reduction: {abs(net_change)}"
+            detail=(
+                f"Insufficient inventory for product '{product.name}'. "
+                f"Available: {product.current_stock}, "
+                f"Requested reduction: {abs(net_change)}"
+            ),
         )
 
     # --- Batch Management ---
@@ -123,7 +141,34 @@ def adjust_stock(
                 batch.purchase_price = purchase_price
 
         else:
-            # Create new batch
+            # New batch
+            organization = (
+                db.query(Organization)
+                .filter(
+                    Organization.id == organization_id
+                )
+                .first()
+            )
+
+            if organization and organization.subscription_tier == "Free":
+                active_batch_count = (
+                    db.query(Batch)
+                    .filter(
+                        Batch.organization_id == organization_id,
+                        Batch.quantity > 0,
+                    )
+                    .count()
+                )
+
+                if active_batch_count >= 5:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=(
+                            "Free tier active batch limit (5) reached. "
+                            "Upgrade to Pro to create additional batches."
+                        ),
+                    )
+
             batch = Batch(
                 organization_id=organization_id,
                 product_id=product_id,
@@ -131,67 +176,61 @@ def adjust_stock(
                 expiry_date=expiry_date,
                 quantity=net_change,
                 remaining_quantity=net_change,
-                purchase_price=purchase_price or product.cost_price,
-            )
-            db.add(batch)
-            db.flush()    # ensures batch.id is available
-            
-    # For outgoing stock, deduct from batches using FEFO (First-Expiring-First-Out)
-    elif net_change < 0:
-        reduction_needed = abs(net_change)
-        
-        # Query active batches, sorting by expiry date (nulls last)
-        from sqlalchemy import or_
-
-        batches = (
-            db.query(Batch)
-            .filter(
-                Batch.product_id == product_id,
-                Batch.organization_id == organization_id,
-                Batch.remaining_quantity > 0,
-                or_(
-                    Batch.expiry_date == None,
-                    Batch.expiry_date >= date.today(),
+                purchase_price=(
+                    purchase_price
+                    if purchase_price is not None
+                    else product.cost_price
                 ),
             )
-            .order_by(
-                Batch.expiry_date.asc().nullslast(),
-                Batch.received_at.asc(),
-            )
-            .all()
-        )
-        print("\n========== FEFO ==========")
-        print("Product:", product.name)
-        print("Need:", reduction_needed)
 
-        for b in batches:
-            print(
-                b.id,
-                b.batch_number,
-                b.remaining_quantity,
-                b.expiry_date,
-            )
-        # Verify total batch quantity matches
-        total_batch_qty = sum(b.remaining_quantity for b in batches)
-        if total_batch_qty < reduction_needed:
-            # If batches are out of sync, make up from a default batch or raise error
-            # To be safe and strict, raise error
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Insufficient batch quantities for product '{product.name}'. Total batches available: {total_batch_qty}, Needed: {reduction_needed}"
-            )
-        for batch in batches:
-            if reduction_needed <= 0:
-                break
+            db.add(batch)
+            db.flush()
 
-            if batch.remaining_quantity >= reduction_needed:
-                used = reduction_needed
-                batch.remaining_quantity -= used
-                reduction_needed = 0
-            else:
-                used = batch.remaining_quantity
-                batch.remaining_quantity = 0
-                reduction_needed -= used
+    # For outgoing stock, deduct from batches using FEFO
+    elif net_change < 0:
+        reduction_needed = abs(net_change)
+
+        # ---------------------------------------------------------
+        # Exact batch requested
+        # ---------------------------------------------------------
+        if batch_id is not None:
+            batch_query = (
+                db.query(Batch)
+                .filter(
+                    Batch.id == batch_id,
+                    Batch.product_id == product_id,
+                    Batch.organization_id == organization_id,
+                    Batch.remaining_quantity > 0,
+                )
+            )
+
+            if not allow_expired:
+                batch_query = batch_query.filter(
+                    or_(
+                        Batch.expiry_date.is_(None),
+                        Batch.expiry_date >= date.today(),
+                    )
+                )
+
+            batch = batch_query.first()
+
+            if not batch:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Selected batch not found or has no remaining stock.",
+                )
+
+            if batch.remaining_quantity < reduction_needed:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Insufficient stock in batch '{batch.batch_number}'. "
+                        f"Available: {batch.remaining_quantity}, "
+                        f"Requested: {reduction_needed}"
+                    ),
+                )
+
+            batch.remaining_quantity -= reduction_needed
 
             txn = InventoryTransaction(
                 organization_id=organization_id,
@@ -202,47 +241,107 @@ def adjust_stock(
                 transaction_type=transaction_type,
                 quantity=net_change,
                 notes=notes,
+                reference=reference,
             )
+
             db.add(txn)
             db.flush()
 
-            print(
-                "Saved transaction:",
-                txn.id,
-                txn.batch_id,
-                txn.transaction_type,
-                txn.quantity,
+        # ---------------------------------------------------------
+        # No batch specified → normal FEFO
+        # ---------------------------------------------------------
+        else:
+            batch_query = (
+                db.query(Batch)
+                .filter(
+                    Batch.product_id == product_id,
+                    Batch.organization_id == organization_id,
+                    Batch.remaining_quantity > 0,
+                )
             )
 
-            print(
-                "Using batch:",
-                batch.batch_number,
-                "Remaining:",
-                batch.remaining_quantity,
+            if not allow_expired:
+                batch_query = batch_query.filter(
+                    or_(
+                        Batch.expiry_date.is_(None),
+                        Batch.expiry_date >= date.today(),
+                    )
+                )
+
+            batches = (
+                batch_query
+                .order_by(
+                    Batch.expiry_date.asc().nullslast(),
+                    Batch.received_at.asc(),
+                )
+                .all()
             )
+
+            total_batch_qty = sum(
+                b.remaining_quantity for b in batches
+            )
+
+            if total_batch_qty < reduction_needed:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Insufficient batch quantities for product "
+                        f"'{product.name}'. "
+                        f"Total batches available: {total_batch_qty}, "
+                        f"Needed: {reduction_needed}"
+                    ),
+                )
+
+            for batch in batches:
+                if reduction_needed <= 0:
+                    break
+
+                if batch.remaining_quantity >= reduction_needed:
+                    used = reduction_needed
+                    batch.remaining_quantity -= used
+                    reduction_needed = 0
+                else:
+                    used = batch.remaining_quantity
+                    batch.remaining_quantity = 0
+                    reduction_needed -= used
+
+                txn = InventoryTransaction(
+                    organization_id=organization_id,
+                    product_id=product_id,
+                    batch_id=batch.id,
+                    purchase_order_id=purchase_order_id,
+                    created_by=user_id,
+                    transaction_type=transaction_type,
+                    quantity=-used,
+                    notes=notes,
+                    reference=reference,
+                )
+
+                db.add(txn)
+                db.flush()
 
     # ----------------------------
     # Update product stock
     # ----------------------------
     product.current_stock += net_change
 
-    # Create STOCK_IN transaction only.
-    if transaction_type == "STOCK_IN":
+    # Incoming stock or positive adjustment:
+    # create one transaction for the batch that received the quantity.
+    if net_change > 0:
         txn = InventoryTransaction(
             organization_id=organization_id,
             product_id=product_id,
             batch_id=batch.id,
-            purchase_order_id=None,
+            purchase_order_id=purchase_order_id,
             created_by=user_id,
             transaction_type=transaction_type,
             quantity=net_change,
             notes=notes,
+            reference=reference,
         )
-        db.add(txn)
-    else:
-        txn = None
 
-    db.flush()
+        db.add(txn)
+        db.flush()
 
     audit = AuditLog(
         organization_id=organization_id,
