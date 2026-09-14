@@ -260,7 +260,10 @@ export default function DashboardPage() {
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Today's Sales</span>
             <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">
-              ₹{Math.round((cards?.revenue ?? 0) * 80).toLocaleString('en-IN')}
+              ₹{Number(cards?.revenue ?? 0).toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </span>
           </div>
           <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100/50 rounded px-1.5 py-0.5 mt-4 self-start">
