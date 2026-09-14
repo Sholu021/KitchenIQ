@@ -30,7 +30,10 @@ export async function getTopSellingRecipes() {
   return response.data;
 }
 
-
+export async function getRecentActivity() {
+  const response = await apiClient.get("/dashboard/recent-activity");
+  return response.data;
+}
 
 export async function getAIInsights() {
   const response = await apiClient.get("/dashboard/ai-insights");

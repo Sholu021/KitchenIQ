@@ -361,7 +361,7 @@ export default function InventoryPage() {
     ]
       .map((row) =>
         row
-          .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+          .map((value: unknown) => `"${String(value).replace(/"/g, '""')}"`)
           .join(",")
       )
       .join("\n");

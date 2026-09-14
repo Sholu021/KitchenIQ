@@ -42,6 +42,11 @@ import {
 } from "@/lib/dashboard";
 
 export default function DashboardPage() {
+  type AIInsight = {
+    type: string;
+    title: string;
+    message: string;
+  };
   const router = useRouter();
 
   const userName = useAuthStore((state) => state.userName);
@@ -49,10 +54,18 @@ export default function DashboardPage() {
   const [chartFilter, setChartFilter] = useState<'today' | '7days' | '30days' | '12months'>('7days');
 
   // Interactive tasks checklist state
-  
+  const [tasks, setTasks] = useState([
+    { id: 1, label: 'Review low-stock items', checked: false },
+    { id: 2, label: 'Review expiring batches', checked: false },
+    { id: 3, label: 'Review today’s sales', checked: false },
+  ]);
 
   const toggleTask = (id: number) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, checked: !t.checked } : t));
+    setTasks(prev =>
+      prev.map(t =>
+        t.id === id ? { ...t, checked: !t.checked } : t
+      )
+    );
   };
 
   const handleGeneratePO = async () => {
@@ -108,7 +121,9 @@ export default function DashboardPage() {
     queryFn: getSalesTrend,
   });
   
-  const { data: aiInsightsData = [] } = useQuery({
+  const { data: aiInsightsData } = useQuery<{
+    insights: AIInsight[];
+  }>({
     queryKey: ["ai-insights"],
     queryFn: getAIInsights,
   });
@@ -188,7 +203,8 @@ export default function DashboardPage() {
         profit: Number(item.profit ?? 0),
       }))
     : [];
-  const aiInsights = aiInsightsData?.insights ?? [];
+  
+  const aiInsights: AIInsight[] = aiInsightsData?.insights ?? [];
 
   const recipe1 = topSellingRecipes[0];
   const recipe2 = topSellingRecipes[1];
@@ -621,7 +637,7 @@ export default function DashboardPage() {
                     borderRadius: "12px",
                     boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
                   }}
-                  formatter={(value: number, name: string) => [
+                  formatter={(value, name) => [
                     `₹${Number(value).toLocaleString("en-IN", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
