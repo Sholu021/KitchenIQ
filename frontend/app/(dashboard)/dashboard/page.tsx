@@ -32,6 +32,7 @@ import Link from 'next/link';
 import { useRouter } from "next/navigation";
 import {
   getExecutiveSummary,
+  getDashboardOverview,
   getProfitSummary,
   getSalesTrend,
   getTopSellingRecipes,
@@ -136,6 +137,11 @@ export default function DashboardPage() {
   const { data: expiringItemsData = [] } = useQuery({
     queryKey: ["expiring-items"],
     queryFn: getExpiringItems,
+  });
+
+  const { data: overview } = useQuery({
+    queryKey: ["dashboard-overview"],
+    queryFn: getDashboardOverview,
   });
 
   console.log("Loading:", profitLoading);
@@ -260,7 +266,7 @@ export default function DashboardPage() {
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Today's Sales</span>
             <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">
-              ₹{Number(cards?.revenue ?? 0).toLocaleString('en-IN', {
+              ₹{Number(overview?.sales?.today ?? 0).toLocaleString('en-IN', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}

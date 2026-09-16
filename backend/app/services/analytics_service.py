@@ -16,40 +16,48 @@ def calculate_inventory_value(
     db: Session,
     organization_id: int,
 ):
-    batches = (
-        db.query(Batch)
-        .join(Product, Product.id == Batch.product_id)
+    products = (
+        db.query(Product)
         .filter(
-            Batch.organization_id == organization_id,
-            Batch.remaining_quantity > 0,
+            Product.organization_id == organization_id,
         )
         .all()
     )
 
-    total_value = 0
-    raw_material_value = 0
-    finished_goods_value = 0
+    inventory_value = 0.0
+    raw_material_value = 0.0
+    finished_goods_value = 0.0
+    total_units = 0.0
 
-    for batch in batches:
+    for product in products:
+        stock = float(product.current_stock or 0)
+        cost = float(product.cost_price or 0)
 
-        value = batch.remaining_quantity * batch.purchase_price
+        value = stock * cost
 
-        total_value += value
+        inventory_value += value
+        total_units += stock
 
-        if batch.product.is_finished_product:
+        if product.is_finished_product:
             finished_goods_value += value
         else:
             raw_material_value += value
 
+    active_batches = (
+        db.query(Batch)
+        .filter(
+            Batch.organization_id == organization_id,
+            Batch.remaining_quantity > 0,
+        )
+        .count()
+    )
+
     return {
-        "inventory_value": round(total_value, 2),
+        "inventory_value": round(inventory_value, 2),
         "raw_material_value": round(raw_material_value, 2),
         "finished_goods_value": round(finished_goods_value, 2),
-        "active_batches": len(batches),
-        "total_units": round(
-            sum(batch.remaining_quantity for batch in batches),
-            2,
-        ),
+        "active_batches": active_batches,
+        "total_units": round(total_units, 2),
     }
 
 def calculate_inventory_health_score(
@@ -77,13 +85,17 @@ def calculate_inventory_health_score(
         organization_id=organization_id,
     )
 
+    health_products = health.get("products", [])
+
     healthy_products = sum(
-        1 for item in health
+        1
+        for item in health_products
         if item["status"] == "OK"
     )
 
     reorder_now = sum(
-        1 for item in health
+        1
+        for item in health_products
         if item["status"] == "REORDER NOW"
     )
 

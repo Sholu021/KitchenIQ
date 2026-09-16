@@ -5,6 +5,11 @@ export async function getExecutiveSummary() {
   return response.data;
 }
 
+export async function getDashboardOverview() {
+  const response = await apiClient.get("/dashboard/overview");
+  return response.data;
+}
+
 export async function getProfitSummary() {
   const response = await apiClient.get("/dashboard/profit-summary");
   return response.data;

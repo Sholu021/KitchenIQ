@@ -73,6 +73,50 @@ def dashboard_overview(
         .scalar()
     )
 
+    now = datetime.utcnow()
+    today = now.date()
+    week_start = today - timedelta(days=6)
+    month_start = today.replace(day=1)
+
+    sales_today = (
+        db.query(func.coalesce(func.sum(Sale.total_amount), 0))
+        .filter(
+            Sale.organization_id == organization_id,
+            Sale.sale_date >= today,
+        )
+        .scalar()
+        or 0
+    )
+
+    sales_week = (
+        db.query(func.coalesce(func.sum(Sale.total_amount), 0))
+        .filter(
+            Sale.organization_id == organization_id,
+            Sale.sale_date >= week_start,
+        )
+        .scalar()
+        or 0
+    )
+
+    sales_month = (
+        db.query(func.coalesce(func.sum(Sale.total_amount), 0))
+        .filter(
+            Sale.organization_id == organization_id,
+            Sale.sale_date >= month_start,
+        )
+        .scalar()
+        or 0
+    )
+
+    orders_today = (
+        db.query(func.count(Sale.id))
+        .filter(
+            Sale.organization_id == organization_id,
+            Sale.sale_date >= today,
+        )
+        .scalar()
+        or 0
+    )
     gross_profit = (
         db.query(func.coalesce(func.sum(Sale.gross_profit), 0))
         .filter(
