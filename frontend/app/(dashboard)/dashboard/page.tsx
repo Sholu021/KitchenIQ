@@ -224,7 +224,7 @@ export default function DashboardPage() {
   });
   
   const healthColor =
-    (cards?.inventory_health ?? 0) >= 90
+    (overview?.inventory?.health_score ?? 0) >= 90
       ? "#10b981" // Green
       : (cards?.inventory_health ?? 0) >= 75
       ? "#f59e0b" // Amber
@@ -284,9 +284,7 @@ export default function DashboardPage() {
             <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">
               ₹{Math.round(cards?.inventory_value ?? 0).toLocaleString("en-IN")}
             </span>
-            <span className="text-2xl font-black text-slate-800">
-              N/A
-            </span>
+            
           
           </div>
           <span className="text-[10px] font-semibold text-slate-400 mt-4 block">
@@ -710,7 +708,7 @@ export default function DashboardPage() {
                   strokeDasharray={339.3}
                   strokeDashoffset={
                     339.3 -
-                    (339.3 * (cards?.inventory_health ?? 0)) / 100
+                    (339.3 * (overview?.inventory?.health_score ?? 0)) / 100
                   }
                 />
 
@@ -718,7 +716,7 @@ export default function DashboardPage() {
 
               <div className="text-center z-10">
                 <div className="text-2xl font-black text-slate-800">
-                  {cards?.inventory_health ?? 0}%
+                  {overview?.inventory?.health_score ?? 0}%
                 </div>
 
                 <div className="text-[10px] font-bold text-slate-500 uppercase">
