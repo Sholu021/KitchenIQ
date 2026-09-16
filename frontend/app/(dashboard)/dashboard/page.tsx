@@ -736,7 +736,7 @@ export default function DashboardPage() {
              </span>
 
              <span className="font-mono text-slate-900">
-               {cards?.inventory_health ?? 0}%
+               {overview?.inventory?.health_score ?? 0}%
              </span>
            </div>
 
@@ -1019,7 +1019,10 @@ export default function DashboardPage() {
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-150">
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Total Sales</span>
               <span className="text-base font-extrabold text-slate-800 block mt-1 font-mono">
-                ₹{Math.round((cards?.revenue_today ?? 0) * 80)}
+                â‚¹{Number(overview?.sales?.today ?? 0).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </span>
             </div>
 
@@ -1036,7 +1039,7 @@ export default function DashboardPage() {
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-150">
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Inventory Health</span>
               <span className="text-base font-extrabold text-slate-800 block mt-1 font-mono">
-                {cards?.inventory_health ?? 0}%
+                {overview?.inventory?.health_score ?? 0}%
               </span>
             </div>
 
