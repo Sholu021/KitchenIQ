@@ -32,13 +32,13 @@ import Link from 'next/link';
 import { useRouter } from "next/navigation";
 import {
   getExecutiveSummary,
+  getDashboardSummary,
   getDashboardOverview,
   getProfitSummary,
   getSalesTrend,
   getTopSellingRecipes,
   getLowStockItems,
   getExpiringItems,
-  getRecentActivity,
   getAIInsights,
 } from "@/lib/dashboard";
 
@@ -144,6 +144,11 @@ export default function DashboardPage() {
     queryFn: getDashboardOverview,
   });
 
+  const { data: dashboardSummary } = useQuery({
+    queryKey: ["dashboard-summary"],
+    queryFn: getDashboardSummary,
+  });
+
   console.log("Loading:", profitLoading);
   console.log("Error:", profitError);
   console.log("Error Details:", profitErrorDetails);
@@ -185,6 +190,10 @@ export default function DashboardPage() {
     : [];
 
   const recipes = topSellingRecipes;
+
+  const recentActivity = Array.isArray(dashboardSummary?.recent_activity)
+    ? dashboardSummary.recent_activity
+    : [];
 
   const lowStockItems = Array.isArray(lowStockData)
     ? lowStockData
@@ -978,9 +987,43 @@ export default function DashboardPage() {
 
             <div className="space-y-4 text-xs font-semibold text-slate-700">
 
-              <div className="text-center py-8 text-slate-400">
-                Recent activity is not available yet.
-              </div>
+              {recentActivity.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">
+                  No recent activity yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentActivity.map((activity: any, index: number) => (
+                    <div
+                      key={`${activity.type}-${activity.time}-${index}`}
+                      className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    >
+                      <div>
+                        <span className="font-bold text-slate-800 block">
+                          {activity.title}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          {activity.subtitle}
+                        </span>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="font-mono font-bold text-slate-800 block">
+                          {activity.amount !== undefined
+                            ? `₹${Number(activity.amount).toLocaleString("en-IN", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}`
+                            : ""}
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          {new Date(activity.time).toLocaleString("en-IN")}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
       </div>
@@ -1018,8 +1061,8 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-xs font-semibold text-slate-650">
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-150">
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Total Sales</span>
-              <span className="text-base font-extrabold text-slate-800 block mt-1 font-mono">
-                â‚¹{Number(overview?.sales?.today ?? 0).toLocaleString("en-IN", {
+              <span className="text-base font-extrabold text-slate-800 block mt-1 font-mono">          
+                ₹{Number(overview?.sales?.today ?? 0).toLocaleString("en-IN", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
@@ -1028,12 +1071,18 @@ export default function DashboardPage() {
 
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-150">
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Total Expenses</span>
-              <span className="text-base font-extrabold text-slate-850 block mt-1 font-mono">₹{Math.round(profitSummary?.today?.expenses ?? 0).toLocaleString("en-IN")}</span>
+              <span className="text-base font-extrabold text-slate-850 block mt-1 font-mono">₹{Number(profitSummary?.today?.expenses ?? 0).toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}</span>
             </div>
 
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-150">
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Estimated Profit</span>
-              <span className="text-base font-extrabold text-emerald-600 block mt-1 font-mono">₹{Math.round(profitSummary?.today?.profit ?? 0).toLocaleString("en-IN")}</span>
+              <span className="text-base font-extrabold text-emerald-600 block mt-1 font-mono">₹{Number(profitSummary?.today?.profit ?? 0).toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}</span>
             </div>
 
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-150">
