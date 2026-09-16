@@ -775,14 +775,13 @@ def executive_summary(
         db.query(
             func.coalesce(
                 func.sum(
-                    Batch.remaining_quantity * Batch.purchase_price
+                    Product.current_stock * Product.cost_price
                 ),
                 0.0,
             )
         )
         .filter(
-            Batch.organization_id == org_id,
-            Batch.remaining_quantity > 0,
+            Product.organization_id == org_id,
         )
         .scalar()
     )
