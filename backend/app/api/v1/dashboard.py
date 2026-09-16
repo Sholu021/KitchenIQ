@@ -260,27 +260,39 @@ def get_dashboard_summary(
              "amount": float(po.total_amount)
          })
 
-     # Inventory Transactions
+    # Inventory Transactions
     transactions = (
-         db.query(InventoryTransaction)
-         .filter(InventoryTransaction.organization_id == org_id)
-         .order_by(InventoryTransaction.created_at.desc())
-         .limit(5)
-         .all()
-     )
+        db.query(InventoryTransaction)
+        .join(Product, Product.id == InventoryTransaction.product_id)
+        .filter(
+            InventoryTransaction.organization_id == org_id,
+            Product.organization_id == org_id,
+        )
+        .order_by(InventoryTransaction.created_at.desc())
+        .limit(5)
+        .all()
+    )
 
     for tx in transactions:
-         recent_activity.append({
-             "type": "inventory",
-             "time": tx.created_at.isoformat(),
-             "title": tx.transaction_type,
-             "subtitle": f"Product #{tx.product_id}",
-             "amount": tx.quantity
-      })
-    
-         recent_activity.sort(key=lambda x: x["time"], reverse=True)
+        transaction_title = (
+            "Stock Received"
+            if tx.transaction_type == "STOCK_IN"
+            else "Stock Used"
+            if tx.transaction_type == "STOCK_OUT"
+            else tx.transaction_type.replace("_", " ").title()
+        )
 
-         recent_activity = recent_activity[:10]
+        recent_activity.append({
+            "type": "inventory",
+            "time": tx.created_at.isoformat(),
+            "title": transaction_title,
+            "subtitle": tx.product.name,
+            "quantity": float(tx.quantity or 0),
+        })
+    
+        recent_activity.sort(key=lambda x: x["time"], reverse=True)
+
+        recent_activity = recent_activity[:10]
 
     
     return {

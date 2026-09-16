@@ -1009,7 +1009,9 @@ export default function DashboardPage() {
 
                       <div className="text-right">
                         <span className="font-mono font-bold text-slate-800 block">
-                          {activity.amount !== undefined
+                          {activity.type === "inventory"
+                            ? `${Number(activity.quantity ?? 0).toLocaleString("en-IN")} units`
+                            : activity.amount !== undefined
                             ? `₹${Number(activity.amount).toLocaleString("en-IN", {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,
