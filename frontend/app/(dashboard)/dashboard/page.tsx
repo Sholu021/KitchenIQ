@@ -741,7 +741,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
               <span className="flex items-center gap-2 text-slate-700">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                Healthy
+                Health Score
              </span>
 
              <span className="font-mono text-slate-900">
