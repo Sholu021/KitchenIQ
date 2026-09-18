@@ -312,7 +312,7 @@ export default function AIInsightsPage() {
                     <AlertCircle size={20} />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Expiring within 30 Days</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Expiring within 7 Days</span>
                     <span className="text-sm font-extrabold text-amber-600 font-mono">₹{Number(waste_analysis.expiring_7_days_value ?? 0).toFixed(2)}</span>
                   </div>
                 </div>
