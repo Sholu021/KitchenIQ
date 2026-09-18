@@ -78,31 +78,59 @@ def executive_summary(
 
 @router.get("", response_model=dict)
 def get_analytics_dashboard(
-    days: int = 14,
+    days: str = "14",
     db: Session = Depends(get_db),
     current_user: User = Depends(require_staff)
 ):
     org_id = current_user.organization_id
 
-    # 1. Sales Trend
+    valid_periods = {"7", "14", "30", "all"}
+    if days not in valid_periods:
+        raise HTTPException(status_code=400, detail="days must be 7, 14, 30, or all")
+
+    today = date.today()
+
+    if days == "all":
+        earliest_sale = (
+            db.query(func.min(Sale.sale_date))
+            .filter(Sale.organization_id == org_id)
+            .scalar()
+        )
+        earliest_wastage = (
+            db.query(func.min(WastageLog.created_at))
+            .filter(WastageLog.organization_id == org_id)
+            .scalar()
+        )
+        candidates = [
+            value.date() if hasattr(value, "date") else value
+            for value in (earliest_sale, earliest_wastage)
+            if value is not None
+        ]
+        start_date = min(candidates) if candidates else today
+        trend_days = (today - start_date).days + 1
+    else:
+        trend_days = int(days)
+        start_date = today - timedelta(days=trend_days - 1)
+
     sales_trend = []
-    # 2. Wastage Trend
     wastage_trend = []
 
-    for i in range(days - 1, -1, -1):
-        day_date = date.today() - timedelta(days=i)
+    for i in range(trend_days - 1, -1, -1):
+        day_date = today - timedelta(days=i)
         day_start = datetime.combine(day_date, datetime.min.time())
         day_end = datetime.combine(day_date, datetime.max.time())
 
-        # Sales sum for day
-        sales_sum = db.query(func.coalesce(func.sum(Sale.total_amount), 0.0)).filter(
+        sales_sum = db.query(
+            func.coalesce(func.sum(Sale.total_amount), 0.0)
+        ).filter(
             Sale.organization_id == org_id,
             Sale.sale_date >= day_start,
             Sale.sale_date <= day_end
         ).scalar()
 
-        # Wastage sum for day
-        wastage_sum = db.query(func.coalesce(func.sum(WastageLog.cost_loss), 0.0)).filter(
+        wastage_sum = db.query(
+            func.coalesce(func.sum(WastageLog.cost_loss), 0.0)
+        ).filter(
             WastageLog.organization_id == org_id,
             WastageLog.created_at >= day_start,
             WastageLog.created_at <= day_end
@@ -112,48 +140,84 @@ def get_analytics_dashboard(
         sales_trend.append({"date": date_str, "amount": float(sales_sum)})
         wastage_trend.append({"date": date_str, "amount": float(wastage_sum)})
 
-    # 3. Category Breakdown (Inventory value by Category)
     category_data = db.query(
         Category.name,
-        func.coalesce(func.sum(Product.current_stock * Product.cost_price), 0.0).label("value")
-    ).select_from(Product).join(Category, Product.category_id == Category.id).filter(
+        func.coalesce(
+            func.sum(Product.current_stock * Product.cost_price), 0.0
+        ).label("value")
+    ).select_from(Product).join(
+        Category, Product.category_id == Category.id
+    ).filter(
         Product.organization_id == org_id
     ).group_by(Category.name).all()
 
     category_breakdown = [
-        {"name": item[0], "value": float(item[1])} for item in category_data
+        {"name": item[0], "value": float(item[1])}
+        for item in category_data
     ]
 
-    # Handle uncategorized products
     uncategorized_value = db.query(
-        func.coalesce(func.sum(Product.current_stock * Product.cost_price), 0.0)
+        func.coalesce(
+            func.sum(Product.current_stock * Product.cost_price), 0.0
+        )
     ).filter(
         Product.organization_id == org_id,
         Product.category_id == None
     ).scalar()
 
     if uncategorized_value and float(uncategorized_value) > 0:
-        category_breakdown.append({"name": "Uncategorized", "value": float(uncategorized_value)})
+        category_breakdown.append(
+            {"name": "Uncategorized", "value": float(uncategorized_value)}
+        )
 
-    # 4. Inventory Velocity (Last 30 Days Stock In vs Stock Out by Product)
-    thirty_days_ago = datetime.now(UTC) - timedelta(days=30)
-    
+    transaction_start = datetime.combine(start_date, datetime.min.time())
+
     velocity_data = db.query(
         Product.name,
-        func.coalesce(func.sum(case((InventoryTransaction.transaction_type == 'STOCK_IN', InventoryTransaction.quantity), else_=0.0)), 0.0).label("stock_in"),
-        func.coalesce(func.sum(case((InventoryTransaction.transaction_type == 'STOCK_OUT', func.abs(InventoryTransaction.quantity)), else_=0.0)), 0.0).label("stock_out")
-    ).select_from(InventoryTransaction).join(Product, InventoryTransaction.product_id == Product.id).filter(
+        func.coalesce(
+            func.sum(
+                case(
+                    (
+                        InventoryTransaction.transaction_type == 'STOCK_IN',
+                        InventoryTransaction.quantity
+                    ),
+                    else_=0.0
+                )
+            ), 0.0
+        ).label("stock_in"),
+        func.coalesce(
+            func.sum(
+                case(
+                    (
+                        InventoryTransaction.transaction_type == 'STOCK_OUT',
+                        func.abs(InventoryTransaction.quantity)
+                    ),
+                    else_=0.0
+                )
+            ), 0.0
+        ).label("stock_out")
+    ).select_from(
+        InventoryTransaction
+    ).join(
+        Product,
+        InventoryTransaction.product_id == Product.id
+    ).filter(
         Product.organization_id == org_id,
-        InventoryTransaction.created_at >= thirty_days_ago
-    ).group_by(Product.name).limit(10).all()
+        InventoryTransaction.created_at >= transaction_start
+    ).group_by(
+        Product.name
+    ).order_by(
+        Product.name.asc()
+    ).limit(10).all()
 
-    inventory_velocity = []
-    for item in velocity_data:
-        inventory_velocity.append({
+    inventory_velocity = [
+        {
             "product_name": item[0],
             "stock_in": float(item[1]),
             "stock_out": float(item[2])
-        })
+        }
+        for item in velocity_data
+    ]
 
     return {
         "sales_trend": sales_trend,
