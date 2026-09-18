@@ -89,8 +89,9 @@ def get_analytics_dashboard(
         raise HTTPException(status_code=400, detail="days must be 7, 14, 30, or all")
 
     today = date.today()
+    is_all_time = days == "all"
 
-    if days == "all":
+    if is_all_time:
         earliest_sale = (
             db.query(func.min(Sale.sale_date))
             .filter(Sale.organization_id == org_id)
@@ -101,44 +102,82 @@ def get_analytics_dashboard(
             .filter(WastageLog.organization_id == org_id)
             .scalar()
         )
+
         candidates = [
             value.date() if hasattr(value, "date") else value
             for value in (earliest_sale, earliest_wastage)
             if value is not None
         ]
+
         start_date = min(candidates) if candidates else today
-        trend_days = (today - start_date).days + 1
+        trend_start = start_date - timedelta(days=start_date.weekday())
+        trend_end = today
+        trend_granularity = "weekly"
     else:
         trend_days = int(days)
         start_date = today - timedelta(days=trend_days - 1)
+        trend_start = start_date
+        trend_end = today
+        trend_granularity = "daily"
 
     sales_trend = []
     wastage_trend = []
 
-    for i in range(trend_days - 1, -1, -1):
-        day_date = today - timedelta(days=i)
-        day_start = datetime.combine(day_date, datetime.min.time())
-        day_end = datetime.combine(day_date, datetime.max.time())
+    if is_all_time:
+        current_start = trend_start
 
-        sales_sum = db.query(
-            func.coalesce(func.sum(Sale.total_amount), 0.0)
-        ).filter(
-            Sale.organization_id == org_id,
-            Sale.sale_date >= day_start,
-            Sale.sale_date <= day_end
-        ).scalar()
+        while current_start <= trend_end:
+            current_end = min(current_start + timedelta(days=6), trend_end)
 
-        wastage_sum = db.query(
-            func.coalesce(func.sum(WastageLog.cost_loss), 0.0)
-        ).filter(
-            WastageLog.organization_id == org_id,
-            WastageLog.created_at >= day_start,
-            WastageLog.created_at <= day_end
-        ).scalar()
+            period_start = datetime.combine(current_start, datetime.min.time())
+            period_end = datetime.combine(current_end, datetime.max.time())
 
-        date_str = day_date.strftime("%b %d")
-        sales_trend.append({"date": date_str, "amount": float(sales_sum)})
-        wastage_trend.append({"date": date_str, "amount": float(wastage_sum)})
+            sales_sum = db.query(
+                func.coalesce(func.sum(Sale.total_amount), 0.0)
+            ).filter(
+                Sale.organization_id == org_id,
+                Sale.sale_date >= period_start,
+                Sale.sale_date <= period_end
+            ).scalar()
+
+            wastage_sum = db.query(
+                func.coalesce(func.sum(WastageLog.cost_loss), 0.0)
+            ).filter(
+                WastageLog.organization_id == org_id,
+                WastageLog.created_at >= period_start,
+                WastageLog.created_at <= period_end
+            ).scalar()
+
+            label = current_start.strftime("%b %d")
+            sales_trend.append({"date": label, "amount": float(sales_sum)})
+            wastage_trend.append({"date": label, "amount": float(wastage_sum)})
+
+            current_start += timedelta(days=7)
+    else:
+        for i in range((trend_end - trend_start).days, -1, -1):
+            day_date = trend_end - timedelta(days=i)
+            day_start = datetime.combine(day_date, datetime.min.time())
+            day_end = datetime.combine(day_date, datetime.max.time())
+
+            sales_sum = db.query(
+                func.coalesce(func.sum(Sale.total_amount), 0.0)
+            ).filter(
+                Sale.organization_id == org_id,
+                Sale.sale_date >= day_start,
+                Sale.sale_date <= day_end
+            ).scalar()
+
+            wastage_sum = db.query(
+                func.coalesce(func.sum(WastageLog.cost_loss), 0.0)
+            ).filter(
+                WastageLog.organization_id == org_id,
+                WastageLog.created_at >= day_start,
+                WastageLog.created_at <= day_end
+            ).scalar()
+
+            date_str = day_date.strftime("%b %d")
+            sales_trend.append({"date": date_str, "amount": float(sales_sum)})
+            wastage_trend.append({"date": date_str, "amount": float(wastage_sum)})
 
     category_data = db.query(
         Category.name,
@@ -170,7 +209,7 @@ def get_analytics_dashboard(
             {"name": "Uncategorized", "value": float(uncategorized_value)}
         )
 
-    transaction_start = datetime.combine(start_date, datetime.min.time())
+    transaction_start = datetime.combine(trend_start, datetime.min.time())
 
     velocity_data = db.query(
         Product.name,
@@ -223,7 +262,8 @@ def get_analytics_dashboard(
         "sales_trend": sales_trend,
         "wastage_trend": wastage_trend,
         "category_breakdown": category_breakdown,
-        "inventory_velocity": inventory_velocity
+        "inventory_velocity": inventory_velocity,
+        "trend_granularity": trend_granularity,
     }
 
 @router.get("/inventory-value")
