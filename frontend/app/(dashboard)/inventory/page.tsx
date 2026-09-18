@@ -1502,14 +1502,14 @@ export default function InventoryPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">Purchase Price</span>
                     <span className="text-slate-800 font-mono">
-                      ₹{(selectedProduct.cost_price * BASE_TO_INR_RATE).toFixed(0)}
+                      ₹{Number(selectedProduct.cost_price ?? 0).toFixed(2)}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">Selling Price</span>
                     <span className="text-slate-800 font-mono">
-                      ₹{(selectedProduct.selling_price * BASE_TO_INR_RATE).toFixed(0)}
+                      ₹{Number(selectedProduct.selling_price ?? 0).toFixed(2)}
                     </span>
                   </div>
                 </div>
