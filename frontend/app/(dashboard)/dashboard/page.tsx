@@ -54,21 +54,6 @@ export default function DashboardPage() {
   const [poStatus, setPoStatus] = useState<string | null>(null);
   const [chartFilter, setChartFilter] = useState<'today' | '7days' | '30days' | '12months'>('7days');
 
-  // Interactive tasks checklist state
-  const [tasks, setTasks] = useState([
-    { id: 1, label: 'Review low-stock items', checked: false },
-    { id: 2, label: 'Review expiring batches', checked: false },
-    { id: 3, label: 'Review today’s sales', checked: false },
-  ]);
-
-  const toggleTask = (id: number) => {
-    setTasks(prev =>
-      prev.map(t =>
-        t.id === id ? { ...t, checked: !t.checked } : t
-      )
-    );
-  };
-
   const handleGeneratePO = async () => {
     try {
 
@@ -100,6 +85,14 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ["executive-summary"],
     queryFn: getExecutiveSummary,
+  });
+
+  const { data: organization } = useQuery({
+    queryKey: ["organization"],
+    queryFn: async () => {
+      const res = await apiClient.get("/auth/organization");
+      return res.data;
+    },
   });
 
   const {
@@ -183,8 +176,6 @@ export default function DashboardPage() {
   }
   const cards = executive ?? {};
 
-  // Temporary placeholders.
-  // We'll replace these with real API queries one by one.
   const topSellingRecipes = Array.isArray(topSellingRecipesData)
     ? topSellingRecipesData
     : [];
@@ -231,13 +222,21 @@ export default function DashboardPage() {
     month: 'short',
     day: 'numeric'
   });
+
+  const currentHour = new Date().getHours();
+  const greeting =
+    currentHour < 12
+      ? "Good Morning"
+      : currentHour < 18
+      ? "Good Afternoon"
+      : "Good Evening";
   
   const healthColor =
     (overview?.inventory?.health_score ?? 0) >= 90
-      ? "#10b981" // Green
-      : (cards?.inventory_health ?? 0) >= 75
-      ? "#f59e0b" // Amber
-      : "#ef4444"; // Red
+      ? "#10b981"
+      : (overview?.inventory?.health_score ?? 0) >= 75
+      ? "#f59e0b"
+      : "#ef4444";
 
   return (
     <div className="space-y-8">
@@ -246,10 +245,10 @@ export default function DashboardPage() {
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            👋 Good Morning, {userName || 'Rahul'}
+            👋 {greeting}, {userName || "there"}
           </h1>
           <p className="text-sm text-slate-500 mt-1.5 font-medium">
-            Here's what's happening at <span className="text-emerald-600 font-bold">Cafe Aroma</span> today — {todayDateStr}.
+            Here's what's happening at <span className="text-emerald-600 font-bold">{organization?.name ?? "your restaurant"}</span> today — {todayDateStr}.
           </p>
         </div>
 
@@ -795,10 +794,10 @@ export default function DashboardPage() {
                 <span className="text-lg shrink-0">🥇</span>
                 <div>
                   <span className="font-bold text-slate-800 text-sm block">
-                    {recipe1?.recipe_name ?? "Chicken Burger"}
+                    {recipe1?.recipe_name ?? "No sales data yet"}
                   </span>
                   <span className="text-xs text-slate-400 mt-0.5 block font-medium">
-                    {recipe1?.quantity_sold ?? 128}
+                    {recipe1?.quantity_sold ?? 0} sold
                   </span>
                 </div>
               </div>
@@ -818,10 +817,10 @@ export default function DashboardPage() {
                 <span className="text-lg shrink-0">🥈</span>
                 <div>
                   <span className="font-bold text-slate-800 text-sm block">
-                    {recipe2?.recipe_name ?? "Cappuccino"}
+                    {recipe2?.recipe_name ?? "No sales data yet"}
                   </span>
                   <span className="text-xs text-slate-400 mt-0.5 block font-medium">
-                    {recipe2?.quantity_sold ?? 104} sold
+                    {recipe2?.quantity_sold ?? 0} sold
                   </span>
                 </div>
               </div>
@@ -839,10 +838,10 @@ export default function DashboardPage() {
                 <span className="text-lg shrink-0">🥉</span>
                 <div>
                   <span className="font-bold text-slate-800 text-sm block">
-                    {recipe3?.recipe_name ?? "Pizza"}
+                    {recipe3?.recipe_name ?? "No sales data yet"}
                   </span>
                   <span className="text-xs text-slate-400 mt-0.5 block font-medium">
-                    {recipe3?.quantity_sold ?? 89} sold
+                    {recipe3?.quantity_sold ?? 0} sold
                   </span>
                 </div>
               </div>
