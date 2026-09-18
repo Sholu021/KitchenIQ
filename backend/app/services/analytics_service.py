@@ -287,13 +287,14 @@ def get_expiring_batches(
 
     batches = (
         db.query(Batch)
+        .join(Product, Product.id == Batch.product_id)
         .filter(
             Batch.organization_id == organization_id,
             Batch.remaining_quantity > 0,
             Batch.expiry_date != None,
             Batch.expiry_date >= today,
             Batch.expiry_date <= limit,
-            Product.is_finished_product == False
+            Product.is_finished_product == False,
         )
         .order_by(Batch.expiry_date.asc())
         .all()
