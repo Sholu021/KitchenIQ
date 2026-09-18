@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 
 export default function AnalyticsPage() {
-  const [days, setDays] = useState(14);
+  const [days, setDays] = useState<number | 'all'>(14);
 
   // Fetch Analytics data
   const { data: analytics, isLoading, isError, error, refetch, isRefetching } = useQuery({
@@ -80,6 +80,7 @@ export default function AnalyticsPage() {
   // Custom calculations
   const totalSales = sales_trend.reduce((acc: number, item: any) => acc + item.amount, 0);
   const totalWastage = wastage_trend.reduce((acc: number, item: any) => acc + item.amount, 0);
+  const periodLabel = days === 'all' ? 'All Time' : `${days}d`;
 
   return (
     <div className="space-y-8">
@@ -96,7 +97,7 @@ export default function AnalyticsPage() {
         <div className="flex items-center gap-3">
           {/* Days selector */}
           <div className="flex p-1.5 bg-slate-100 rounded-xl">
-            {[7, 14, 30].map((d) => (
+            {[7, 14, 30, 'all'].map((d) => (
               <button
                 key={d}
                 onClick={() => setDays(d)}
@@ -106,7 +107,7 @@ export default function AnalyticsPage() {
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                {d} Days
+                {d === 'all' ? 'All Time' : `${d} Days`}
               </button>
             ))}
           </div>
@@ -129,7 +130,7 @@ export default function AnalyticsPage() {
             <TrendingUp size={28} />
           </div>
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">Total Sales Revenue ({days}d)</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">Total Sales Revenue ({periodLabel})</span>
             <span className="text-3xl font-extrabold text-slate-900 mt-1 block font-mono">${totalSales.toFixed(2)}</span>
           </div>
         </div>
@@ -139,7 +140,7 @@ export default function AnalyticsPage() {
             <Flame size={28} />
           </div>
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">Total Wastage Cost ({days}d)</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">Total Wastage Cost ({periodLabel})</span>
             <span className="text-3xl font-extrabold text-slate-900 mt-1 block font-mono">${totalWastage.toFixed(2)}</span>
           </div>
         </div>
@@ -168,12 +169,12 @@ export default function AnalyticsPage() {
                 </defs>
                 <CartesianGrid stroke="#f1f5f9" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
+                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v}`} />
                 <Tooltip
                   contentStyle={{ background: '#ffffff', borderColor: '#e5e7eb', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}
                   labelStyle={{ color: '#64748b', fontWeight: 'bold', fontSize: '11px' }}
                   itemStyle={{ color: '#1e293b', fontWeight: 'bold', fontSize: '12px' }}
-                  formatter={(value: any) => [`$${value.toFixed(2)}`, 'Revenue']}
+                  formatter={(value: any) => [`₹${value.toFixed(2)}`, 'Revenue']}
                 />
                 <Area type="monotone" dataKey="amount" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorSalesAnalytics)" />
               </AreaChart>
@@ -201,12 +202,12 @@ export default function AnalyticsPage() {
                 </defs>
                 <CartesianGrid stroke="#f1f5f9" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
+                <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v}`} />
                 <Tooltip
                   contentStyle={{ background: '#ffffff', borderColor: '#e5e7eb', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}
                   labelStyle={{ color: '#64748b', fontWeight: 'bold', fontSize: '11px' }}
                   itemStyle={{ color: '#1e293b', fontWeight: 'bold', fontSize: '12px' }}
-                  formatter={(value: any) => [`$${value.toFixed(2)}`, 'Loss']}
+                  formatter={(value: any) => [`₹${value.toFixed(2)}`, 'Loss']}
                 />
                 <Area type="monotone" dataKey="amount" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorWastageAnalytics)" />
               </AreaChart>
@@ -253,7 +254,7 @@ export default function AnalyticsPage() {
                     <Tooltip
                       contentStyle={{ background: '#ffffff', borderColor: '#e5e7eb', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}
                       itemStyle={{ color: '#1e293b', fontWeight: 'bold', fontSize: '12px' }}
-                      formatter={(value: any) => [`$${value.toFixed(2)}`, 'Cost Value']}
+                      formatter={(value: any) => [`₹${value.toFixed(2)}`, 'Cost Value']}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -276,7 +277,7 @@ export default function AnalyticsPage() {
         <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6 lg:col-span-2">
           <div>
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Calendar size={18} className="text-emerald-500" /> Inventory Flow Velocity (30 Days)
+              <Calendar size={18} className="text-emerald-500" /> Inventory Flow Velocity ({periodLabel})
             </h3>
             <p className="text-xs text-slate-500 mt-0.5 font-medium">Comparison of total quantities received (Stock In) vs consumed (Stock Out) by ingredient.</p>
           </div>
