@@ -40,6 +40,7 @@ export default function AnalyticsPage() {
   });
 
   const BAR_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#14b8a6', '#f43f5e', '#a855f7'];
+  const periods: Array<number | 'all'> = [7, 14, 30, 'all'];
 
   if (isLoading) {
     return (
@@ -97,7 +98,7 @@ export default function AnalyticsPage() {
         <div className="flex items-center gap-3">
           {/* Days selector */}
           <div className="flex p-1.5 bg-slate-100 rounded-xl">
-            {[7, 14, 30, 'all'].map((d) => (
+            {periods.map((d) => (
               <button
                 key={d}
                 onClick={() => setDays(d)}
@@ -131,7 +132,7 @@ export default function AnalyticsPage() {
           </div>
           <div>
             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">Total Sales Revenue ({periodLabel})</span>
-            <span className="text-3xl font-extrabold text-slate-900 mt-1 block font-mono">${totalSales.toFixed(2)}</span>
+            <span className="text-3xl font-extrabold text-slate-900 mt-1 block font-mono" >₹{totalSales.toFixed(2)}</span>
           </div>
         </div>
 
@@ -141,7 +142,7 @@ export default function AnalyticsPage() {
           </div>
           <div>
             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">Total Wastage Cost ({periodLabel})</span>
-            <span className="text-3xl font-extrabold text-slate-900 mt-1 block font-mono">${totalWastage.toFixed(2)}</span>
+            <span className="text-3xl font-extrabold text-slate-900 mt-1 block font-mono" >₹{totalWastage.toFixed(2)}</span>
           </div>
         </div>
       </div>
