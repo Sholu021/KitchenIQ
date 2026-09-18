@@ -184,7 +184,7 @@ export default function RecipesPage() {
 
                 <div className="p-3 bg-slate-50 border border-slate-200/60 rounded-xl mb-4 flex items-center justify-between">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Computed Cost:</span>
-                  <span className="text-sm font-bold text-slate-800 font-mono">${recipe.cost_price.toFixed(2)}</span>
+                  <span className="text-sm font-bold text-slate-800 font-mono">₹{Number(recipe.cost_price ?? 0).toFixed(2)}</span>
                 </div>
 
                 <div className="space-y-1">
@@ -365,7 +365,7 @@ export default function RecipesPage() {
 
             <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl mb-5 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-400 uppercase">Total Raw Cost:</span>
-              <span className="text-base font-bold text-slate-800 font-mono">${selectedRecipe.cost_price.toFixed(2)}</span>
+              <span className="text-base font-bold text-slate-800 font-mono">₹{Number(selectedRecipe.cost_price ?? 0).toFixed(2)}</span>
             </div>
 
             <div className="space-y-2.5">
