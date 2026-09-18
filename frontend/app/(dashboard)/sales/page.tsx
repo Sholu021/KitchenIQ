@@ -147,7 +147,7 @@ export default function SalesPage() {
                       {new Date(sale.sale_date).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 text-right font-mono font-bold text-slate-800">
-                      ${sale.total_amount.toFixed(2)}
+                      ₹{Number(sale.total_amount ?? 0).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <button
@@ -213,7 +213,7 @@ export default function SalesPage() {
                         >
                           <option value="">Choose recipe...</option>
                           {recipes.map((r: any) => (
-                            <option key={r.id} value={r.id}>{r.name} (Cost: ${r.cost_price.toFixed(2)})</option>
+                            <option key={r.id} value={r.id}>{r.name} (Cost: ₹{Number(r.cost_price ?? 0).toFixed(2)})</option>
                           ))}
                         </select>
                       </div>
@@ -296,7 +296,7 @@ export default function SalesPage() {
               </table>
               <div className="p-4 bg-slate-50 border-t border-slate-200/80 flex items-center justify-between text-xs font-semibold">
                 <span className="font-bold text-slate-400 uppercase">Gross Revenue:</span>
-                <span className="text-sm font-bold text-slate-800 font-mono">${selectedSale.total_amount.toFixed(2)}</span>
+                <span className="text-sm font-bold text-slate-800 font-mono">₹{Number(selectedSale.total_amount ?? 0).toFixed(2)}</span>
               </div>
             </div>
           </div>
