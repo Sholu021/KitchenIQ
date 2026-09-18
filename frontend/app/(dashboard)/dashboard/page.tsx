@@ -803,9 +803,11 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="text-right">
-                <span className="font-extrabold text-slate-900 block font-mono text-xs">₹35,000</span>
-                <span className="text-[10px] font-bold text-emerald-600 flex items-center justify-end gap-0.5 mt-0.5">
-                  <TrendingUp size={11} /> 12%
+                <span className="font-extrabold text-slate-900 block font-mono text-xs">
+                  ₹{Number(recipe1?.revenue ?? 0).toLocaleString("en-IN", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </span>
               </div>
             </div>
@@ -823,7 +825,12 @@ export default function DashboardPage() {
                   </span>
                 </div>
               </div>
-              <span className="font-extrabold text-slate-900 font-mono text-xs">₹12,480</span>
+              <span className="font-extrabold text-slate-900 font-mono text-xs">
+                ₹{Number(recipe2?.revenue ?? 0).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </span>
             </div>
 
             {/* Recipe 3 */}
@@ -839,7 +846,12 @@ export default function DashboardPage() {
                   </span>
                 </div>
               </div>
-              <span className="font-extrabold text-slate-900 font-mono text-xs">₹31,150</span>
+              <span className="font-extrabold text-slate-900 font-mono text-xs">
+                ₹{Number(recipe3?.revenue ?? 0).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </span>
             </div>
           </div>
         </div>
