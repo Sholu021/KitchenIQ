@@ -175,9 +175,9 @@ def generate_mock_insights(db: Session, organization_id: int) -> Dict[str, Any]:
         f"{len(expired_batches)} expired batches requiring disposal. "
         f"There are {len(expiring_soon_batches)} batches expiring in the next 7 days, "
         f"representing a near-term waste risk of "
-        f"${expiring_soon_waste_value:.2f}. "
+        f"₹{expiring_soon_waste_value:.2f}. "
         f"Total waste exposure including expired stock is "
-        f"${total_waste_exposure:.2f}."
+        f"₹{total_waste_exposure:.2f}."
     )
 
     health_summary = {
@@ -545,7 +545,7 @@ def ask_ai_copilot(db: Session, organization_id: int, question: str) -> str:
         elif "waste" in q or "loss" in q or "dead" in q:
             expired_cost = sum(b["quantity"] * next((p["cost_price"] for p in products if p["name"] == b["product_name"]), 0.0) for b in batches if b["expiry_date"] and date.fromisoformat(b["expiry_date"]) < today)
             return (
-                f"Currently, expired inventory accounts for about ${expired_cost:.2f} in potential waste. "
+                f"Currently, expired inventory accounts for about ₹{expired_cost:.2f} in potential waste. "
                 "You can reduce food waste by designing recipes using expiring dairy/produce or utilizing FEFO rotation in kitchen prep."
             )
 
