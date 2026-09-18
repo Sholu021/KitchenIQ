@@ -95,10 +95,27 @@ export default function PurchaseOrdersPage() {
       const res = await apiClient.patch(`/purchase-orders/${id}/status`, { status });
       return res.data;
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+    },
   });
   const receivePOMutation = useMutation({
     mutationFn: async (id: number) => {
       const po = purchaseOrders.find((p: any) => p.id === id);
+
+      if (!po) {
+        throw new Error("Purchase order not found.");
+      }
+
+      const missingReceivingData = po.items?.some(
+        (item: any) => !item.batch_number || !item.expiry_date
+      );
+
+      if (missingReceivingData) {
+        throw new Error(
+          "Batch number and expiry date are required for every item before receiving stock."
+        );
+      }
 
       const payload = {
         items: po.items.map((item: any) => ({
@@ -137,7 +154,7 @@ export default function PurchaseOrdersPage() {
     },
 
     onError: (err: any) => {
-      alert(err.response?.data?.detail || "Receive failed");
+      alert(err.response?.data?.detail || err.message || "Receive failed");
     },
   });
 
@@ -322,7 +339,7 @@ export default function PurchaseOrdersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right font-mono font-bold text-slate-800">
-                      ${po.total_amount.toFixed(2)}
+                      ₹{Number(po.total_amount ?? 0).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-slate-400 font-semibold text-xs">
                       {new Date(po.created_at).toLocaleDateString()}
@@ -346,10 +363,10 @@ export default function PurchaseOrdersPage() {
                         {!isReadOnly && po.status === 'SENT' && (
                           <>
                             <button
-                              onClick={() => handleUpdateStatus(po.id, 'RECEIVED')}
+                              onClick={() => receivePOMutation.mutate(po.id)}
                               className="p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-all flex items-center gap-1 cursor-pointer text-xs font-bold shadow-sm shadow-emerald-500/10"
                             >
-                              <Check size={13} /> Receive Stock
+                              <Check size={13} /> {receivePOMutation.isPending ? 'Receiving...' : 'Receive Stock'}
                             </button>
                             <button
                               onClick={() => handleUpdateStatus(po.id, 'CANCELLED')}
@@ -453,7 +470,7 @@ export default function PurchaseOrdersPage() {
                       </div>
 
                       <div className="w-28 flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500">
-                        <span className="text-[10px] text-slate-400 font-bold shrink-0">$</span>
+                        <span className="text-[10px] text-slate-400 font-bold shrink-0">₹</span>
                         <input
                           type="number"
                           step="any"
@@ -547,9 +564,9 @@ export default function PurchaseOrdersPage() {
                     <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-4 py-3 font-bold text-slate-900">{item.product?.name}</td>
                       <td className="px-4 py-3 text-right font-mono font-bold text-slate-800">{item.quantity} {item.product?.unit}</td>
-                      <td className="px-4 py-3 text-right font-mono">${item.unit_price.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-mono">₹{Number(item.unit_price ?? 0).toFixed(2)}</td>
                       <td className="px-4 py-3 text-right font-mono font-bold text-emerald-600">
-                        ${(item.quantity * item.unit_price).toFixed(2)}
+                        ₹{(Number(item.quantity ?? 0) * Number(item.unit_price ?? 0)).toFixed(2)}
                       </td>
                     </tr>
                   ))}
@@ -557,27 +574,13 @@ export default function PurchaseOrdersPage() {
               </table>
               <div className="p-4 bg-slate-50 border-t border-slate-200/80 flex items-center justify-between text-xs font-semibold">
                 <span className="font-bold text-slate-400 uppercase">Grand Total:</span>
-                <span className="text-sm font-bold text-slate-800">${selectedPO.total_amount.toFixed(2)}</span>
+                <span className="text-sm font-bold text-slate-800">₹{Number(selectedPO.total_amount ?? 0).toFixed(2)}</span>
               </div>
             </div>
 
-            {/* Quick action helper in details view */}
-            {!isReadOnly && selectedPO.status === 'RECEIVED' && (
-              <div className="flex gap-3">
-                <button
-                  onClick={() => receivePOMutation.mutate(selectedPO.id)}
-                  className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1 cursor-pointer shadow-md shadow-emerald-500/10"
-                >
-                  <Check size={14} /> Confirm Stocks Received
-                </button>
-                <button
-                  onClick={() => {
-                    handleUpdateStatus(selectedPO.id, 'CANCELLED');
-                  }}
-                  className="py-2.5 px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-150 font-bold rounded-xl text-xs transition-all cursor-pointer"
-                >
-                  Cancel PO
-                </button>
+            {selectedPO.status === 'RECEIVED' && (
+              <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-xs font-semibold text-emerald-700">
+                Stock received and inventory updated successfully.
               </div>
             )}
           </div>
