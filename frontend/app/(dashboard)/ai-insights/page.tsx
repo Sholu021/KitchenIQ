@@ -217,7 +217,7 @@ export default function AIInsightsPage() {
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Total Waste Financial Risk</span>
-                    <span className="text-base font-extrabold text-slate-800 font-mono">${health_summary.waste_risk_value.toFixed(2)}</span>
+                    <span className="text-base font-extrabold text-slate-800 font-mono">₹{Number(health_summary.waste_risk_value ?? 0).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -277,7 +277,7 @@ export default function AIInsightsPage() {
                         <div className="text-right">
                           <span className="text-[9px] font-bold text-slate-400 uppercase block tracking-wider">Est. Cost</span>
                           <span className="text-sm font-bold text-emerald-600 font-mono">
-                            ${suggestion.estimated_cost.toFixed(2)}
+                            ₹{Number(suggestion.estimated_cost ?? 0).toFixed(2)}
                           </span>
                         </div>
                       </div>
@@ -303,7 +303,7 @@ export default function AIInsightsPage() {
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Expired Batch Valuation</span>
-                    <span className="text-sm font-extrabold text-rose-500 font-mono">${waste_analysis.expired_batches_value.toFixed(2)}</span>
+                    <span className="text-sm font-extrabold text-rose-500 font-mono">₹{Number(waste_analysis.expired_batches_value ?? 0).toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -313,7 +313,7 @@ export default function AIInsightsPage() {
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Expiring within 30 Days</span>
-                    <span className="text-sm font-extrabold text-amber-600 font-mono">${waste_analysis.expiring_7_days_value.toFixed(2)}</span>
+                    <span className="text-sm font-extrabold text-amber-600 font-mono">₹{Number(waste_analysis.expiring_7_days_value ?? 0).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -331,7 +331,7 @@ export default function AIInsightsPage() {
                         </div>
                         <div className="text-right">
                           <span className="text-slate-400 block uppercase font-bold text-[9px] tracking-wider">Sunk Cost</span>
-                          <span className="font-bold text-slate-800 font-mono">${item.value.toFixed(2)}</span>
+                          <span className="font-bold text-slate-800 font-mono">₹{Number(item.value ?? 0).toFixed(2)}</span>
                         </div>
                       </div>
                     ))}
