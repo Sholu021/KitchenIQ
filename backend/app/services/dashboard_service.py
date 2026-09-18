@@ -161,7 +161,13 @@ def get_top_selling_recipes(
         db.query(
             Recipe.name.label("recipe_name"),
             func.sum(SaleItem.quantity).label("quantity_sold"),
-            func.sum(SaleItem.revenue).label("revenue"),
+            func.sum(
+                func.coalesce(
+                    func.nullif(SaleItem.revenue, 0),
+                    SaleItem.quantity * func.nullif(SaleItem.unit_price, 0),
+                    SaleItem.quantity * Recipe.selling_price,
+                )
+            ).label("revenue"),
         )
         .join(SaleItem, SaleItem.recipe_id == Recipe.id)
         .join(Sale, Sale.id == SaleItem.sale_id)
