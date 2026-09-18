@@ -27,8 +27,6 @@ import {
   YAxis
 } from 'recharts';
 
-const BASE_TO_INR_RATE = 80;
-
 export default function InventoryPage() {
   const queryClient = useQueryClient();
   
@@ -395,7 +393,7 @@ export default function InventoryPage() {
   };
 
   // 1. Calculate values for summary cards dynamically
-  const totalIngredientsCount = products.length || 248;
+  const totalIngredientsCount = products.length;
 
   const totalValuation = products.reduce(
     (acc: number, p: any) => acc + (p.current_stock * p.cost_price),
@@ -496,7 +494,7 @@ export default function InventoryPage() {
         </div>
         <div className="bg-white border border-slate-200/85 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Inventory Value</span>
-          <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">₹{(totalValuation * BASE_TO_INR_RATE).toLocaleString('en-IN')}</span>
+          <span className="text-2xl font-extrabold text-slate-900 block mt-2 font-mono">₹{totalValuation.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
         </div>
         <div className="bg-white border border-slate-200/85 rounded-2xl p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Low Stock</span>
@@ -735,11 +733,11 @@ export default function InventoryPage() {
                             </td>
                             <td className="px-6 py-4 text-xs">
                               <Link href="/suppliers" className="text-emerald-600 hover:text-emerald-700 font-bold">
-                                Fresh Farms
+                                Not assigned
                               </Link>
                             </td>
                             <td className="px-6 py-4 text-right font-mono text-slate-900 text-xs">
-                              ₹{(p.cost_price * BASE_TO_INR_RATE).toFixed(0)}/{p.unit}
+                              ₹{Number(p.cost_price ?? 0).toFixed(2)}/{p.unit}
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center justify-center gap-1.5">
