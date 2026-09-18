@@ -281,8 +281,8 @@ export default function DashboardPage() {
               })}
             </span>
           </div>
-          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100/50 rounded px-1.5 py-0.5 mt-4 self-start">
-            +12% from yesterday
+          <span className="text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 mt-4 self-start">
+            Daily sales
           </span>
         </div>
 
