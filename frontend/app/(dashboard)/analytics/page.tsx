@@ -76,12 +76,13 @@ export default function AnalyticsPage() {
     );
   }
 
-  const { sales_trend, wastage_trend, category_breakdown, inventory_velocity } = analytics;
+  const { sales_trend, wastage_trend, category_breakdown, inventory_velocity, trend_granularity } = analytics;
 
   // Custom calculations
   const totalSales = sales_trend.reduce((acc: number, item: any) => acc + item.amount, 0);
   const totalWastage = wastage_trend.reduce((acc: number, item: any) => acc + item.amount, 0);
   const periodLabel = days === 'all' ? 'All Time' : `${days}d`;
+  const trendLabel = trend_granularity === 'weekly' ? 'Weekly' : 'Daily';
 
   return (
     <div className="space-y-8">
@@ -156,7 +157,7 @@ export default function AnalyticsPage() {
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <TrendingUp size={18} className="text-emerald-500" /> Sales Revenue Velocity
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5 font-medium">Daily gross revenue sales trends over the selected duration.</p>
+            <p className="text-xs text-slate-500 mt-0.5 font-medium">{trendLabel} gross revenue sales trends over the selected duration.</p>
           </div>
 
           <div className="h-72 w-full">
@@ -189,7 +190,7 @@ export default function AnalyticsPage() {
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <Flame size={18} className="text-rose-500" /> Sunk Cost Wastage Trend
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5 font-medium">Daily food waste and spillage value tracking.</p>
+            <p className="text-xs text-slate-500 mt-0.5 font-medium">{trendLabel} food waste and spillage value tracking.</p>
           </div>
 
           <div className="h-72 w-full">
