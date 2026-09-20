@@ -92,11 +92,31 @@ body {
   background: #cbd5e1;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 /* Premium Light Glassmorphism utility */
 .glass-panel {
   background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(229, 231, 235, 0.6);
+}
+
+/* Dark Glassmorphism for B2B SaaS theme */
+.dark-glass-panel {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(51, 65, 85, 0.4);
+}
+
+.dark-glass-panel-hover {
+  transition: all 0.3s ease;
+}
+.dark-glass-panel-hover:hover {
+  background: rgba(30, 41, 59, 0.75);
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.15);
 }
 
 /* Radial glow and grid mesh background utility for Light Theme */
@@ -108,4 +128,15 @@ body {
     linear-gradient(to bottom, rgba(0, 0, 0, 0.015) 1px, transparent 1px);
   background-size: 100% 100%, 48px 48px, 48px 48px;
 }
+
+/* Premium Dark Grid Background */
+.grid-bg-dark {
+  background-color: #060913;
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15), transparent),
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 36px 36px, 36px 36px;
+}
+
 

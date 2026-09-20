@@ -3,8 +3,9 @@ import "./globals.css";
 import Providers from "./providers";
 
 export const metadata: Metadata = {
-  title: "KitchenIQ AI | Restaurant Inventory & Intelligence",
-  description: "AI Inventory management, recipes costing, batch expiry warnings, and predictive restaurant supply analytics.",
+  title: "KitchenIQ AI — Smart Restaurant ERP & Predictive Inventory Management",
+  description: "Stop food waste & recipe margin leakage. KitchenIQ AI uses predictive analytics, FEFO batch tracking, and dynamic recipe costing to boost restaurant profitability.",
+  keywords: ["restaurant ERP", "food waste prevention", "FEFO inventory", "recipe costing software", "AI kitchen analytics", "cloud kitchen ERP"],
 };
 
 export default function RootLayout({
