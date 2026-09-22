@@ -76,7 +76,13 @@ export default function AnalyticsPage() {
     );
   }
 
-  const { sales_trend, wastage_trend, category_breakdown, inventory_velocity, trend_granularity } = analytics;
+  const {
+    sales_trend = [],
+    wastage_trend = [],
+    category_breakdown = [],
+    inventory_velocity = [],
+    trend_granularity = "daily",
+  } = analytics ?? {};
 
   // Custom calculations
   const totalSales = sales_trend.reduce((acc: number, item: any) => acc + item.amount, 0);
