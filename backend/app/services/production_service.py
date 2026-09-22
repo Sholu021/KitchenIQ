@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
-from app.services.inventory_service import adjust_stock
+from app.services.inventory_service import adjust_stock, calculate_fefo_cost
 from datetime import datetime, date
 
 
@@ -61,6 +61,18 @@ def produce_recipe(
     expiry_date,
     user_id: int,
 ):
+    if quantity_produced <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Production quantity must be greater than zero.",
+        )
+
+    if not batch_number or not batch_number.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Batch number is required.",
+        )
+
     recipe = (
         db.query(Recipe)
         .filter(
@@ -110,14 +122,34 @@ def produce_recipe(
                     f"{ingredient.product.name}"
                 ),
             )
+
+    finished_product = (
+        db.query(Product)
+        .filter(
+            Product.id == recipe.finished_product_id,
+            Product.organization_id == organization_id,
+        )
+        .first()
+    )
+
+    if finished_product is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recipe finished product not found.",
+        )
+
     production_unit_cost = 0.0
 
     for ingredient in recipe.ingredients:
+        required_quantity = (
+            ingredient.quantity_required * quantity_produced
+        )
+
         production_unit_cost += calculate_fefo_cost(
             db=db,
             organization_id=organization_id,
             product_id=ingredient.product_id,
-            quantity=ingredient.quantity_required,
+            quantity=required_quantity,
         )
 
     production_unit_cost = round(production_unit_cost, 2)
@@ -163,21 +195,6 @@ def produce_recipe(
 
     db.add(finished_batch)
     db.flush()
-
-    finished_product = (
-        db.query(Product)
-        .filter(
-            Product.id == recipe.finished_product_id,
-            Product.organization_id == organization_id,
-        )
-        .first()
-    ) 
-
-    if finished_product is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Recipe finished product not found.",
-        )
     
     finished_product.current_stock += quantity_produced
         
@@ -203,7 +220,11 @@ def produce_recipe(
 
     db.add(audit)
 
-    db.commit()
-    db.refresh(production)
+    try:
+        db.commit()
+        db.refresh(production)
+        return production
 
-    return production
+    except Exception:
+        db.rollback()
+        raise

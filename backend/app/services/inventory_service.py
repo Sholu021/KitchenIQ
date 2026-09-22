@@ -75,6 +75,19 @@ def adjust_stock(
     reference: Optional[str] = None,
     allow_expired: bool = False,
     ) -> InventoryTransaction:
+
+    if transaction_type in ("STOCK_IN", "STOCK_OUT") and quantity <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Stock quantity must be greater than zero.",
+        )
+
+    if transaction_type == "ADJUSTMENT" and quantity == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Adjustment quantity cannot be zero.",
+        )
+
     product = db.query(Product).filter(
         Product.id == product_id,
         Product.organization_id == organization_id
