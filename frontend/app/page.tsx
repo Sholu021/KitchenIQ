@@ -866,167 +866,191 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* --- PRICING SECTION --- */}
-      <section id="pricing" className="py-20 px-6 max-w-6xl mx-auto w-full z-10 border-t border-slate-800/60">
+      <section id="pricing" className="py-20 px-6 max-w-6xl mx-auto w-full z-10 border-t border-slate-200">
         <div className="text-center mb-12 space-y-4">
-          <span className="text-xs font-extrabold uppercase tracking-widest text-emerald-400">Simple Transparent Pricing</span>
-          <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">Flexible Plans For Every Scale</h2>
-          <p className="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto">
-            Choose the right tier for your food operations. Lock in high-margin inventory tools and eliminate waste.
+          <p className="text-sm font-semibold uppercase tracking-widest text-emerald-600">Simple, transparent pricing</p>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900">Plans Built for Your Kitchen</h2>
+          <p className="text-slate-500 max-w-2xl mx-auto">
+            Start with the essentials, then scale as your kitchen grows.
           </p>
-
-          {/* Billing Toggle */}
-          <div className="pt-4 flex items-center justify-center gap-3">
-            <span className={`text-xs font-bold ${!annualBilling ? 'text-white' : 'text-slate-400'}`}>Monthly Billing</span>
-            <button
-              onClick={() => setAnnualBilling(!annualBilling)}
-              className="w-12 h-6 bg-slate-800 rounded-full p-1 transition-colors relative cursor-pointer"
-              aria-label="Toggle annual billing"
-            >
-              <div className={`w-4 h-4 rounded-full bg-amber-400 transition-transform ${annualBilling ? 'translate-x-6' : 'translate-x-0'}`}></div>
-            </button>
-            <span className={`text-xs font-bold flex items-center gap-1.5 ${annualBilling ? 'text-white' : 'text-slate-400'}`}>
-              Annual Billing <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] px-2 py-0.5 rounded-full font-extrabold">Save 20%</span>
-            </span>
-          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-          
-          {/* Plan 1: Bistro */}
-          <div className="dark-glass-panel rounded-2xl p-8 border border-slate-800 flex flex-col justify-between space-y-8">
-            <div>
-              <h3 className="text-xl font-bold text-white">Bistro</h3>
-              <p className="text-xs text-slate-400 mt-1">Best for small cafes, standalone bakeries, and cloud kitchens.</p>
-              
-              <div className="my-6">
-                <span className="text-4xl font-extrabold text-white font-mono">
-                  ${annualBilling ? '39' : '49'}
-                </span>
-                <span className="text-xs text-slate-400"> / month</span>
-                {annualBilling && <div className="text-[10px] text-emerald-400 font-mono mt-1">Billed annually ($468/yr)</div>}
-              </div>
+        <div className="flex justify-center items-center gap-3 mb-10">
+          <div className="inline-flex rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setAnnualBilling(false)}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
+                !annualBilling
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              type="button"
+              onClick={() => setAnnualBilling(true)}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
+                annualBilling
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              Annual
+            </button>
+          </div>
+          <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold">
+            Save 20%
+          </span>
+        </div>
 
-              <div className="space-y-3 pt-2">
-                <div className="flex items-start gap-2.5 text-xs text-slate-300">
-                  <Check size={16} className="text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Up to 100 products catalog</span>
-                </div>
-                <div className="flex items-start gap-2.5 text-xs text-slate-300">
-                  <Check size={16} className="text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Dynamic recipe margin calculator</span>
-                </div>
-                <div className="flex items-start gap-2.5 text-xs text-slate-300">
-                  <Check size={16} className="text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Manual inventory logs &amp; batch creation</span>
-                </div>
-                <div className="flex items-start gap-2.5 text-xs text-slate-300">
-                  <Check size={16} className="text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Basic reorder threshold alerts</span>
-                </div>
+        <div className="grid md:grid-cols-3 gap-6 items-stretch">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm flex flex-col">
+            <div className="mb-6">
+              <h3 className="text-xl font-bold text-slate-900">Starter</h3>
+              <p className="mt-2 text-sm text-slate-500">Everything you need to stay on top of your kitchen.</p>
+            </div>
+
+            <div className="mb-6">
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-bold text-slate-900">?</span>
+                <span className="text-5xl font-bold tracking-tight text-slate-900">
+                  {annualBilling ? "2,399" : "2,999"}
+                </span>
+                <span className="text-sm text-slate-500">
+                  {annualBilling ? "/month ? billed annually" : "/month"}
+                </span>
+              </div>
+              <div className="mt-2 min-h-[18px] text-xs font-semibold text-slate-500">
+                {annualBilling ? "?28,788/year" : "?35,988/year"}
               </div>
             </div>
 
-            <Link
+            <div className="space-y-3 flex-1">
+              {[
+                "Up to 150 ingredients tracked",
+                "Real-time stock levels",
+                "Expiry & wastage alerts",
+                "Reorder notifications (SMS + email)",
+                "Mobile app access",
+                "Onboarding support",
+                "Demand forecasting",
+                "POS integration",
+                "Multi-outlet support",
+              ].map((feature, index) => (
+                <div key={feature} className="flex items-start gap-3 text-sm">
+                  <Check className={`w-4 h-4 mt-0.5 shrink-0 ${index < 6 ? "text-emerald-600" : "text-slate-300"}`} />
+                  <span className={index < 6 ? "text-slate-700" : "text-slate-400"}>{feature}</span>
+                </div>
+              ))}
+            </div>
+
+            <a
               href="/register"
-              className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold rounded-xl text-center text-xs transition-colors cursor-pointer"
+              className="mt-8 w-full rounded-xl border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:border-emerald-500 hover:text-emerald-700 transition"
             >
-              Start Bistro Trial
-            </Link>
+              Start with Starter
+            </a>
           </div>
 
-          {/* Plan 2: Trattoria (Featured) */}
-          <div className="dark-glass-panel rounded-2xl p-8 border-2 border-indigo-500/60 flex flex-col justify-between space-y-8 relative bg-slate-950/40 shadow-2xl">
-            <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-black text-[10px] uppercase tracking-widest px-4 py-1 rounded-full shadow-lg border border-indigo-300/30">
+          <div className="relative rounded-2xl border-2 border-emerald-500 bg-white p-8 shadow-lg flex flex-col">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-emerald-600 px-4 py-1 text-xs font-bold text-white">
               Most Popular
-            </span>
+            </div>
 
-            <div>
-              <h3 className="text-xl font-bold text-white mt-1">Trattoria</h3>
-              <p className="text-xs text-slate-400 mt-1">Ideal for high-volume restaurants, bistros, and growing food brands.</p>
-              
-              <div className="my-6">
-                <span className="text-4xl font-extrabold text-white font-mono">
-                  ${annualBilling ? '79' : '99'}
+            <div className="mb-6">
+              <h3 className="text-xl font-bold text-slate-900">Growth</h3>
+              <p className="mt-2 text-sm text-slate-500">AI-powered intelligence for growing restaurant operations.</p>
+            </div>
+
+            <div className="mb-6">
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-bold text-slate-900">?</span>
+                <span className="text-5xl font-bold tracking-tight text-slate-900">
+                  {annualBilling ? "4,399" : "5,499"}
                 </span>
-                <span className="text-xs text-slate-400"> / month</span>
-                {annualBilling && <div className="text-[10px] text-emerald-400 font-mono mt-1">Billed annually ($948/yr)</div>}
+                <span className="text-sm text-slate-500">
+                  {annualBilling ? "/month ? billed annually" : "/month"}
+                </span>
               </div>
-
-              <div className="space-y-3 pt-2">
-                <div className="flex items-start gap-2.5 text-xs text-slate-200 font-medium">
-                  <Check size={16} className="text-amber-400 shrink-0 mt-0.5" />
-                  <span>Unlimited products &amp; suppliers</span>
-                </div>
-                <div className="flex items-start gap-2.5 text-xs text-slate-200 font-medium">
-                  <Check size={16} className="text-amber-400 shrink-0 mt-0.5" />
-                  <span>FEFO Expiry batch warnings</span>
-                </div>
-                <div className="flex items-start gap-2.5 text-xs text-slate-200 font-medium">
-                  <Check size={16} className="text-amber-400 shrink-0 mt-0.5" />
-                  <span>Automated PO Lifecycle &amp; Receiving</span>
-                </div>
-                <div className="flex items-start gap-2.5 text-xs text-slate-200 font-medium">
-                  <Check size={16} className="text-amber-400 shrink-0 mt-0.5" />
-                  <span>AI Predictive Copilot &amp; Smart Fallback</span>
-                </div>
-                <div className="flex items-start gap-2.5 text-xs text-slate-200 font-medium">
-                  <Check size={16} className="text-amber-400 shrink-0 mt-0.5" />
-                  <span>Role-Based Staff Permissions (RBAC)</span>
-                </div>
+              <div className="mt-2 min-h-[18px] text-xs font-semibold text-slate-500">
+                {annualBilling ? "?52,788/year" : "?65,988/year"}
               </div>
             </div>
 
-            <Link
+            <div className="space-y-3 flex-1">
+              {[
+                "Unlimited ingredients",
+                "AI demand forecasting",
+                "Smart reorder recommendations",
+                "POS integration (Toast, Square, etc.)",
+                "Recipe cost tracking",
+                "Usage & wastage analytics",
+                "Up to 3 outlets",
+                "Priority chat support",
+                "Custom integrations",
+              ].map((feature, index) => (
+                <div key={feature} className="flex items-start gap-3 text-sm">
+                  <Check className={`w-4 h-4 mt-0.5 shrink-0 ${index < 8 ? "text-emerald-600" : "text-slate-300"}`} />
+                  <span className={index < 8 ? "text-slate-700" : "text-slate-400"}>{feature}</span>
+                </div>
+              ))}
+            </div>
+
+            <a
               href="/register"
-              className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-bold rounded-xl text-center text-xs transition-all shadow-lg shadow-indigo-500/25 cursor-pointer"
+              className="mt-8 w-full rounded-xl bg-emerald-600 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-emerald-700 transition shadow-sm"
             >
-              Start Trattoria Trial
-            </Link>
+              Start with Growth
+            </a>
           </div>
 
-          {/* Plan 3: Grand Cuisine */}
-          <div className="dark-glass-panel rounded-2xl p-8 border border-slate-800 flex flex-col justify-between space-y-8">
-            <div>
-              <h3 className="text-xl font-bold text-white">Grand Cuisine</h3>
-              <p className="text-xs text-slate-400 mt-1">Enterprise multi-outlet control for chains and cloud kitchen networks.</p>
-              
-              <div className="my-6">
-                <span className="text-4xl font-extrabold text-white font-mono">Custom</span>
-                <span className="text-xs text-slate-400"> / annual billing</span>
-              </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm flex flex-col">
+            <div className="mb-6">
+              <h3 className="text-xl font-bold text-slate-900">Enterprise</h3>
+              <p className="mt-2 text-sm text-slate-500">For multi-location restaurant groups with custom needs.</p>
+            </div>
 
-              <div className="space-y-3 pt-2">
-                <div className="flex items-start gap-2.5 text-xs text-slate-300">
-                  <Check size={16} className="text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Multi-outlet synchronization &amp; transfers</span>
-                </div>
-                <div className="flex items-start gap-2.5 text-xs text-slate-300">
-                  <Check size={16} className="text-emerald-400 shrink-0" />
-                  <span>Custom POS integration endpoints</span>
-                </div>
-                <div className="flex items-start gap-2.5 text-xs text-slate-300">
-                  <Check size={16} className="text-emerald-400 shrink-0" />
-                  <span>Dedicated Support Account Director</span>
-                </div>
-                <div className="flex items-start gap-2.5 text-xs text-slate-300">
-                  <Check size={16} className="text-emerald-400 shrink-0" />
-                  <span>SLA &amp; Custom Onboarding Training</span>
-                </div>
+            <div className="mb-6">
+              <div className="flex items-baseline gap-1">
+                <span className="text-4xl font-bold tracking-tight text-slate-900">Custom</span>
+              </div>
+              <div className="mt-2 min-h-[18px] text-xs font-semibold text-slate-500">
+                Tailored to your operation
               </div>
             </div>
 
-            <Link
-              href="/register"
-              className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold rounded-xl text-center text-xs transition-colors cursor-pointer"
-            >
-              Contact Enterprise Sales
-            </Link>
-          </div>
+            <div className="space-y-3 flex-1">
+              {[
+                "Unlimited outlets",
+                "Central dashboard for all locations",
+                "Custom demand models",
+                "Dedicated account manager",
+                "Custom POS & ERP integrations",
+                "Staff training & onboarding",
+                "SLA-backed uptime",
+                "White-label option",
+                "API access",
+              ].map((feature) => (
+                <div key={feature} className="flex items-start gap-3 text-sm">
+                  <Check className="w-4 h-4 mt-0.5 shrink-0 text-emerald-600" />
+                  <span className="text-slate-700">{feature}</span>
+                </div>
+              ))}
+            </div>
 
+            <a
+              href="/register"
+              className="mt-8 w-full rounded-xl border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:border-emerald-500 hover:text-emerald-700 transition"
+            >
+              Contact Sales
+            </a>
+          </div>
         </div>
       </section>
+
 
       {/* --- FAQ SECTION --- */}
       <section id="faq" className="py-20 px-6 max-w-4xl mx-auto w-full z-10 border-t border-slate-800/60">
