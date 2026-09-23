@@ -828,6 +828,73 @@ export default function Home() {
         </div>
       </section>
 
+      {/* --- WHY KITCHENIQ / BUSINESS VALUE --- */}
+      <section id="why-kitcheniq" className="bg-slate-50 py-20 px-6 border-t border-slate-200">
+        <div className="mx-auto w-full max-w-6xl">
+          <div className="mx-auto max-w-3xl text-center">
+            <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold uppercase tracking-widest text-emerald-700">
+              Why KitchenIQ
+            </span>
+            <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
+              Every Smarter Order Protects Your Margin
+            </h2>
+            <p className="mt-4 text-sm leading-7 text-slate-500 sm:text-base">
+              We won&apos;t invent an average savings number for your kitchen.
+              Every kitchen&apos;s inventory, purchasing, and sales patterns are different.
+              Here&apos;s what KitchenIQ is built to move, directionally.
+            </p>
+          </div>
+
+          <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="group rounded-2xl border border-slate-200 bg-white p-7 text-center shadow-sm transition-all hover:-translate-y-1 hover:border-emerald-300 hover:shadow-md">
+              <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-xl font-extrabold text-emerald-600">
+                ↓
+              </div>
+              <h3 className="text-base font-bold text-slate-900">Food Waste</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Reduce avoidable over-ordering and ingredients that expire unused.
+              </p>
+            </div>
+
+            <div className="group rounded-2xl border border-slate-200 bg-white p-7 text-center shadow-sm transition-all hover:-translate-y-1 hover:border-emerald-300 hover:shadow-md">
+              <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-xl font-extrabold text-emerald-600">
+                ↓
+              </div>
+              <h3 className="text-base font-bold text-slate-900">Stockout Risk</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Identify shortages earlier, before they hit mid-service.
+              </p>
+            </div>
+
+            <div className="group rounded-2xl border border-slate-200 bg-white p-7 text-center shadow-sm transition-all hover:-translate-y-1 hover:border-blue-300 hover:shadow-md">
+              <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-xl font-extrabold text-blue-600">
+                ↑
+              </div>
+              <h3 className="text-base font-bold text-slate-900">Inventory Visibility</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Know what&apos;s actually on your shelves, in real time.
+              </p>
+            </div>
+
+            <div className="group rounded-2xl border border-slate-200 bg-white p-7 text-center shadow-sm transition-all hover:-translate-y-1 hover:border-blue-300 hover:shadow-md">
+              <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-xl font-extrabold text-blue-600">
+                ↑
+              </div>
+              <h3 className="text-base font-bold text-slate-900">Purchasing Efficiency</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Make reorder decisions based on data, not gut feel.
+              </p>
+            </div>
+          </div>
+
+          <p className="mx-auto mt-7 max-w-2xl text-center text-xs leading-6 text-slate-500 sm:text-sm">
+            Your actual results will depend on your kitchen&apos;s inventory,
+            purchasing, and sales patterns. A free audit can estimate what this
+            might look like for your specific kitchen.
+          </p>
+        </div>
+      </section>
+
       {/* --- INTERACTIVE ROI CALCULATOR SECTION --- */}
       <section id="roi" className="py-20 px-6 max-w-5xl mx-auto w-full z-10 border-t border-slate-800/60">
         <div className="dark-glass-panel rounded-3xl p-8 sm:p-12 border border-slate-800 shadow-2xl relative overflow-hidden bg-[#080d1a]">
@@ -856,19 +923,19 @@ export default function Home() {
               onClick={() => applyPreset(25000, 18)}
               className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg text-xs font-semibold text-slate-300 transition-colors cursor-pointer"
             >
-              Medium Bistro ($25k)
+              Medium Bistro (₹25k)
             </button>
             <button
               onClick={() => applyPreset(60000, 22)}
               className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg text-xs font-semibold text-slate-300 transition-colors cursor-pointer"
             >
-              Cloud Kitchen ($60k)
+              Cloud Kitchen (₹60k)
             </button>
             <button
               onClick={() => applyPreset(120000, 25)}
               className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg text-xs font-semibold text-slate-300 transition-colors cursor-pointer"
             >
-              Multi-Outlet ($120k)
+              Multi-Outlet (₹120k)
             </button>
           </div>
 
@@ -882,7 +949,7 @@ export default function Home() {
                     <DollarSign size={16} className="text-amber-400" /> Monthly Raw Food Spend
                   </span>
                   <span className="text-white font-mono text-base font-bold bg-slate-900 px-3 py-1 rounded-lg border border-slate-800">
-                    ${monthlySpend.toLocaleString()}
+                    ₹{monthlySpend.toLocaleString()}
                   </span>
                 </div>
                 <input
@@ -895,9 +962,9 @@ export default function Home() {
                   className="w-full accent-amber-500 bg-slate-950 h-2.5 rounded-lg cursor-pointer"
                 />
                 <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-                  <span>$3,000</span>
-                  <span>$100,000</span>
-                  <span>$200,000+</span>
+                  <span>₹3,000</span>
+                  <span>₹100,000</span>
+                  <span>₹200,000+</span>
                 </div>
               </div>
 
@@ -921,13 +988,13 @@ export default function Home() {
                 />
                 <div className="flex justify-between text-[10px] text-slate-500 font-mono">
                   <span>5% (Strict Control)</span>
-                  <span>18% (Industry Avg)</span>
+                  <span>18% (Illustrative)</span>
                   <span>35% (High Leakage)</span>
                 </div>
               </div>
 
               <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-800 text-xs text-slate-400 leading-relaxed">
-                <strong className="text-slate-200">Illustrative Estimate Note:</strong> Savings calculations use an estimated 42% waste reduction factor for simulation purposes. Actual kitchen results vary based on operational volume, waste tracking discipline, and menu items.
+                <strong className="text-slate-200">Illustrative Estimate Note:</strong> Savings calculations use an estimated 42% reduction factor for illustration. Actual kitchen results vary based on operational volume, waste tracking discipline, and menu items.
               </div>
 
             </div>
@@ -940,14 +1007,14 @@ export default function Home() {
                 <div>
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Estimated Monthly Savings</span>
                   <span className="text-3xl sm:text-4xl font-black text-white mt-1 block font-mono">
-                    ${monthlySavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ₹{monthlySavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
 
                 <div className="pt-6 border-t border-slate-800">
                   <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block">Projected Annual Savings</span>
                   <span className="text-4xl sm:text-5xl font-black text-amber-400 mt-1 block font-mono">
-                    ${yearlySavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ₹{yearlySavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
@@ -957,7 +1024,7 @@ export default function Home() {
                   href="/register"
                   className="w-full py-3.5 px-6 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] cursor-pointer"
                 >
-                  Lock In ${Math.round(yearlySavings).toLocaleString()}/Year Savings <ArrowRight size={15} />
+                  Explore ₹{Math.round(yearlySavings).toLocaleString()} Potential Annual Savings <ArrowRight size={15} />
                 </Link>
               </div>
             </div>
