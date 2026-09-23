@@ -139,6 +139,7 @@ export default function Home() {
         <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold text-slate-300">
           <a href="#features" className="hover:text-amber-400 transition-colors">Features</a>
           <a href="#showcase" className="hover:text-amber-400 transition-colors">Live Showcase</a>
+          <a href="#why-kitcheniq" className="hover:text-amber-400 transition-colors">Why KitchenIQ</a>
           <a href="#roi" className="hover:text-amber-400 transition-colors">ROI Calculator</a>
           <a href="#pricing" className="hover:text-amber-400 transition-colors">Pricing</a>
           <a href="#faq" className="hover:text-amber-400 transition-colors">FAQ</a>
@@ -1321,6 +1322,7 @@ export default function Home() {
           <div className="flex flex-wrap justify-center gap-6 text-xs text-slate-400 font-semibold">
             <a href="#features" className="hover:text-amber-400 transition-colors">Features</a>
             <a href="#showcase" className="hover:text-amber-400 transition-colors">Live Showcase</a>
+            <a href="#why-kitcheniq" className="hover:text-amber-400 transition-colors">Why KitchenIQ</a>
             <a href="#roi" className="hover:text-amber-400 transition-colors">ROI Calculator</a>
             <a href="#pricing" className="hover:text-amber-400 transition-colors">Pricing</a>
             <a href="#faq" className="hover:text-amber-400 transition-colors">FAQ</a>
