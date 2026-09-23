@@ -239,95 +239,194 @@ export default function Home() {
           </div>
         </div>
       )}
-
       {/* --- HERO SECTION --- */}
-      <section className="relative pt-12 lg:pt-20 pb-16 px-6 max-w-6xl mx-auto z-10 text-center space-y-8">
-        
-        {/* Status Pill Badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-indigo-500/10 border border-indigo-500/25 text-indigo-300 rounded-full text-xs font-medium backdrop-blur-md">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          <span>Next-Gen Smart Kitchen ERP &amp; Waste Optimization</span>
-        </div>
+      <section className="relative overflow-hidden bg-gradient-to-br from-white via-emerald-50/70 to-blue-50/60 px-6 py-16 lg:py-20">
+        <div className="absolute -right-24 -top-24 h-[420px] w-[420px] rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+        <div className="absolute -left-24 top-20 h-[320px] w-[320px] rounded-full bg-cyan-400/10 blur-3xl pointer-events-none" />
 
-        {/* Main Headline */}
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.08] max-w-5xl mx-auto">
-          Stop Kitchen Food Waste &amp; <br />
-          <span className="bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 bg-clip-text text-transparent">
-            Recipe Margin Leakage
-          </span> <br />
-          With AI Precision
-        </h1>
+        <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[55fr_45fr] lg:gap-14">
 
-        {/* Sub-headline */}
-        <p className="text-sm sm:text-base lg:text-lg text-slate-400 max-w-3xl mx-auto leading-relaxed">
-          KitchenIQ AI predicts ingredient stockouts, automates FEFO batch tracking, and recalculates recipe margins in real time. Identify avoidable food waste and protect recipe margins with better inventory visibility.
-        </p>
+          {/* Hero Content */}
+          <div>
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-700">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+              AI-Powered Inventory Intelligence
+            </div>
 
-        {/* Target Audience Pills */}
-        <div className="flex flex-wrap justify-center items-center gap-2 pt-2 text-[11px] font-semibold text-slate-400">
-          <span className="px-3 py-1 bg-slate-900/60 border border-slate-800 rounded-full flex items-center gap-1.5">
-            <Utensils size={12} className="text-amber-400" /> Fine Dining &amp; Bistros
-          </span>
-          <span className="px-3 py-1 bg-slate-900/60 border border-slate-800 rounded-full flex items-center gap-1.5">
-            <Building2 size={12} className="text-indigo-400" /> Cloud Kitchens
-          </span>
-          <span className="px-3 py-1 bg-slate-900/60 border border-slate-800 rounded-full flex items-center gap-1.5">
-            <Zap size={12} className="text-emerald-400" /> Bakeries &amp; Cafés
-          </span>
-          <span className="px-3 py-1 bg-slate-900/60 border border-slate-800 rounded-full flex items-center gap-1.5">
-            <Layers size={12} className="text-sky-400" /> Multi-Outlet Chains
-          </span>
-        </div>
+            <h1 className="max-w-3xl text-4xl font-extrabold leading-[1.08] tracking-tight text-slate-900 sm:text-5xl lg:text-[3.5rem]">
+              Know What Your Kitchen Needs ?{" "}
+              <span className="text-orange-500">Before You Run Out.</span>
+            </h1>
 
-        {/* Action Buttons */}
-        <div className="pt-4 flex flex-col sm:flex-row gap-4 justify-center items-center w-full max-w-2xl mx-auto">
-          <Link
-            href="/register"
-            className="w-full sm:w-auto py-3.5 px-8 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 hover:shadow-[0_0_30px_rgba(245,158,11,0.4)] cursor-pointer"
-          >
-            Start Free Trial <ArrowRight size={16} />
-          </Link>
-          <button
-            onClick={handleSeeDemo}
-            disabled={demoLoading}
-            className="w-full sm:w-auto py-3.5 px-8 border border-slate-700/80 hover:border-slate-500 bg-slate-900/60 hover:bg-slate-800/80 text-slate-200 font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-          >
-            <Zap size={16} className="text-amber-400" />
-            {demoLoading ? 'Launching Demo...' : 'Instant Demo Login'}
-          </button>
-          <a
-            href="https://wa.me/917549569748"
-            target="_blank"
-            rel="noreferrer"
-            className="w-full sm:w-auto py-3.5 px-6 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <MessageCircle size={17} /> WhatsApp Us
-          </a>
-        </div>
+            <p className="mt-5 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
+              KitchenIQ AI analyzes your inventory and sales patterns to help your kitchen predict demand, prevent stockouts, reduce food waste, and reorder smarter.
+            </p>
 
-        {/* Key Trust Highlights */}
-        <div className="pt-6 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto border-t border-slate-900/60 text-slate-400 text-xs">
-          <div className="flex items-center justify-center gap-1.5">
-            <CheckCircle size={14} className="text-emerald-400 shrink-0" />
-            <span>Multi-Tenant Security</span>
+            <div className="mt-5 flex max-w-xl items-start gap-3 rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 px-4 py-3.5">
+              <span className="text-xl">??</span>
+              <p className="text-sm leading-6 text-amber-900">
+                Book a free audit and we'll walk through <strong>your own inventory data</strong> with you ? no generic averages, just your kitchen's numbers.
+              </p>
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <a
+                href="#showcase"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:bg-orange-600"
+              >
+                See KitchenIQ in action <ArrowRight size={15} />
+              </a>
+
+              <Link
+                href="/register"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-5 py-3 text-sm font-bold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50"
+              >
+                Start Free Trial
+              </Link>
+
+              <button
+                onClick={handleSeeDemo}
+                disabled={demoLoading}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-5 py-3 text-sm font-bold text-blue-700 transition hover:bg-blue-100 disabled:opacity-50"
+              >
+                <Zap size={15} />
+                {demoLoading ? 'Launching Demo...' : 'Instant Demo'}
+              </button>
+            </div>
+
+            <p className="mt-3 text-xs text-slate-400">
+              ? No credit card required for the demo
+            </p>
+
+            <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              {[
+                'AI-driven demand forecasting',
+                'Low-stock alerts before you run out',
+                'Smarter, data-backed reordering',
+                'One dashboard for your whole kitchen',
+              ].map((item) => (
+                <div key={item} className="flex items-center gap-2 text-sm font-medium text-slate-600">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-extrabold text-emerald-600">
+                    ?
+                  </span>
+                  {item}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-slate-200 pt-5 text-xs font-semibold text-slate-500">
+              <span>??? Built for commercial kitchens</span>
+              <span>?? AI-powered insights</span>
+              <span>?? Real-time inventory</span>
+            </div>
           </div>
-          <div className="flex items-center justify-center gap-1.5">
-            <CheckCircle size={14} className="text-emerald-400 shrink-0" />
-            <span>FEFO Batch Tracking</span>
-          </div>
-          <div className="flex items-center justify-center gap-1.5">
-            <CheckCircle size={14} className="text-emerald-400 shrink-0" />
-            <span>Instant Demo Access</span>
-          </div>
-          <div className="flex items-center justify-center gap-1.5">
-            <CheckCircle size={14} className="text-emerald-400 shrink-0" />
-            <span>OpenAI + Local Fallback</span>
+
+          {/* Dashboard Mockup */}
+          <div className="relative">
+            <div className="absolute -right-3 -top-6 z-20 hidden max-w-[250px] rounded-xl border border-red-100 bg-white p-3 shadow-xl sm:flex sm:items-center sm:gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 text-lg">
+                ??
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-900">Low Stock Alert</div>
+                <div className="text-[11px] font-semibold leading-4 text-red-500">
+                  Chicken Breast: 3 kg left ? Order now
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10">
+              <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-900 px-4 py-3">
+                <div className="flex gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                </div>
+                <div className="text-xs font-semibold text-slate-300">
+                  KitchenIQ ? Live Dashboard (example)
+                </div>
+              </div>
+
+              <div className="space-y-4 bg-slate-50 p-4 sm:p-5">
+                <div className="flex items-center justify-between rounded-xl bg-slate-900 p-4 text-white">
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-300">?? Inventory Health</div>
+                    <div className="mt-1 text-2xl font-extrabold">82%</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[11px] text-slate-400">Low Stock</div>
+                    <div className="mt-1 text-sm font-bold text-blue-300">7 items</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                  <div className="rounded-xl border border-slate-200 bg-white p-3">
+                    <div className="text-[10px] font-semibold text-slate-400">Waste This Month</div>
+                    <div className="mt-1 text-base font-extrabold text-slate-900">₹18,420</div>
+                    <div className="mt-1 text-[10px] text-slate-400">example figure</div>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white p-3">
+                    <div className="text-[10px] font-semibold text-slate-400">AI Forecast</div>
+                    <div className="mt-1 text-base font-extrabold text-slate-900">7 days</div>
+                    <div className="mt-1 text-[10px] font-semibold text-emerald-600">ahead</div>
+                  </div>
+                  <div className="col-span-2 rounded-xl border border-slate-200 bg-white p-3 sm:col-span-1">
+                    <div className="text-[10px] font-semibold text-slate-400">Ingredient</div>
+                    <div className="mt-1 text-sm font-extrabold text-slate-900">Tomatoes</div>
+                    <div className="mt-1 text-[10px] text-slate-400">12 kg on hand</div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 rounded-xl border border-red-100 bg-white p-3">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-red-500" />
+                    <span className="flex-1 text-[11px] font-medium leading-4 text-slate-600">
+                      Tomatoes: predicted usage 28 kg ? reorder 20 kg within 2 days
+                    </span>
+                    <span className="hidden rounded-full bg-red-50 px-2 py-1 text-[9px] font-bold text-red-600 sm:inline">
+                      AI Forecast
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 rounded-xl border border-orange-100 bg-white p-3">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-orange-500" />
+                    <span className="flex-1 text-[11px] font-medium leading-4 text-slate-600">
+                      Mozzarella expiring in 2 days ? use priority
+                    </span>
+                    <span className="hidden rounded-full bg-orange-50 px-2 py-1 text-[9px] font-bold text-orange-600 sm:inline">
+                      Expiry
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 rounded-xl border border-emerald-100 bg-white p-3">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500" />
+                    <span className="flex-1 text-[11px] font-medium leading-4 text-slate-600">
+                      Olive Oil reorder recommendation sent
+                    </span>
+                    <span className="hidden rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-bold text-emerald-600 sm:inline">
+                      Done
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="absolute -bottom-6 -left-4 z-20 hidden max-w-[270px] rounded-xl border border-blue-100 bg-white p-3 shadow-xl sm:flex sm:items-center sm:gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-lg">
+                ??
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-900">AI Insight</div>
+                <div className="text-[11px] font-semibold leading-4 text-blue-600">
+                  Chicken likely to hit reorder point in 3 days
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
+
+
 
       {/* --- INTERACTIVE PRODUCT SHOWCASE SECTION --- */}
       <section id="showcase" className="px-6 max-w-6xl mx-auto w-full z-10 pb-20 pt-6">
