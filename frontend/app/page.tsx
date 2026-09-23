@@ -254,7 +254,7 @@ export default function Home() {
             </div>
 
             <h1 className="max-w-3xl text-4xl font-extrabold leading-[1.08] tracking-tight text-slate-900 sm:text-5xl lg:text-[3.5rem]">
-              Know What Your Kitchen Needs ?{" "}
+              Know What Your Kitchen Needs &mdash;{" "}
               <span className="text-orange-500">Before You Run Out.</span>
             </h1>
 
@@ -263,9 +263,9 @@ export default function Home() {
             </p>
 
             <div className="mt-5 flex max-w-xl items-start gap-3 rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 px-4 py-3.5">
-              <span className="text-xl">??</span>
+              <span className="text-xl font-bold text-orange-500">i</span>
               <p className="text-sm leading-6 text-amber-900">
-                Book a free audit and we'll walk through <strong>your own inventory data</strong> with you ? no generic averages, just your kitchen's numbers.
+                Book a free audit and we'll walk through <strong>your own inventory data</strong> with you &mdash; no generic averages, just your kitchen's numbers.
               </p>
             </div>
 
@@ -295,7 +295,7 @@ export default function Home() {
             </div>
 
             <p className="mt-3 text-xs text-slate-400">
-              ? No credit card required for the demo
+              No credit card required for the demo
             </p>
 
             <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -307,7 +307,7 @@ export default function Home() {
               ].map((item) => (
                 <div key={item} className="flex items-center gap-2 text-sm font-medium text-slate-600">
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-extrabold text-emerald-600">
-                    ?
+                    ✓
                   </span>
                   {item}
                 </div>
@@ -315,9 +315,9 @@ export default function Home() {
             </div>
 
             <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-slate-200 pt-5 text-xs font-semibold text-slate-500">
-              <span>??? Built for commercial kitchens</span>
-              <span>?? AI-powered insights</span>
-              <span>?? Real-time inventory</span>
+              <span>Built for commercial kitchens</span>
+              <span>AI-powered insights</span>
+              <span>Real-time inventory</span>
             </div>
           </div>
 
@@ -325,12 +325,12 @@ export default function Home() {
           <div className="relative">
             <div className="absolute -right-3 -top-6 z-20 hidden max-w-[250px] rounded-xl border border-red-100 bg-white p-3 shadow-xl sm:flex sm:items-center sm:gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 text-lg">
-                ??
+                !
               </div>
               <div>
                 <div className="text-xs font-bold text-slate-900">Low Stock Alert</div>
                 <div className="text-[11px] font-semibold leading-4 text-red-500">
-                  Chicken Breast: 3 kg left ? Order now
+                  Chicken Breast: 3 kg left &mdash; Order now
                 </div>
               </div>
             </div>
@@ -343,14 +343,14 @@ export default function Home() {
                   <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
                 </div>
                 <div className="text-xs font-semibold text-slate-300">
-                  KitchenIQ ? Live Dashboard (example)
+                  KitchenIQ &mdash; Live Dashboard (example)
                 </div>
               </div>
 
               <div className="space-y-4 bg-slate-50 p-4 sm:p-5">
                 <div className="flex items-center justify-between rounded-xl bg-slate-900 p-4 text-white">
                   <div>
-                    <div className="text-[11px] font-semibold text-slate-300">?? Inventory Health</div>
+                    <div className="text-[11px] font-semibold text-slate-300">Inventory Health</div>
                     <div className="mt-1 text-2xl font-extrabold">82%</div>
                   </div>
                   <div className="text-right">
@@ -381,7 +381,7 @@ export default function Home() {
                   <div className="flex items-center gap-2 rounded-xl border border-red-100 bg-white p-3">
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-red-500" />
                     <span className="flex-1 text-[11px] font-medium leading-4 text-slate-600">
-                      Tomatoes: predicted usage 28 kg ? reorder 20 kg within 2 days
+                      Tomatoes: predicted usage 28 kg &mdash; reorder 20 kg within 2 days
                     </span>
                     <span className="hidden rounded-full bg-red-50 px-2 py-1 text-[9px] font-bold text-red-600 sm:inline">
                       AI Forecast
@@ -391,7 +391,7 @@ export default function Home() {
                   <div className="flex items-center gap-2 rounded-xl border border-orange-100 bg-white p-3">
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-orange-500" />
                     <span className="flex-1 text-[11px] font-medium leading-4 text-slate-600">
-                      Mozzarella expiring in 2 days ? use priority
+                      Mozzarella expiring in 2 days &mdash; use priority
                     </span>
                     <span className="hidden rounded-full bg-orange-50 px-2 py-1 text-[9px] font-bold text-orange-600 sm:inline">
                       Expiry
@@ -413,7 +413,7 @@ export default function Home() {
 
             <div className="absolute -bottom-6 -left-4 z-20 hidden max-w-[270px] rounded-xl border border-blue-100 bg-white p-3 shadow-xl sm:flex sm:items-center sm:gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-lg">
-                ??
+                !
               </div>
               <div>
                 <div className="text-xs font-bold text-slate-900">AI Insight</div>
@@ -1014,7 +1014,7 @@ export default function Home() {
 
             <div className="mb-6">
               <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-slate-900">?</span>
+                <span className="text-2xl font-bold text-slate-900">&#8377;</span>
                 <span className="text-5xl font-bold tracking-tight text-slate-900">
                   {annualBilling ? "2,399" : "2,999"}
                 </span>
@@ -1066,7 +1066,7 @@ export default function Home() {
 
             <div className="mb-6">
               <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-slate-900">?</span>
+                <span className="text-2xl font-bold text-slate-900">&#8377;</span>
                 <span className="text-5xl font-bold tracking-tight text-slate-900">
                   {annualBilling ? "4,399" : "5,499"}
                 </span>
