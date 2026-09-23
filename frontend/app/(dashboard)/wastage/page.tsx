@@ -153,7 +153,7 @@ export default function WastagePage() {
           </div>
           <div>
             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">Cumulative Financial Loss</span>
-            <span className="text-3xl font-extrabold text-slate-900 mt-1 block font-mono">-${totalFinancialLoss.toFixed(2)}</span>
+            <span className="text-3xl font-extrabold text-slate-900 mt-1 block font-mono">₹{totalFinancialLoss.toFixed(2)}</span>
           </div>
         </div>
 
@@ -219,7 +219,7 @@ export default function WastagePage() {
                       {log.quantity} {log.product?.unit || ''}
                     </td>
                     <td className="px-6 py-4 text-center font-bold font-mono text-rose-500">
-                      -${log.cost_loss.toFixed(2)}
+                      -₹{log.cost_loss.toFixed(2)}
                     </td>
                     <td className="px-6 py-4">
                       <span className="px-2.5 py-0.5 bg-rose-50 border border-rose-200/50 text-rose-700 rounded-full font-bold text-[10px]">
