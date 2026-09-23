@@ -38,7 +38,7 @@ export default function SalesPage() {
   // Record Sale Mutation
   const recordSaleMutation = useMutation({
     mutationFn: async (payload: any) => {
-      const res = await apiClient.post('/sales', payload);
+      const res = await apiClient.post('/sales/', payload);
       return res.data;
     },
     onSuccess: () => {
