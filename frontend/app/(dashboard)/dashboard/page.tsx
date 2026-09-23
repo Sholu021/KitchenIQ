@@ -14,15 +14,10 @@ import {
   CartesianGrid
 } from 'recharts';
 import {
-  TrendingUp,
-  DollarSign,
   AlertTriangle,
-  Clock,
   Plus,
   ShoppingCart,
   PlusCircle,
-  CheckSquare,
-  Square,
   Sparkles,
   Bot,
   CheckCircle,
@@ -179,8 +174,6 @@ export default function DashboardPage() {
   const topSellingRecipes = Array.isArray(topSellingRecipesData)
     ? topSellingRecipesData
     : [];
-
-  const recipes = topSellingRecipes;
 
   const recentActivity = Array.isArray(dashboardSummary?.recent_activity)
     ? dashboardSummary.recent_activity

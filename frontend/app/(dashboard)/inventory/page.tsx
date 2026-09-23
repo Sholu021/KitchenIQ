@@ -37,7 +37,7 @@ export default function InventoryPage() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
-  const [inventoryHealth, setInventoryHealth] = useState(100);
+  const [inventoryHealth] = useState(100);
 
   // Drawer states
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
@@ -45,7 +45,7 @@ export default function InventoryPage() {
 
   const [ledgerProduct, setLedgerProduct] = useState<any | null>(null);
   const [ledgerFilter, setLedgerFilter] = useState("ALL");
-  const [exportSuccess, setExportSuccess] = useState(false);
+  const [, setExportSuccess] = useState(false);
   const [ledgerDateFrom, setLedgerDateFrom] = useState("");
   const [ledgerDateTo, setLedgerDateTo] = useState("");
 

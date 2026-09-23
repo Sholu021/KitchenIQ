@@ -8,26 +8,16 @@ import { apiClient } from '@/lib/api-client';
 import {
   Sparkles,
   ArrowRight,
-  ShieldCheck,
   BarChart3,
   Clock,
   ChefHat,
-  MessageCircle,
   Calculator,
-  ChevronRight,
-  CheckCircle,
-  TrendingUp,
-  AlertTriangle,
-  Layers,
   Boxes,
   Menu,
   X,
   Zap,
   Check,
   Lock,
-  RefreshCw,
-  Building2,
-  Utensils,
   Bot,
   SlidersHorizontal,
   DollarSign
@@ -67,7 +57,7 @@ export default function Home() {
       const { access_token, refresh_token, role, organization_id, user_name } = res.data;
       login(access_token, refresh_token, role, organization_id, user_name);
       router.push('/dashboard');
-    } catch (err) {
+    } catch {
       alert('Failed to log in to demo mode. Please verify the backend is online.');
     } finally {
       setDemoLoading(false);

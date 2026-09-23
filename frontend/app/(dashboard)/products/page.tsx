@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
-import { Plus, Search, Filter, Edit, Trash, ChevronLeft, ChevronRight, X, FolderPlus, Sparkles, CheckCircle2, ChevronRightSquare, ArrowRight } from 'lucide-react';
+import { Plus, Search, Filter, Edit, Trash, ChevronLeft, ChevronRight, X, FolderPlus, ArrowRight } from 'lucide-react';
 
 export default function ProductsPage() {
   const queryClient = useQueryClient();

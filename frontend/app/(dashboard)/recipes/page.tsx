@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
-import { Plus, Trash, BookOpen, Clock, Tag, X, Eye, Sparkles, ChefHat } from 'lucide-react';
+import { Plus, Trash, X, Eye, ChefHat } from 'lucide-react';
 
 export default function RecipesPage() {
   const queryClient = useQueryClient();

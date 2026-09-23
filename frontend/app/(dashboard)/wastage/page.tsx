@@ -10,9 +10,7 @@ import {
   X,
   AlertTriangle,
   Flame,
-  ShieldAlert,
   Coins,
-  RefreshCw,
   Search,
   Calendar
 } from 'lucide-react';

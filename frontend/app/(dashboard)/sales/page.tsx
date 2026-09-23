@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import { Plus, Trash, DollarSign, Calendar, ShoppingBag, Eye, X } from 'lucide-react';
+import { Plus, Trash, ShoppingBag, Eye, X } from 'lucide-react';
 
 export default function SalesPage() {
   const queryClient = useQueryClient();

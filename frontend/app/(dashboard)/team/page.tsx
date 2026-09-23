@@ -8,7 +8,6 @@ import {
   Users,
   Plus,
   X,
-  ShieldAlert,
   Activity,
   Trash2,
   AlertTriangle,

@@ -26,10 +26,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Bell,
-  Search,
-  Plus,
   Calendar,
-  User as UserIcon,
 } from "lucide-react";
 
 export default function DashboardLayout({
