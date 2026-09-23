@@ -136,52 +136,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-def on_startup():
-
-    logger.info("========== REGISTERED ROUTES ==========")
-
-    for route in app.routes:
-        if hasattr(route, "methods"):
-            logger.info("%s %s", route.path, route.methods)
-
-    logger.info("Initializing database tables...")
-
-    logger.info("=" * 80)
-    logger.info("TABLES: %s", list(Base.metadata.tables.keys()))
-    logger.info("=" * 80)
-
-    Base.metadata.create_all(bind=engine)
-
-    logger.info(
-        "Registered tables: %s",
-        list(Base.metadata.tables.keys()),
-    )
-
-    logger.info("Running database seeding check...")
-
-    db = SessionLocal()
-
-    try:
-        seed_db(db)
-    except Exception as e:
-        logger.exception("Database seeding failed")
-    finally:
-        db.close()
-
-    # Start scheduled jobs
-    report_scheduler.start()
-    logger.info("Report Scheduler started.")
-
-    ceo_scheduler.start()
-    logger.info("CEO Scheduler started.")
-
-    inventory_scheduler.start()
-    logger.info("Inventory Scheduler started.")
-
-    reorder_scheduler.start()
-    logger.info("AI Reorder Scheduler started.")
-
 @app.get("/")
 def read_root():
     return {
@@ -226,12 +180,4 @@ def db_debug():
         "tables": [t[0] for t in tables]
     }
 
-@app.on_event("shutdown")
-def shutdown():
 
-    report_scheduler.shutdown(wait=False)
-    ceo_scheduler.shutdown(wait=False)
-    inventory_scheduler.shutdown(wait=False)
-    reorder_scheduler.shutdown(wait=False)
-
-    logger.info("Schedulers stopped.")
