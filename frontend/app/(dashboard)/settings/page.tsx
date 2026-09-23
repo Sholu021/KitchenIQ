@@ -210,8 +210,8 @@ export default function SettingsPage() {
                       <span className="font-bold text-slate-900 text-sm block">KitchenIQ Pro</span>
                       <span className="text-slate-400 text-[10px] block mt-0.5">
                         {billingCycle === 'monthly'
-                          ? '$24.00 / month, cancel anytime'
-                          : '$20.00 / month ($240.00 billed annually)'}
+                          ? '₹2,999 / month, cancel anytime'
+                          : '₹2,399 / month (₹28,788 billed annually)'}
                       </span>
                     </div>
                     <button
@@ -219,7 +219,7 @@ export default function SettingsPage() {
                       disabled={role !== 'Owner'}
                       className="py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold rounded-xl text-xs cursor-pointer flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/10"
                     >
-                      <Zap size={12} /> {billingCycle === 'monthly' ? 'Subscribe @ $24/mo' : 'Subscribe @ $240/yr'}
+                      <Zap size={12} /> {billingCycle === 'monthly' ? 'Subscribe @ ₹2,999/mo' : 'Subscribe @ ₹28,788/yr'}
                     </button>
                   </div>
                 </div>
@@ -274,7 +274,7 @@ export default function SettingsPage() {
 
             <div className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
               <span className="font-bold text-slate-400">Database Driver</span>
-              <span className="font-mono text-slate-700">SQLite Local (SQLAlchemy 2.0)</span>
+              <span className="font-mono text-slate-700">Configured Production Database</span>
             </div>
 
             <div className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
@@ -332,7 +332,7 @@ export default function SettingsPage() {
                     KitchenIQ Pro {billingCycle === 'annual' ? 'Annual Plan' : 'Monthly Plan'}
                   </span>
                   <span className="text-slate-800 font-bold font-mono">
-                    {billingCycle === 'annual' ? '$240.00 / yr' : '$24.00 / mo'}
+                    {billingCycle === 'annual' ? '₹28,788.00 / yr' : '₹2,999.00 / mo'}
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-500 leading-normal font-semibold">
