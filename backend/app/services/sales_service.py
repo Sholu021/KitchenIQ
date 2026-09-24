@@ -67,7 +67,7 @@ def create_sale(
                 detail=f"Ingredient Product ID {prod_id} not found"
             )
             
-        available = (
+        available_batch = (
             db.query(func.coalesce(func.sum(Batch.remaining_quantity), 0))
             .filter(
                 Batch.organization_id == organization_id,
@@ -81,10 +81,18 @@ def create_sale(
             .scalar()
         )
 
+        # current_stock includes both batch-backed and legacy unbatched stock.
+        # Only the portion not represented by active batches is legacy stock.
+        legacy_unbatched = max(
+            product.current_stock - float(available_batch or 0),
+            0.0,
+        )
+        available = float(available_batch or 0) + legacy_unbatched
+
         if available < total_needed:
             raise HTTPException(
                 status_code=400,
-                detail=f"Insufficient batch inventory for {product.name}. "
+                detail=f"Insufficient inventory for {product.name}. "
                        f"Required {total_needed}, Available {available}"
             )
 
