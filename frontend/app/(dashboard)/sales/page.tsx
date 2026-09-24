@@ -3,10 +3,13 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { useAuthStore } from '@/store/auth-store';
 import { Plus, Trash, ShoppingBag, Eye, X } from 'lucide-react';
 
 export default function SalesPage() {
   const queryClient = useQueryClient();
+  const role = useAuthStore((state) => state.role);
+  const canRecordSale = role === 'owner' || role === 'manager';
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
@@ -109,12 +112,14 @@ export default function SalesPage() {
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Sales Register</h1>
           <p className="text-sm text-slate-500 mt-1.5 font-medium">Log menu sales transactions to automatically trigger inventory ingredient deductions.</p>
         </div>
-        <button
-          onClick={() => setCreateModalOpen(true)}
-          className="py-3 px-5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-emerald-500/10 self-start sm:self-auto"
-        >
-          <Plus size={16} /> Record Sale
-        </button>
+        {canRecordSale && (
+          <button
+            onClick={() => setCreateModalOpen(true)}
+            className="py-3 px-5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-emerald-500/10 self-start sm:self-auto"
+          >
+            <Plus size={16} /> Record Sale
+          </button>
+        )}
       </div>
 
       {/* Sales List */}
@@ -166,7 +171,7 @@ export default function SalesPage() {
       </div>
 
       {/* --- RECORD SALE MODAL --- */}
-      {createModalOpen && (
+      {createModalOpen && canRecordSale && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="w-full max-w-lg bg-white border border-slate-200 rounded-[20px] p-6 shadow-2xl relative overflow-y-auto max-h-[90vh] animate-in zoom-in-95 duration-150">
             <button
