@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_db, get_current_user, require_staff
+from app.core.deps import get_db, get_current_user, require_staff, require_manager
 from app.models.models import Sale, User
 from app.schemas.schemas import SaleCreate, SaleOut
 from app.services.sales_service import create_sale
@@ -23,7 +23,7 @@ def list_sales(
 def record_sale(
     payload: SaleCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_staff),
+    current_user: User = Depends(require_manager),
 ):
     return create_sale(
         db=db,
