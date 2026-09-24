@@ -9,7 +9,8 @@ import { Plus, Trash, ShoppingBag, Eye, X } from 'lucide-react';
 export default function SalesPage() {
   const queryClient = useQueryClient();
   const role = useAuthStore((state) => state.role);
-  const canRecordSale = role === 'owner' || role === 'manager';
+  const normalizedRole = role?.toLowerCase();
+  const canRecordSale = normalizedRole === 'owner' || normalizedRole === 'manager';
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
