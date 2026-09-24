@@ -52,10 +52,31 @@ def calculate_fefo_cost(
         remaining -= used
 
     if remaining > 0:
-        raise HTTPException(
-            status_code=400,
-            detail="Insufficient batch inventory for cost calculation",
+        # Legacy inventory may predate batch tracking. Treat the portion of
+        # current_stock not represented by active batches as unbatched stock.
+        product = (
+            db.query(Product)
+            .filter(
+                Product.id == product_id,
+                Product.organization_id == organization_id,
+            )
+            .first()
         )
+
+        total_batch_qty = sum(batch.remaining_quantity for batch in batches)
+        legacy_unbatched_qty = max(
+            (product.current_stock if product else 0.0) - total_batch_qty,
+            0.0,
+        )
+
+        if legacy_unbatched_qty < remaining:
+            raise HTTPException(
+                status_code=400,
+                detail="Insufficient inventory for cost calculation",
+            )
+
+        total_cost += remaining * (product.cost_price if product else 0.0)
+        remaining = 0.0
 
     return round(total_cost, 2)
 
@@ -294,17 +315,7 @@ def adjust_stock(
                 b.remaining_quantity for b in batches
             )
 
-            if total_batch_qty < reduction_needed:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=(
-                        f"Insufficient batch quantities for product "
-                        f"'{product.name}'. "
-                        f"Total batches available: {total_batch_qty}, "
-                        f"Needed: {reduction_needed}"
-                    ),
-                )
-
+            # Consume active batches first using FEFO.
             for batch in batches:
                 if reduction_needed <= 0:
                     break
@@ -332,6 +343,41 @@ def adjust_stock(
 
                 db.add(txn)
                 db.flush()
+
+            # Legacy stock may exist in current_stock without a batch.
+            # Consume only the portion not represented by active batches.
+            if reduction_needed > 0:
+                legacy_unbatched_qty = max(
+                    product.current_stock - total_batch_qty,
+                    0.0,
+                )
+
+                if legacy_unbatched_qty < reduction_needed:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=(
+                            f"Insufficient inventory for product "
+                            f"'{product.name}'. "
+                            f"Available: {product.current_stock}, "
+                            f"Requested reduction: {abs(net_change)}"
+                        ),
+                    )
+
+                txn = InventoryTransaction(
+                    organization_id=organization_id,
+                    product_id=product_id,
+                    batch_id=None,
+                    purchase_order_id=purchase_order_id,
+                    created_by=user_id,
+                    transaction_type=transaction_type,
+                    quantity=-reduction_needed,
+                    notes=notes,
+                    reference=reference,
+                )
+
+                db.add(txn)
+                db.flush()
+                reduction_needed = 0
 
     # ----------------------------
     # Update product stock
