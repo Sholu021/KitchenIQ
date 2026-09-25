@@ -10,7 +10,8 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_db, require_owner
-from app.models.models import AuditLog, BillingSubscription, Organization, User
+from app.models.billing import BillingSubscription
+from app.models.models import AuditLog, Organization, User
 
 router = APIRouter(prefix="/billing", tags=["Billing"])
 
