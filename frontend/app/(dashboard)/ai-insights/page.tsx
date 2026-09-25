@@ -27,7 +27,7 @@ export default function AIInsightsPage() {
   const [inputQuestion, setInputQuestion] = useState('');
 
   // Fetch AI Insights
-  const { data: insights, isLoading, isError, refetch, isRefetching } = useQuery({
+  const { data: insights, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ['ai-insights'],
     queryFn: async () => {
       const res = await apiClient.get('/ai/insights');
@@ -103,10 +103,11 @@ export default function AIInsightsPage() {
   }
 
   if (isError) {
+    const isProRequired = (error as { response?: { status?: number } })?.response?.status === 403;
     return (
       <div className="p-6 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600">
-        <h3 className="font-bold text-base">Failed to load AI Intelligence data</h3>
-        <p className="text-sm mt-1">Check database tables or verify your credentials.</p>
+        <h3 className="font-bold text-base">{isProRequired ? 'AI Insights is a Pro feature' : 'Failed to load AI Intelligence data'}</h3>
+        <p className="text-sm mt-1">{isProRequired ? 'Upgrade to Pro in Settings to access AI-powered inventory intelligence.' : 'Please try again. If the problem persists, contact your administrator.'}</p>
         <button 
           onClick={() => refetch()} 
           className="mt-4 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-xs cursor-pointer transition-colors"
