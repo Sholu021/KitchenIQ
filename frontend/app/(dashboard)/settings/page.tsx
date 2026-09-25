@@ -37,26 +37,37 @@ export default function SettingsPage() {
     }
   });
 
-  // 2. Upgrade Subscription Mutation
-  const upgradeSubscriptionMutation = useMutation({
-    mutationFn: async (tier: string) => {
-      const res = await apiClient.post('/auth/organization/subscription', { tier });
+  // 2. Live Razorpay subscription checkout
+  const createSubscriptionMutation = useMutation({
+    mutationFn: async (billing_cycle: 'monthly' | 'annual') => {
+      const res = await apiClient.post('/billing/subscriptions', { billing_cycle });
+      return res.data;
+    },
+    onError: (err: any) => {
+      alert(err.response?.data?.detail || 'Unable to start Razorpay checkout.');
+      setIsProcessingPayment(false);
+    }
+  });
+
+  const verifyPaymentMutation = useMutation({
+    mutationFn: async (payload: {
+      razorpay_payment_id: string;
+      razorpay_subscription_id: string;
+      razorpay_signature: string;
+    }) => {
+      const res = await apiClient.post('/billing/subscriptions/verify', payload);
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-      queryKey: ["org-details-layout"],
-    });
-
-    queryClient.invalidateQueries({
-      queryKey: ["ai-insights"],
-    });
-
-    setPaymentModalOpen(false);
-    setIsProcessingPayment(false);
-  },
+      queryClient.invalidateQueries({ queryKey: ['org-details'] });
+      queryClient.invalidateQueries({ queryKey: ['org-details-layout'] });
+      queryClient.invalidateQueries({ queryKey: ['ai-insights'] });
+      setPaymentModalOpen(false);
+      setIsProcessingPayment(false);
+      alert('KitchenIQ Pro is now active.');
+    },
     onError: (err: any) => {
-      alert(err.response?.data?.detail || 'Upgrade failed. Only Owners can adjust billing.');
+      alert(err.response?.data?.detail || 'Payment verification failed.');
       setIsProcessingPayment(false);
     }
   });
@@ -70,12 +81,61 @@ export default function SettingsPage() {
     setPaymentModalOpen(true);
   };
 
-  const handleSimulatePayment = () => {
+  const handleStartRazorpayCheckout = async () => {
+    if (role !== 'Owner') {
+      alert('Subscription billing management is restricted to the Organization Owner.');
+      return;
+    }
+
     setIsProcessingPayment(true);
-    // Simulate Razorpay/Stripe checkout response latency (1.5 seconds)
-    setTimeout(() => {
-      upgradeSubscriptionMutation.mutate(selectedUpgradeTier);
-    }, 1500);
+
+    try {
+      const data = await createSubscriptionMutation.mutateAsync(billingCycle);
+
+      const loadRazorpay = () =>
+        new Promise<void>((resolve, reject) => {
+          if ((window as any).Razorpay) {
+            resolve();
+            return;
+          }
+          const script = document.createElement('script');
+          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error('Unable to load Razorpay Checkout.'));
+          document.body.appendChild(script);
+        });
+
+      await loadRazorpay();
+
+      const Razorpay = (window as any).Razorpay;
+      const checkout = new Razorpay({
+        key: data.key_id,
+        subscription_id: data.subscription_id,
+        name: 'KitchenIQ AI',
+        description: `KitchenIQ Pro ${billingCycle === 'annual' ? 'Annual' : 'Monthly'} Plan`,
+        prefill: {
+          name: userName || '',
+        },
+        theme: {
+          color: '#10b981',
+        },
+        handler: (response: {
+          razorpay_payment_id: string;
+          razorpay_subscription_id: string;
+          razorpay_signature: string;
+        }) => {
+          verifyPaymentMutation.mutate(response);
+        },
+        modal: {
+          ondismiss: () => setIsProcessingPayment(false),
+        },
+      });
+
+      checkout.open();
+    } catch (error) {
+      setIsProcessingPayment(false);
+      alert(error instanceof Error ? error.message : 'Unable to start Razorpay checkout.');
+    }
   };
 
   const handleDowngradeToFree = () => {
@@ -84,7 +144,17 @@ export default function SettingsPage() {
       return;
     }
     if (confirm('Are you sure you want to revert to the Free tier? Limits on products (3), recipes (2), and active batches (5) will be re-enforced.')) {
-      upgradeSubscriptionMutation.mutate('Free');
+      const cancelSubscription = async () => {
+        try {
+          await apiClient.post('/billing/subscriptions/cancel');
+          await queryClient.invalidateQueries({ queryKey: ['org-details'] });
+          await queryClient.invalidateQueries({ queryKey: ['org-details-layout'] });
+          alert('Auto-renewal cancellation requested. Pro access remains active through the current billing cycle.');
+        } catch (err: any) {
+          alert(err.response?.data?.detail || 'Unable to cancel the Razorpay subscription.');
+        }
+      };
+      void cancelSubscription();
     }
   };
 
@@ -341,18 +411,21 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-3 font-semibold text-slate-600">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Simulated Payment Details</span>
-                
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Secure Razorpay Checkout</span>
+
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 text-xs">
                   <div className="flex items-center justify-between text-slate-500">
-                    <span>Card Holder Name</span>
+                    <span>Account</span>
                     <span className="font-bold text-slate-800">{userName}</span>
                   </div>
                   <div className="flex items-center justify-between text-slate-500 border-t border-slate-200/80 pt-2.5">
-                    <span>Simulated Gateway</span>
-                    <span className="font-bold text-emerald-600 flex items-center gap-1"><CheckCircle size={13} className="text-emerald-500" /> Razorpay Test Suite</span>
+                    <span>Payment Provider</span>
+                    <span className="font-bold text-emerald-600 flex items-center gap-1"><CheckCircle size={13} className="text-emerald-500" /> Razorpay</span>
                   </div>
                 </div>
+                <p className="text-[10px] text-slate-400 leading-relaxed">
+                  Payment authorization is handled by Razorpay Checkout. KitchenIQ never receives or stores your card details.
+                </p>
               </div>
 
               <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
@@ -364,7 +437,7 @@ export default function SettingsPage() {
                   Cancel
                 </button>
                 <button
-                  onClick={handleSimulatePayment}
+                  onClick={handleStartRazorpayCheckout}
                   disabled={isProcessingPayment}
                   className="py-2.5 px-5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs cursor-pointer transition-all flex items-center gap-1.5 disabled:opacity-50 shadow-md shadow-emerald-500/10"
                 >
