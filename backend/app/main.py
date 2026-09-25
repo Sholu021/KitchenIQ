@@ -20,6 +20,7 @@ from app.core.seed import seed_db
 from app.core.rate_limit import limiter
 
 from app.api.v1.router import router as api_router
+from app.models.billing import BillingSubscription
 
 from app.services.scheduler_service import scheduler as report_scheduler
 
