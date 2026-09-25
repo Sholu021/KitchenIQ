@@ -199,7 +199,7 @@ export default function SettingsPage() {
                       >
                         Annual
                         <span className="text-[8px] bg-emerald-500 text-white font-extrabold px-1 rounded">
-                          Save 17%
+                          Save 20%
                         </span>
                       </button>
                     </div>
