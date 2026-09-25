@@ -244,49 +244,39 @@ def update_subscription(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_owner)
 ):
-    # Only Owners can manage subscriptions
-    
-    tier = req.tier
-    if tier not in ["Free", "Pro", "Enterprise"]:
+    # Paid plans must be activated through the verified Razorpay billing flow.
+    if req.tier != "Free":
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid subscription tier. Choose 'Free', 'Pro', or 'Enterprise'."
+            status_code=status.HTTP_410_GONE,
+            detail="Paid subscription changes must use the Razorpay billing flow.",
         )
-    
+
     org = db.query(Organization).filter(Organization.id == current_user.organization_id).first()
     if not org:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found"
-        )
-    
-    org.subscription_tier = tier
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+
+    org.subscription_tier = "Free"
     org.subscription_status = "active"
+    org.subscription_expires_at = None
 
-    audit = AuditLog(
-        organization_id=org.id,
-        user_id=current_user.id,
-        action=f"CHANGE_SUBSCRIPTION_{tier.upper()}",
-        entity_type="organization",
-        entity_id=org.id,
+    db.add(
+        AuditLog(
+            organization_id=org.id,
+            user_id=current_user.id,
+            action="CHANGE_SUBSCRIPTION_FREE",
+            entity_type="organization",
+            entity_id=org.id,
+        )
     )
-
-    db.add(audit)
-
     db.commit()
     db.refresh(org)
 
-    # Compute usage counts
     products_count = db.query(Product).filter(Product.organization_id == org.id).count()
     recipes_count = db.query(Recipe).filter(Recipe.organization_id == org.id).count()
     batches_count = db.query(Batch).filter(
         Batch.organization_id == org.id,
         Batch.quantity > 0
     ).count()
-
-    products_limit = 3 if org.subscription_tier == "Free" else None
-    recipes_limit = 2 if org.subscription_tier == "Free" else None
-    batches_limit = 5 if org.subscription_tier == "Free" else None
 
     return OrganizationDetailsOut(
         id=org.id,
@@ -296,9 +286,9 @@ def update_subscription(
         subscription_expires_at=org.subscription_expires_at,
         created_at=org.created_at,
         products_count=products_count,
-        products_limit=products_limit,
+        products_limit=3,
         recipes_count=recipes_count,
-        recipes_limit=recipes_limit,
+        recipes_limit=2,
         batches_count=batches_count,
-        batches_limit=batches_limit
+        batches_limit=5,
     )
