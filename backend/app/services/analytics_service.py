@@ -343,17 +343,6 @@ def demand_forecast(
         .all()
     )
 
-    print("\n========== DEMAND FORECAST ==========")
-    print(__file__)
-
-    print("\nProducts returned from query:")
-    for p in products:
-        print(
-            f"id={p.id}, "
-            f"name={p.name}, "
-            f"is_finished_product={p.is_finished_product}"
-        )
-        
     forecast = []
 
     for product in products:
