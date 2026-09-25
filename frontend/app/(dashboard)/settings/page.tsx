@@ -143,7 +143,7 @@ export default function SettingsPage() {
       alert('Subscription billing management is restricted to the Organization Owner.');
       return;
     }
-    if (confirm('Are you sure you want to revert to the Free tier? Limits on products (3), recipes (2), and active batches (5) will be re-enforced.')) {
+    if (confirm('Cancel Pro auto-renewal? Your Pro access will remain active through the current billing cycle.')) {
       const cancelSubscription = async () => {
         try {
           await apiClient.post('/billing/subscriptions/cancel');
