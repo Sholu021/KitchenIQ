@@ -447,7 +447,7 @@ export default function SettingsPage() {
                       Processing Checkout...
                     </>
                   ) : (
-                    'Complete Payment'
+                    'Open Secure Checkout'
                   )}
                 </button>
               </div>
