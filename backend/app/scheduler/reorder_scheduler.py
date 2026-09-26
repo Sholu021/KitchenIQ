@@ -3,28 +3,21 @@ from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
 from app.models.models import Organization
-from app.services.purchase_service import (
-    generate_purchase_orders_from_recommendations,
-)
+from app.services.purchase_service import generate_purchase_orders_from_recommendations
 
 scheduler = BackgroundScheduler()
 
 
 def nightly_reorder_job():
     db: Session = SessionLocal()
-
     try:
         organizations = db.query(Organization).all()
-
         for org in organizations:
             generate_purchase_orders_from_recommendations(
                 db=db,
                 organization_id=org.id,
-                user_id=1,  # System user
+                user_id=None,
             )
-
-        print("Nightly AI reorder completed.")
-
     finally:
         db.close()
 
