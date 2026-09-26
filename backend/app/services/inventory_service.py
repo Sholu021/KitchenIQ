@@ -109,10 +109,15 @@ def adjust_stock(
             detail="Adjustment quantity cannot be zero.",
         )
 
-    product = db.query(Product).filter(
-        Product.id == product_id,
-        Product.organization_id == organization_id
-    ).first()
+    product = (
+        db.query(Product)
+        .filter(
+            Product.id == product_id,
+            Product.organization_id == organization_id,
+        )
+        .with_for_update()
+        .first()
+    )
     
     if not product:
         raise HTTPException(

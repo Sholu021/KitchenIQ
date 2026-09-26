@@ -239,7 +239,7 @@ def update_po_status(
 def generate_purchase_orders_from_recommendations(
     db: Session,
     organization_id: int,
-    user_id: int,
+    user_id: Optional[int] = None,
 ):
     recommendations = calculate_reorder_recommendations(
         db=db,
@@ -278,7 +278,6 @@ def generate_purchase_orders_from_recommendations(
                 "quantity": recommendation["recommended_order_quantity"],
             }
         )
-    print(supplier_groups)
     created_purchase_orders = []
 
     for supplier_id, items in supplier_groups.items():
@@ -313,13 +312,9 @@ def generate_purchase_orders_from_recommendations(
             )
             .first()
         )
-        print("Supplier:", supplier_id)
-        print("Existing PO:", existing_po.id if existing_po else None)
         if existing_po:
-            print(f"USING EXISTING PO: {existing_po.id}")
             po = existing_po
         else:
-            print("CREATING NEW PO")
 
             po = PurchaseOrder(
                 organization_id=organization_id,
@@ -335,7 +330,6 @@ def generate_purchase_orders_from_recommendations(
             db.add(po)
             db.flush()
 
-            print(f"NEW PO ID: {po.id}")
 
         total = 0
 

@@ -1,11 +1,13 @@
 import logging
+import os
+import secrets
 
 logger = logging.getLogger(__name__)
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, Request, status
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_db, get_current_user, require_owner
+from app.core.deps import get_db, get_current_user, require_owner, CSRF_COOKIE_NAME, ACCESS_COOKIE_NAME, REFRESH_COOKIE_NAME
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -18,7 +20,7 @@ from app.schemas.schemas import (
     RegisterOrgOwnerRequest,
     LoginRequest,
     RefreshTokenRequest,
-    Token,
+    AuthSession,
     UserOut,
     SubscriptionUpgradeRequest,
     OrganizationDetailsOut
@@ -26,9 +28,27 @@ from app.schemas.schemas import (
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-@router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "lax")
+COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN") or None
+ACCESS_COOKIE_MAX_AGE = 15 * 60
+REFRESH_COOKIE_MAX_AGE = 30 * 24 * 60 * 60
+
+def _set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
+    csrf_token = secrets.token_urlsafe(32)
+    common = {"secure": COOKIE_SECURE, "httponly": True, "samesite": COOKIE_SAMESITE, "domain": COOKIE_DOMAIN, "path": "/"}
+    response.set_cookie(ACCESS_COOKIE_NAME, access_token, max_age=ACCESS_COOKIE_MAX_AGE, **common)
+    response.set_cookie(REFRESH_COOKIE_NAME, refresh_token, max_age=REFRESH_COOKIE_MAX_AGE, **common)
+    response.set_cookie(CSRF_COOKIE_NAME, csrf_token, max_age=REFRESH_COOKIE_MAX_AGE, secure=COOKIE_SECURE, httponly=False, samesite=COOKIE_SAMESITE, domain=COOKIE_DOMAIN, path="/")
+
+def _clear_auth_cookies(response: Response) -> None:
+    for name in (ACCESS_COOKIE_NAME, REFRESH_COOKIE_NAME, CSRF_COOKIE_NAME):
+        response.delete_cookie(name, domain=COOKIE_DOMAIN, path="/")
+
+@router.post("/register", response_model=AuthSession, status_code=status.HTTP_201_CREATED)
 def register_organization_and_owner(
     req: RegisterOrgOwnerRequest,
+    response: Response,
     db: Session = Depends(get_db)
 ):
     try:
@@ -79,13 +99,8 @@ def register_organization_and_owner(
         access_token = create_access_token(subject=owner.id)
         refresh_token = create_refresh_token(subject=owner.id)
 
-        return Token(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            role=owner.role,
-            organization_id=owner.organization_id,
-            user_name=owner.full_name
-        )
+        _set_auth_cookies(response, access_token, refresh_token)
+        return AuthSession(role=owner.role, organization_id=owner.organization_id, user_name=owner.full_name)
 
     except HTTPException:
         db.rollback()
@@ -99,9 +114,10 @@ def register_organization_and_owner(
             detail="Registration failed. Please try again.",
         )
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=AuthSession)
 def login(
     req: LoginRequest,
+    response: Response,
     db: Session = Depends(get_db)
 ):
     user = db.query(User).filter(User.email == req.email).first()
@@ -132,21 +148,21 @@ def login(
     access_token = create_access_token(subject=user.id)
     refresh_token = create_refresh_token(subject=user.id)
 
-    return Token(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        role=user.role,
-        organization_id=user.organization_id,
-        user_name=user.full_name
-    )
+    _set_auth_cookies(response, access_token, refresh_token)
+    return AuthSession(role=user.role, organization_id=user.organization_id, user_name=user.full_name)
 
 
-@router.post("/refresh", response_model=Token)
+@router.post("/refresh", response_model=AuthSession)
 def refresh_token(
     req: RefreshTokenRequest,
+    request: Request,
+    response: Response,
     db: Session = Depends(get_db)
 ):
-    payload = decode_token(req.refresh_token)
+    raw_refresh_token = req.refresh_token or request.cookies.get(REFRESH_COOKIE_NAME)
+    if not raw_refresh_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token missing")
+    payload = decode_token(raw_refresh_token)
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -183,13 +199,14 @@ def refresh_token(
     access_token = create_access_token(subject=user.id)
     new_refresh_token = create_refresh_token(subject=user.id)
 
-    return Token(
-        access_token=access_token,
-        refresh_token=new_refresh_token,
-        role=user.role,
-        organization_id=user.organization_id,
-        user_name=user.full_name
-    )
+    _set_auth_cookies(response, access_token, new_refresh_token)
+    return AuthSession(role=user.role, organization_id=user.organization_id, user_name=user.full_name)
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(response: Response, current_user: User = Depends(get_current_user)):
+    _clear_auth_cookies(response)
+    return None
 
 
 @router.get("/me", response_model=UserOut)

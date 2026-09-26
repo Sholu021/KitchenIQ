@@ -54,12 +54,24 @@ def create_sale(
             needed_qty = ingredient.quantity_required * sale_qty
             needed_ingredients[prod_id] = needed_ingredients.get(prod_id, 0.0) + needed_qty
 
+    # 2. Lock all ingredient products in deterministic order before
+    # checking stock. This serializes concurrent sales touching the same
+    # inventory rows and prevents overselling between the check and deduction.
+    locked_products = (
+        db.query(Product)
+        .filter(
+            Product.organization_id == organization_id,
+            Product.id.in_(list(needed_ingredients.keys())),
+        )
+        .order_by(Product.id)
+        .with_for_update()
+        .all()
+    )
+    locked_product_map = {product.id: product for product in locked_products}
+
     # 2. Pre-verify all ingredient stocks
     for prod_id, total_needed in needed_ingredients.items():
-        product = db.query(Product).filter(
-            Product.id == prod_id,
-            Product.organization_id == organization_id
-        ).first()
+        product = locked_product_map.get(prod_id)
         
         if not product:
             raise HTTPException(

@@ -7,10 +7,11 @@ from typing import Literal
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_db, require_owner
-from app.models.billing import BillingSubscription
+from app.models.billing import BillingSubscription, BillingWebhookEvent
 from app.models.models import AuditLog, Organization, User
 
 router = APIRouter(prefix="/billing", tags=["Billing"])
@@ -253,11 +254,34 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid webhook signature")
 
     event = await request.json()
+    event_id = event.get("id")
     event_name = event.get("event", "")
     subscription = event.get("payload", {}).get("subscription", {}).get("entity", {})
     subscription_id = subscription.get("id")
 
+    # Razorpay can retry webhook deliveries. Persist the provider event ID
+    # under a unique constraint so the same event cannot mutate billing state
+    # more than once.
+    if not event_id:
+        raise HTTPException(status_code=400, detail="Webhook event ID is missing")
+
+    webhook_event = BillingWebhookEvent(
+        event_id=event_id,
+        event_name=event_name,
+        subscription_id=subscription_id,
+        status="received",
+    )
+    try:
+        with db.begin_nested():
+            db.add(webhook_event)
+            db.flush()
+    except IntegrityError:
+        return {"status": "ok", "duplicate": True}
+
     if not subscription_id:
+        webhook_event.status = "ignored"
+        webhook_event.processed_at = datetime.now(timezone.utc)
+        db.commit()
         return {"status": "ignored"}
 
     record = (
@@ -289,5 +313,7 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
         org.subscription_status = "active"
         org.subscription_expires_at = None
 
+    webhook_event.status = "processed"
+    webhook_event.processed_at = datetime.now(timezone.utc)
     db.commit()
     return {"status": "ok"}

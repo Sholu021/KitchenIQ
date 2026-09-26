@@ -48,7 +48,7 @@ def test_create_purchase_order_success(client, db, seed_test_data):
         },
     )
 
-    token = login.json()["access_token"]
+    token = login.cookies["kitcheniq_access"]
 
     # Create PO
     response = client.post(

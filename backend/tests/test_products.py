@@ -22,7 +22,7 @@ def test_create_product_success(client, seed_test_data):
         },
     )
 
-    token = login.json()["access_token"]
+    token = login.cookies["kitcheniq_access"]
 
     response = client.post(
         "/api/v1/products",
@@ -58,7 +58,7 @@ def test_create_product_duplicate_sku(client, seed_test_data):
         },
     )
 
-    token = login.json()["access_token"]
+    token = login.cookies["kitcheniq_access"]
 
     headers = {
         "Authorization": f"Bearer {token}",
@@ -109,7 +109,7 @@ def test_update_product_success(client, seed_test_data):
         },
     )
 
-    token = login.json()["access_token"]
+    token = login.cookies["kitcheniq_access"]
 
     headers = {
         "Authorization": f"Bearer {token}",
@@ -160,7 +160,7 @@ def test_delete_product_success(client, seed_test_data):
         },
     )
 
-    token = login.json()["access_token"]
+    token = login.cookies["kitcheniq_access"]
 
     headers = {
         "Authorization": f"Bearer {token}",
@@ -212,7 +212,7 @@ def test_update_product_not_found(client, seed_test_data):
         },
     )
 
-    token = login.json()["access_token"]
+    token = login.cookies["kitcheniq_access"]
 
     response = client.patch(
         "/api/v1/products/999999",
@@ -255,7 +255,7 @@ def test_update_product_other_organization(client, db, seed_test_data):
         },
     )
 
-    token = login.json()["access_token"]
+    token = login.cookies["kitcheniq_access"]
 
     response = client.patch(
         f"/api/v1/products/{product.id}",

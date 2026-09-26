@@ -94,12 +94,9 @@ class LoginRequest(BaseSchema):
     password: str
 
 class RefreshTokenRequest(BaseModel):
-    refresh_token: str
+    refresh_token: Optional[str] = None
 
-class Token(BaseSchema):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
+class AuthSession(BaseSchema):
     role: str
     organization_id: int
     user_name: str
