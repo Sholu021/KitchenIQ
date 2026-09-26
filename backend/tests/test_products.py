@@ -22,7 +22,7 @@ def test_create_product_success(client, seed_test_data):
         },
     )
 
-    token = login.json()["access_token"]
+    token = login.cookies["kitcheniq_access"]
 
     response = client.post(
         "/api/v1/products",
