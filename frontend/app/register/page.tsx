@@ -38,9 +38,8 @@ export default function RegisterPage() {
         owner_email: email,
         owner_password: password,
       });
-      const { access_token, refresh_token, role, organization_id, user_name } = res.data;
-      
-      login(access_token, refresh_token, role, organization_id, user_name);
+      const { role, organization_id, user_name } = res.data;
+      login(role, organization_id, user_name);
       router.push('/dashboard');
     } catch (err: any) {
       setError(
