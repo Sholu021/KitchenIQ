@@ -54,8 +54,8 @@ export default function Home() {
         email: 'owner@kitcheniq.com',
         password: 'password123'
       });
-      const { access_token, refresh_token, role, organization_id, user_name } = res.data;
-      login(access_token, refresh_token, role, organization_id, user_name);
+      const { role, organization_id, user_name } = res.data;
+      login(role, organization_id, user_name);
       router.push('/dashboard');
     } catch {
       alert('Failed to log in to demo mode. Please verify the backend is online.');
