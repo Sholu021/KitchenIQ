@@ -204,7 +204,7 @@ def refresh_token(
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(response: Response):
+def logout(response: Response, current_user: User = Depends(get_current_user)):
     _clear_auth_cookies(response)
     return None
 
