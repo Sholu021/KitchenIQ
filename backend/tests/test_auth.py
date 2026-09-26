@@ -54,7 +54,7 @@ def test_business_health_authenticated(client, seed_test_data):
 def test_cookie_auth_requires_csrf_for_mutations(client, seed_test_data):
     login_response = client.post(
         "/api/v1/auth/login",
-        json={"email": "manager_a@test.com", "password": "testpass"},
+        json={"email": "owner_a@test.com", "password": "testpass"},
     )
     assert login_response.status_code == 200
 
