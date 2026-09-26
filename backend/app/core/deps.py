@@ -1,5 +1,7 @@
+import os
+import secrets
 from typing import List, Optional
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
@@ -9,7 +11,13 @@ from app.models.models import User
 
 reusable_oauth2 = HTTPBearer(auto_error=False)
 
+CSRF_COOKIE_NAME = "kitcheniq_csrf"
+ACCESS_COOKIE_NAME = "kitcheniq_access"
+REFRESH_COOKIE_NAME = "kitcheniq_refresh"
+SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+
 def get_current_user(
+    request: Request,
     db: Session = Depends(get_db),
     token: Optional[HTTPAuthorizationCredentials] = Depends(reusable_oauth2),
 ) -> User:
@@ -18,17 +26,30 @@ def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
-    if token is None:
+
+    cookie_token = request.cookies.get(ACCESS_COOKIE_NAME)
+    bearer_token = token.credentials if token else None
+    raw_token = bearer_token or cookie_token
+    using_cookie = bool(cookie_token) and not bearer_token
+
+    if not raw_token:
         raise credentials_exception
 
-    payload = decode_token(token.credentials)
+    if using_cookie and request.method not in SAFE_METHODS:
+        csrf_cookie = request.cookies.get(CSRF_COOKIE_NAME)
+        csrf_header = request.headers.get("X-CSRF-Token")
+        if not csrf_cookie or not csrf_header or not secrets.compare_digest(csrf_cookie, csrf_header):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="CSRF validation failed",
+            )
+
+    payload = decode_token(raw_token)
 
     if not payload or payload.get("type") != "access":
         raise credentials_exception
-        
-    user_id = payload.get("sub")
 
+    user_id = payload.get("sub")
     if user_id is None:
         raise credentials_exception
 
@@ -40,13 +61,13 @@ def get_current_user(
     user = db.query(User).filter(User.id == user_id_int).first()
     if user is None:
         raise credentials_exception
-        
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user"
         )
-        
+
     return user
 
 class RoleChecker:
@@ -61,16 +82,9 @@ class RoleChecker:
             )
         return current_user
 
-# Role dependency shortcuts
 require_owner = RoleChecker(["owner"])
 require_manager = RoleChecker(["owner", "manager"])
 require_staff = RoleChecker(["owner", "manager", "staff"])
 
 def require_roles(*roles: str):
-    """
-    Example:
-        Depends(require_roles("owner"))
-        Depends(require_roles("owner", "manager"))
-        Depends(require_roles("manager", "staff"))
-    """
     return RoleChecker(list(roles))
