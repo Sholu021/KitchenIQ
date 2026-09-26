@@ -1,7 +1,10 @@
 import axios from "axios";
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://kitcheniq-h1aa.onrender.com/api/v1"
+    : "http://localhost:8000/api/v1");
 
 export const apiClient = axios.create({
   baseURL: API_URL,
