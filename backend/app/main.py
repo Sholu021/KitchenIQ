@@ -13,7 +13,6 @@ from app.routes.analytics import router as analytics_router
 
 from app.core.logging import setup_logging
 from app.core.exceptions import register_exception_handlers
-from app.core.database import Base
 from app.core.rate_limit import limiter
 
 from app.api.v1.router import router as api_router
