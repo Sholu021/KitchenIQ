@@ -81,8 +81,9 @@ def create_subscription(
         db.query(BillingSubscription)
         .filter(
             BillingSubscription.organization_id == org.id,
-            BillingSubscription.status.in_(["created", "authenticated", "active", "pending"]),
+            BillingSubscription.status.in_(["authenticated", "active", "pending"]),
         )
+        .order_by(BillingSubscription.created_at.desc())
         .first()
     )
     if existing:
@@ -94,7 +95,10 @@ def create_subscription(
         }
 
     plan_id = annual_plan if req.billing_cycle == "annual" else monthly_plan
-    total_count = 10 if req.billing_cycle == "annual" else 120
+    # Razorpay requires total_count and supports subscriptions for up to 100 years.
+    # Use the maximum practical duration so a KitchenIQ Pro subscription does not
+    # unexpectedly terminate after 10 years.
+    total_count = 100 if req.billing_cycle == "annual" else 1200
 
     payload = {
         "plan_id": plan_id,
@@ -141,7 +145,7 @@ def verify_subscription_payment(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_owner),
 ):
-    _, key_secret, _, _, _ = _settings()
+    key_id, key_secret, _, _, _ = _settings()
     record = (
         db.query(BillingSubscription)
         .filter(
@@ -158,6 +162,13 @@ def verify_subscription_payment(
     if not hmac.compare_digest(expected, req.razorpay_signature):
         raise HTTPException(status_code=400, detail="Payment signature verification failed")
 
+    subscription = _razorpay_request(
+        "GET",
+        f"/subscriptions/{record.razorpay_subscription_id}",
+        key_id,
+        key_secret,
+    )
+
     record.payment_id = req.razorpay_payment_id
     record.status = "active"
     record.updated_at = datetime.now(timezone.utc)
@@ -165,7 +176,10 @@ def verify_subscription_payment(
     org = db.query(Organization).filter(Organization.id == current_user.organization_id).first()
     org.subscription_tier = "Pro"
     org.subscription_status = "active"
-    if record.billing_cycle == "annual":
+    current_end = subscription.get("current_end")
+    if current_end:
+        org.subscription_expires_at = datetime.fromtimestamp(current_end, tz=timezone.utc)
+    elif record.billing_cycle == "annual":
         org.subscription_expires_at = datetime.now(timezone.utc) + timedelta(days=365)
     else:
         org.subscription_expires_at = datetime.now(timezone.utc) + timedelta(days=30)
@@ -263,7 +277,10 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
     if event_name == "subscription.activated" or razorpay_status == "active":
         org.subscription_tier = "Pro"
         org.subscription_status = "active"
-        if record.billing_cycle == "annual":
+        current_end = subscription.get("current_end")
+        if current_end:
+            org.subscription_expires_at = datetime.fromtimestamp(current_end, tz=timezone.utc)
+        elif record.billing_cycle == "annual":
             org.subscription_expires_at = datetime.now(timezone.utc) + timedelta(days=365)
         else:
             org.subscription_expires_at = datetime.now(timezone.utc) + timedelta(days=30)
