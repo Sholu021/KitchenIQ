@@ -114,7 +114,7 @@ def register_organization_and_owner(
             detail="Registration failed. Please try again.",
         )
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=AuthSession)
 def login(
     req: LoginRequest,
     response: Response,
@@ -152,7 +152,7 @@ def login(
     return AuthSession(role=user.role, organization_id=user.organization_id, user_name=user.full_name)
 
 
-@router.post("/refresh", response_model=Token)
+@router.post("/refresh", response_model=AuthSession)
 def refresh_token(
     req: RefreshTokenRequest,
     request: Request,
