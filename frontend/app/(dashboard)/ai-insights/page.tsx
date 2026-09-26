@@ -79,16 +79,6 @@ export default function AIInsightsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-[400px] flex items-center justify-center">
-        <div className="text-sm font-medium text-slate-500">
-          Loading AI Insights...
-        </div>
-      </div>
-    );
-  }
-  
-  if (isLoading) {
-    return (
       <div className="space-y-6 animate-pulse">
         <div className="space-y-2">
           <div className="h-9 w-64 bg-slate-200 rounded-xl"></div>
