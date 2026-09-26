@@ -13,8 +13,7 @@ from app.routes.analytics import router as analytics_router
 
 from app.core.logging import setup_logging
 from app.core.exceptions import register_exception_handlers
-from app.core.database import engine, Base, SessionLocal
-from app.core.seed import seed_db
+from app.core.database import Base
 from app.core.rate_limit import limiter
 
 from app.api.v1.router import router as api_router
@@ -44,29 +43,8 @@ async def lifespan(app: FastAPI):
         if hasattr(route, "methods"):
             logger.info("%s %s", route.path, route.methods)
 
-    logger.info("Initializing database tables...")
-
-    logger.info("=" * 80)
-    logger.info("TABLES: %s", list(Base.metadata.tables.keys()))
-    logger.info("=" * 80)
-
-    Base.metadata.create_all(bind=engine)
-
-    logger.info(
-        "Registered tables: %s",
-        list(Base.metadata.tables.keys()),
-    )
-
-    logger.info("Running database seeding check...")
-
-    db = SessionLocal()
-
-    try:
-        seed_db(db)
-    except Exception:
-        logger.exception("Database seeding failed")
-    finally:
-        db.close()
+    # Database schema changes are managed explicitly through Alembic migrations.
+    # Demo data seeding is intentionally not part of application startup.
 
     report_scheduler.start()
     logger.info("Report Scheduler started.")
