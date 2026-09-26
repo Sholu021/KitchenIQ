@@ -11,7 +11,8 @@ def test_login_success(client, seed_test_data):
     response = client.post("/api/v1/auth/login", json=login_data)
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
-    assert "access_token" in data
+    assert "access_token" not in data
+    assert "kitcheniq_access" in response.cookies
     assert data["role"] == "Owner"
     assert data["organization_id"] == seed_test_data["org_a_id"]
 
@@ -27,7 +28,7 @@ def test_login_invalid_password(client, seed_test_data):
 def get_auth_headers(client, email, password):
     login_data = {"email": email, "password": password}
     response = client.post("/api/v1/auth/login", json=login_data)
-    token = response.json()["access_token"]
+    token = response.cookies["kitcheniq_access"]
     return {"Authorization": f"Bearer {token}"}
 
 def test_products_crud_and_isolation(client, seed_test_data):
