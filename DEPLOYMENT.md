@@ -1,218 +1,133 @@
-# InvenChef — Production Deployment Guide
+# KitchenIQ — Production Deployment Guide
 
-This guide outlines how to deploy the **InvenChef** restaurant intelligence SaaS platform. The application is built as a split-stack service:
-1. **Frontend**: Next.js 15 App Router (`/frontend`)
-2. **Backend**: FastAPI with Python 3.11 + SQLAlchemy ORM (`/backend`)
-3. **Database**: SQLite (for local development/testing) or PostgreSQL (for production)
+KitchenIQ is a split-stack SaaS application:
 
----
+- Frontend: Next.js App Router in `/frontend`, deployed on Vercel.
+- Backend: FastAPI in `/backend`, deployed on Render.
+- Database: PostgreSQL in the production environment.
+- Authentication: HttpOnly access/refresh cookies with CSRF protection.
+- Billing: Razorpay subscriptions and signed webhooks.
 
-## Deployment Architecture Options
+## Current production architecture
 
-Depending on your budget, team scale, and operations, choose one of these two production-ready options:
+Frontend:
+- Production URL: `https://kitcheniq-frontend.vercel.app`
+- Next.js proxies `/api/v1/*` to the Render backend.
+- Browser code uses the same-origin `/api/v1` path; do not restore a direct cross-origin API URL.
 
-| Strategy | Host Architecture | Recommended For | Cost |
-| :--- | :--- | :--- | :--- |
-| **Option A (Containerized)** | **Docker Compose on Single VPS** (DigitalOcean, AWS EC2, Hetzner) | Small teams, cost-efficiency, self-hosters | \$5 - \$10/month |
-| **Option B (Managed PaaS)** | **Vercel** (Frontend) + **Render/Railway** (Backend) + **Neon/Supabase** (Database) | Scaling SaaS, zero-ops, automatic CI/CD | Free tier to \$20/month |
+Backend:
+- Render service: `KitchenIQ`
+- Root directory: `backend`
+- Build: `pip install -r requirements.txt`
+- Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- Health check: `/health`
 
----
+## Database migrations
 
-## Option A: Single-Server VPS Deployment (Docker Compose)
+Production schema changes are managed with Alembic.
 
-This is the fastest way to deploy both services and a PostgreSQL database on a single Virtual Private Server (VPS).
+The application must NOT call `Base.metadata.create_all()` during production startup. Apply migrations explicitly:
 
-### 1. Provision Your Server
-1. Create a virtual server (Ubuntu 22.04 LTS recommended) on [DigitalOcean](https://www.digitalocean.com/), [Linode](https://www.linode.com/), [Hetzner](https://www.hetzner.com/), or [AWS EC2](https://aws.amazon.com/).
-2. Set up SSH keys and log in:
-   ```bash
-   ssh root@your_server_ip
-   ```
-
-### 2. Install Docker & Git
-Run the following on your server to install Docker, Docker Compose, and Git:
 ```bash
-# Update packages
-sudo apt-get update && sudo apt-get upgrade -y
-
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# Verify install
-docker --version
-docker compose version
+cd backend
+alembic upgrade head
 ```
 
-### 3. Clone and Configure
-Clone your repository to the server:
-```bash
-git clone https://github.com/your-username/invenchef.git /var/www/invenchef
-cd /var/www/invenchef
-```
+Before applying a migration to production:
 
-Create a production-specific Docker Compose file (`docker-compose.prod.yml`):
-```yaml
-services:
-  db:
-    image: postgres:15-alpine
-    container_name: invenchef-db-prod
-    environment:
-      POSTGRES_USER: invenchef_prod_user
-      POSTGRES_PASSWORD: secure_prod_password_here
-      POSTGRES_DB: invenchef_prod_db
-    volumes:
-      - postgres_prod_data:/var/lib/postgresql/data
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U invenchef_prod_user -d invenchef_prod_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+1. Confirm the production `DATABASE_URL`.
+2. Take/verify a current database backup.
+3. Review the migration and its downgrade path.
+4. Run the migration during a controlled deployment window.
+5. Verify `alembic current` and application health after deployment.
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: invenchef-backend-prod
-    # Run uvicorn in production mode without hot-reload
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
-    expose:
-      - "8000"
-    environment:
-      - DATABASE_URL=postgresql://invenchef_prod_user:secure_prod_password_here@db:5432/invenchef_prod_db
-      - JWT_SECRET=generate_a_very_long_secure_random_key_here
-      - JWT_ALGORITHM=HS256
-      - ACCESS_TOKEN_EXPIRE_MINUTES=60
-      - REFRESH_TOKEN_EXPIRE_DAYS=7
-      - OPENAI_API_KEY=your_openai_api_key_here
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: always
+Current billing migrations include:
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: invenchef-frontend-prod
-    # Build and start Next.js in production mode
-    command: sh -c "npm run build && npm run start"
-    ports:
-      - "3000:3000"
-    environment:
-      # MUST point to the public domain or server IP where the API is reached
-      - NEXT_PUBLIC_API_URL=https://api.yourdomain.com/api/v1
-    depends_on:
-      - backend
-    restart: always
+- `billing_subscriptions_20260926`
+- `billing_webhook_events_20260926`
 
-volumes:
-  postgres_prod_data:
-```
+Do not use `Base.metadata.create_all()` as a substitute for migrations.
 
-### 4. Deploy the Stack
-Run Docker Compose in detached mode:
-```bash
-docker compose -f docker-compose.prod.yml up -d --build
-```
-This builds production-optimized containers, seeds the PostgreSQL database automatically, and starts the services.
+## Environment variables
 
-### 5. Configure Reverse Proxy & SSL (Caddy / Nginx)
-To expose your app securely over HTTPS (port 443), install Caddy on the server host:
-```bash
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update
-sudo apt install caddy
-```
+Production secrets must be configured in the hosting provider, never committed to Git.
 
-Edit `/etc/caddy/Caddyfile`:
-```caddy
-# Frontend Client App
-invenchef.com {
-    reverse_proxy localhost:3000
-}
+Important backend variables include:
 
-# Backend FastAPI API
-api.invenchef.com {
-    reverse_proxy localhost:8000
-}
-```
-Restart Caddy (it will automatically provision SSL certificates from Let's Encrypt):
-```bash
-sudo systemctl restart caddy
-```
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `JWT_ALGORITHM`
+- `COOKIE_SECURE=true`
+- `COOKIE_SAMESITE=none`
+- `ALLOWED_ORIGINS=https://kitcheniq-frontend.vercel.app`
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
+- `RAZORPAY_WEBHOOK_SECRET`
+- `RAZORPAY_PLAN_ID_MONTHLY`
+- `RAZORPAY_PLAN_ID_ANNUAL`
 
----
+Keep `COOKIE_DOMAIN` unset unless the deployment architecture explicitly requires a shared parent domain.
 
-## Option B: Managed Cloud Deployments (PaaS)
+## Billing
 
-This option is highly recommended to delegate server patches, SSL provisioning, database backups, and autoscaling.
+Razorpay webhooks must use the production webhook secret and send the signature in `X-Razorpay-Signature`.
 
-### Part 1: Host the Database (Neon or Supabase)
-1. Register on [Neon.tech](https://neon.tech/) or [Supabase.com](https://supabase.com/).
-2. Create a new PostgreSQL database instance.
-3. Retrieve the connection string. It will look like:
-   `postgresql://[user]:[password]@[hostname]/[db_name]?sslmode=require`
+Before enabling paid customer traffic, verify:
 
-### Part 2: Deploy Backend API (Render / Railway / Fly.io)
-We'll use **Render** in this example:
-1. Sign in to [Render.com](https://render.com/).
-2. Click **New** → **Web Service**.
-3. Connect your GitHub repository.
-4. Set config parameters:
-   - **Name**: `invenchef-backend`
-   - **Root Directory**: `backend`
-   - **Runtime**: `Python`
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-5. Under **Advanced** / **Environment Variables**, add:
-   - `DATABASE_URL` = (Your Neon/Supabase PostgreSQL connection string)
-   - `JWT_SECRET` = (A secure random string)
-   - `JWT_ALGORITHM` = `HS256`
-   - `OPENAI_API_KEY` = (Your OpenAI API Key)
-6. Click **Deploy Web Service**. Render provides a URL (e.g. `https://invenchef-backend.onrender.com`).
+1. Subscription creation works with live Razorpay plans.
+2. Payment signature verification rejects altered signatures.
+3. Webhook signature verification rejects altered payloads.
+4. Duplicate webhook deliveries are idempotent.
+5. Activation changes the organization to Pro.
+6. Cancellation/expiry returns the organization to Free.
+7. Failed payment and refund scenarios have been tested.
 
-### Part 3: Deploy Frontend Next.js (Vercel)
-**Vercel** is the optimal host for Next.js:
-1. Log in to [Vercel.com](https://vercel.com/).
-2. Click **Add New** → **Project**.
-3. Connect your GitHub repository and select your project.
-4. Set config parameters:
-   - **Framework Preset**: `Next.js`
-   - **Root Directory**: `frontend`
-5. In **Environment Variables**, add:
-   - `NEXT_PUBLIC_API_URL` = `https://invenchef-backend.onrender.com/api/v1`
-     *(Note: Point this to your live Render backend URL, appending `/api/v1`)*
-6. Click **Deploy**. Vercel handles compilation, routing optimization, and gives you a free `.vercel.app` domain (or binds your custom domain with automatic SSL).
+Never test destructive billing operations against a real customer subscription.
 
----
+## Security
 
-## Database Migrations (Production Updates)
+- Access and refresh tokens are HttpOnly cookies.
+- Unsafe cookie-authenticated requests require the CSRF token.
+- CORS is restricted to configured frontend origins.
+- Production debug/demo startup behavior is disabled.
+- Background schedulers are disabled unless explicitly enabled.
+- Organization-scoped authorization must be preserved for every authenticated resource.
 
-FastAPI automatically initializes database tables on first startup via:
-```python
-Base.metadata.create_all(bind=engine)
-```
-If you deploy updates that modify the database schema later, you should configure **Alembic** migrations:
-1. Initialize Alembic inside the `/backend` folder:
-   ```bash
-   alembic init alembic
-   ```
-2. Configure `alembic.ini` to pull the active `DATABASE_URL` environment variable.
-3. Run migrations during your CI/CD build step before start:
-   ```bash
-   alembic upgrade head
-   ```
+## Backups and recovery
 
----
+A production backup policy must exist outside the application repository.
 
-## Production Security Checklist
+At minimum:
 
-* [ ] **Change Default Passwords**: Ensure PostgreSQL credentials in your Compose file are not the default development credentials.
-* [ ] **Secret Management**: Never hardcode `JWT_SECRET` or `OPENAI_API_KEY`. Keep them strictly in server environment variables.
-* [ ] **CORS Settings**: Restrict backend allowed origins (`allow_origins` in `app/main.py`) to your specific production frontend domain instead of `*` or localhost.
-* [ ] **Disable Reload**: Ensure `--reload` is removed from uvicorn start scripts to boost processing speeds and secure memory threads.
-* [ ] **Backups**: Ensure your PostgreSQL database volume (`postgres_data`) or managed instance has periodic backups enabled.
+- automated PostgreSQL backups,
+- documented retention period,
+- a tested restore procedure,
+- periodic restore verification.
+
+A backup that has never been restored should not be treated as a verified recovery mechanism.
+
+## CI
+
+GitHub Actions runs:
+
+- backend pytest,
+- frontend production build.
+
+Workflow: `.github/workflows/ci.yml`
+
+A production deployment should only be promoted after the relevant CI checks pass.
+
+## Release checklist
+
+Before each production release:
+
+- [ ] CI passes.
+- [ ] Database migration reviewed.
+- [ ] Production backup verified when schema changes are involved.
+- [ ] Migration applied successfully.
+- [ ] Backend health check passes.
+- [ ] Login/logout works.
+- [ ] Core inventory and sales flows work.
+- [ ] Pro-gated features remain correctly gated.
+- [ ] Billing/webhook behavior is verified when billing code changed.
+- [ ] No new production application errors are present.
