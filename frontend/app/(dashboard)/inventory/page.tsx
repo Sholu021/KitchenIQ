@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
@@ -47,6 +47,10 @@ export default function InventoryPage() {
   const [ledgerFilter, setLedgerFilter] = useState("ALL");
   const [, setExportSuccess] = useState(false);
   const [ledgerDateFrom, setLedgerDateFrom] = useState("");
+  const [csvBusy, setCsvBusy] = useState(false);
+  const [csvMessage, setCsvMessage] = useState<string | null>(null);
+  const [csvError, setCsvError] = useState<string | null>(null);
+  const csvInputRef = useRef<HTMLInputElement | null>(null);
   const [ledgerDateTo, setLedgerDateTo] = useState("");
 
   // Expanded batches state (accordion)
@@ -213,6 +217,14 @@ export default function InventoryPage() {
           : "Unknown",
         stock: Number(transaction.balance ?? 0),
       })) ?? [];
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ["product-categories"],
+    queryFn: async () => {
+      const res = await apiClient.get("/products/categories");
+      return res.data;
+    },
+  });
 
   const { data: batches = [] } = useQuery({
     queryKey: ["batches"],
@@ -453,8 +465,230 @@ export default function InventoryPage() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  // Stock history mock chart data
-  
+  const parseCsv = (text: string): string[][] => {
+    const rows: string[][] = [];
+    let row: string[] = [];
+    let field = "";
+    let quoted = false;
+
+    for (let i = 0; i < text.length; i += 1) {
+      const char = text[i];
+      const next = text[i + 1];
+
+      if (char === '"') {
+        if (quoted && next === '"') {
+          field += '"';
+          i += 1;
+        } else {
+          quoted = !quoted;
+        }
+      } else if (char === "," && !quoted) {
+        row.push(field.trim());
+        field = "";
+      } else if ((char === "\n" || char === "\r") && !quoted) {
+        if (char === "\r" && next === "\n") i += 1;
+        row.push(field.trim());
+        field = "";
+        if (row.some((value) => value !== "")) rows.push(row);
+        row = [];
+      } else {
+        field += char;
+      }
+    }
+
+    if (field !== "" || row.length) {
+      row.push(field.trim());
+      if (row.some((value) => value !== "")) rows.push(row);
+    }
+
+    return rows;
+  };
+
+  const handleInventoryCsvImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setCsvBusy(true);
+    setCsvMessage(null);
+    setCsvError(null);
+
+    try {
+      if (!file.name.toLowerCase().endsWith(".csv")) {
+        throw new Error("Please select a .csv file.");
+      }
+
+      const rows = parseCsv(await file.text());
+      if (rows.length < 2) {
+        throw new Error("The CSV must contain a header row and at least one data row.");
+      }
+
+      const headers = rows[0].map((header) => header.toLowerCase().replace(/\s+/g, "_").trim());
+      const nameIndex = headers.indexOf("name");
+      if (nameIndex === -1) {
+        throw new Error("CSV is missing the required 'Name' column.");
+      }
+
+      const valueAt = (row: string[], key: string) => {
+        const index = headers.indexOf(key);
+        return index >= 0 ? row[index]?.trim() ?? "" : "";
+      };
+
+      let created = 0;
+      let updated = 0;
+      let stocked = 0;
+
+      for (let rowIndex = 1; rowIndex < rows.length; rowIndex += 1) {
+        const row = rows[rowIndex];
+        const name = row[nameIndex]?.trim();
+        if (!name) throw new Error("Row " + (rowIndex + 1) + ": Name is required.");
+
+        const sku = valueAt(row, "sku") || null;
+        const categoryName = valueAt(row, "category");
+        const unit = valueAt(row, "unit") || "kg";
+        const reorderLevelRaw = valueAt(row, "reorder_level");
+        const costPriceRaw = valueAt(row, "cost_price");
+        const sellingPriceRaw = valueAt(row, "selling_price");
+        const initialStockRaw = valueAt(row, "initial_stock");
+        const batchNumber = valueAt(row, "batch_number") || undefined;
+        const expiryDate = valueAt(row, "expiry_date") || undefined;
+
+        const reorderLevel = reorderLevelRaw ? Number(reorderLevelRaw) : 0;
+        const costPrice = costPriceRaw ? Number(costPriceRaw) : 0;
+        const sellingPrice = sellingPriceRaw ? Number(sellingPriceRaw) : 0;
+        const initialStock = initialStockRaw ? Number(initialStockRaw) : 0;
+
+        if (![reorderLevel, costPrice, sellingPrice, initialStock].every(Number.isFinite)) {
+          throw new Error("Row " + (rowIndex + 1) + ": numeric fields contain an invalid value.");
+        }
+        if (initialStock < 0) {
+          throw new Error("Row " + (rowIndex + 1) + ": Initial Stock cannot be negative.");
+        }
+
+        let categoryId: number | null = null;
+        if (categoryName) {
+          const existingCategory = (categories as any[]).find(
+            (category) => category.name?.trim().toLowerCase() === categoryName.toLowerCase()
+          );
+          if (existingCategory) {
+            categoryId = existingCategory.id;
+          } else {
+            const categoryResponse = await apiClient.post("/products/categories", { name: categoryName });
+            categoryId = categoryResponse.data.id;
+            (categories as any[]).push(categoryResponse.data);
+          }
+        }
+
+        const existingProduct = (products as any[]).find(
+          (product) =>
+            (sku && product.sku?.toLowerCase() === sku.toLowerCase()) ||
+            product.name?.trim().toLowerCase() === name.toLowerCase()
+        );
+
+        let product = existingProduct;
+        if (product) {
+          const patch: Record<string, unknown> = {
+            name,
+            unit,
+            reorder_level: reorderLevel,
+            cost_price: costPrice,
+            selling_price: sellingPrice,
+          };
+          if (sku) patch.sku = sku;
+          if (categoryId !== null) patch.category_id = categoryId;
+          const response = await apiClient.patch("/products/" + product.id, patch);
+          product = response.data;
+          updated += 1;
+        } else {
+          const response = await apiClient.post("/products", {
+            name,
+            sku,
+            unit,
+            reorder_level: reorderLevel,
+            cost_price: costPrice,
+            selling_price: sellingPrice,
+            category_id: categoryId,
+          });
+          product = response.data;
+          created += 1;
+        }
+
+        if (initialStock > 0) {
+          await apiClient.post("/batches/adjust", {
+            product_id: product.id,
+            quantity: initialStock,
+            transaction_type: "STOCK_IN",
+            batch_number: batchNumber,
+            expiry_date: expiryDate,
+            notes: "CSV import: " + file.name,
+          });
+          stocked += 1;
+        }
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["products"] }),
+        queryClient.invalidateQueries({ queryKey: ["batches"] }),
+        queryClient.invalidateQueries({ queryKey: ["batch-alerts"] }),
+        queryClient.invalidateQueries({ queryKey: ["inventory-health"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] }),
+      ]);
+
+      setCsvMessage(
+        "CSV imported: " + created + " created, " + updated + " updated" +
+        (stocked ? ", " + stocked + " stock entries added." : ".")
+      );
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail || err?.message || "CSV import failed.";
+      setCsvError(String(detail));
+    } finally {
+      setCsvBusy(false);
+    }
+  };
+
+  const handleExportInventory = () => {
+    if (!products.length) {
+      setCsvError("There is no inventory data to export.");
+      setCsvMessage(null);
+      return;
+    }
+
+    const headers = [
+      "Name",
+      "SKU",
+      "Category",
+      "Unit",
+      "Current Stock",
+      "Reorder Level",
+      "Cost Price",
+      "Selling Price",
+    ];
+    const escapeCsv = (value: unknown) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
+    const rows = (products as any[]).map((product) => [
+      product.name,
+      product.sku,
+      product.category?.name || "",
+      product.unit,
+      product.current_stock,
+      product.reorder_level,
+      product.cost_price,
+      product.selling_price,
+    ]);
+
+    const csv = [headers, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "kitcheniq_inventory_" + new Date().toISOString().slice(0, 10) + ".csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    setCsvError(null);
+    setCsvMessage("CSV exported: " + products.length + " inventory items.");
+  };
 
   return (
     <div className="space-y-8 relative">
@@ -474,17 +708,44 @@ export default function InventoryPage() {
           <Link href="/products" className="py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/10 cursor-pointer">
             <Plus size={14} /> Add Ingredient
           </Link>
-          <button onClick={() => alert("CSV Import file picker simulated.")} className="py-2.5 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer">
-            <Upload size={14} className="text-slate-400" /> Import CSV
+          <input
+            ref={csvInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            onChange={handleInventoryCsvImport}
+            className="hidden"
+            aria-label="Import inventory CSV"
+          />
+          <button
+            type="button"
+            onClick={() => csvInputRef.current?.click()}
+            disabled={csvBusy}
+            className="py-2.5 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Upload size={14} className="text-slate-400" /> {csvBusy ? "Importing..." : "Import CSV"}
           </button>
-          <button onClick={() => alert("CSV Export generated.")} className="py-2.5 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer">
-            <Download size={14} className="text-slate-400" /> Export
+          <button
+            type="button"
+            onClick={handleExportInventory}
+            disabled={csvBusy}
+            className="py-2.5 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download size={14} className="text-slate-400" /> Export CSV
           </button>
           <Link href="/analytics" className="py-2.5 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all">
             <FileText size={14} className="text-slate-400" /> Generate Report
           </Link>
         </div>
       </div>
+
+      {(csvMessage || csvError) && (
+        <div
+          role="status"
+          className={`rounded-xl border px-4 py-3 text-sm font-medium ${csvError ? "border-rose-200 bg-rose-50 text-rose-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}
+        >
+          {csvError || csvMessage}
+        </div>
+      )}
 
       {/* Inventory Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4">
