@@ -550,6 +550,7 @@ export default function InventoryPage() {
         const costPriceRaw = valueAt(row, "cost_price");
         const sellingPriceRaw = valueAt(row, "selling_price");
         const initialStockRaw = valueAt(row, "initial_stock");
+        const currentStockRaw = valueAt(row, "current_stock");
         const batchNumber = valueAt(row, "batch_number") || undefined;
         const expiryDate = valueAt(row, "expiry_date") || undefined;
 
@@ -557,12 +558,16 @@ export default function InventoryPage() {
         const costPrice = costPriceRaw ? Number(costPriceRaw) : 0;
         const sellingPrice = sellingPriceRaw ? Number(sellingPriceRaw) : 0;
         const initialStock = initialStockRaw ? Number(initialStockRaw) : 0;
+        const targetStock = currentStockRaw ? Number(currentStockRaw) : null;
 
         if (![reorderLevel, costPrice, sellingPrice, initialStock].every(Number.isFinite)) {
           throw new Error("Row " + (rowIndex + 1) + ": numeric fields contain an invalid value.");
         }
-        if (initialStock < 0) {
-          throw new Error("Row " + (rowIndex + 1) + ": Initial Stock cannot be negative.");
+        if (targetStock !== null && !Number.isFinite(targetStock)) {
+          throw new Error("Row " + (rowIndex + 1) + ": Current Stock must be numeric.");
+        }
+        if (initialStock < 0 || (targetStock !== null && targetStock < 0)) {
+          throw new Error("Row " + (rowIndex + 1) + ": stock quantities cannot be negative.");
         }
 
         let categoryId: number | null = null;
@@ -613,16 +618,22 @@ export default function InventoryPage() {
           created += 1;
         }
 
-        if (initialStock > 0) {
-          await apiClient.post("/batches/adjust", {
-            product_id: product.id,
-            quantity: initialStock,
-            transaction_type: "STOCK_IN",
-            batch_number: batchNumber,
-            expiry_date: expiryDate,
-            notes: "CSV import: " + file.name,
-          });
-          stocked += 1;
+        const desiredStock = targetStock !== null ? targetStock : (!existingProduct ? initialStock : null);
+        if (desiredStock !== null) {
+          const currentStock = Number(product.current_stock ?? 0);
+          const difference = desiredStock - currentStock;
+
+          if (difference !== 0) {
+            await apiClient.post("/batches/adjust", {
+              product_id: product.id,
+              quantity: Math.abs(difference),
+              transaction_type: difference > 0 ? "STOCK_IN" : "STOCK_OUT",
+              batch_number: batchNumber,
+              expiry_date: expiryDate,
+              notes: "CSV import stock reconciliation: " + file.name,
+            });
+            stocked += 1;
+          }
         }
       }
 
