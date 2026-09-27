@@ -1,10 +1,8 @@
 import axios from "axios";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (process.env.NODE_ENV === "production"
-    ? "https://kitcheniq-h1aa.onrender.com/api/v1"
-    : "http://localhost:8000/api/v1");
+// Use the frontend origin as the browser-facing API origin. Next.js rewrites
+// /api/v1/* to the Render backend, keeping auth cookies same-origin.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
 export const apiClient = axios.create({
   baseURL: API_URL,
