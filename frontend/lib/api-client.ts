@@ -47,7 +47,8 @@ apiClient.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       !originalRequest?._retry &&
-      !String(originalRequest?.url || "").includes("/auth/refresh")
+      !String(originalRequest?.url || "").includes("/auth/refresh") &&
+      !String(originalRequest?.url || "").includes("/auth/login")
     ) {
       originalRequest._retry = true;
 
@@ -64,9 +65,6 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         clearAuth();
-        if (typeof window !== "undefined") {
-          window.location.href = "/login";
-        }
         return Promise.reject(refreshError);
       }
     }
