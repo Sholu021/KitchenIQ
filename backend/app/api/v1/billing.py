@@ -270,17 +270,13 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid webhook signature")
 
     event = await request.json()
-    event_id = event.get("id")
-    event_name = event.get("event", "")
+    # Razorpay webhook payloads do not reliably expose a top-level event ID.\n    # Use the verified raw request body as a stable idempotency key for retries.\n    event_id = event.get("id") or f"razorpay:{hashlib.sha256(body).hexdigest()}"\n    event_name = event.get("event", "")
     subscription = event.get("payload", {}).get("subscription", {}).get("entity", {})
     subscription_id = subscription.get("id")
 
     # Razorpay can retry webhook deliveries. Persist the provider event ID
     # under a unique constraint so the same event cannot mutate billing state
     # more than once.
-    if not event_id:
-        raise HTTPException(status_code=400, detail="Webhook event ID is missing")
-
     webhook_event = BillingWebhookEvent(
         event_id=event_id,
         event_name=event_name,
