@@ -251,6 +251,15 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
     signature = request.headers.get("X-Razorpay-Signature", "")
     expected = hmac.new(webhook_secret.encode(), body, hashlib.sha256).hexdigest()
     if not hmac.compare_digest(expected, signature):
+        # Never log the secret, body, or signatures. Keep enough diagnostic
+        # context to distinguish signature failures from malformed payloads.
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "Razorpay webhook signature validation failed: body_bytes=%d signature_present=%s",
+            len(body),
+            bool(signature),
+        )
         raise HTTPException(status_code=400, detail="Invalid webhook signature")
 
     event = await request.json()
