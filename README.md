@@ -116,14 +116,10 @@ npm run dev
 
 ---
 
-## Status
+## Production readiness
 
-Current development stage:
+KitchenIQ has a live production deployment and a verified core customer journey, including authentication, inventory, purchasing, recipes, production, waste, sales, analytics, reports, team/settings, AI Insights, AI Copilot, and Razorpay test-mode payment verification.
 
-- Backend API
-- Frontend Dashboard
-- AI Gateway
-- Automated Reporting
-- Production Module
+Production launch evidence and remaining provider/business gates are tracked in **[docs/LAUNCH_READINESS.md](docs/LAUNCH_READINESS.md)**.
 
 All backend tests are currently passing.
