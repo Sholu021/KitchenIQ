@@ -75,7 +75,7 @@ def create_subscription(
     org = db.query(Organization).filter(Organization.id == current_user.organization_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
-    if org.subscription_tier != "Free":
+    if org.subscription_tier == "Pro" and org.subscription_status != "trialing":
         raise HTTPException(status_code=400, detail="Organization already has a paid subscription")
 
     existing = (
@@ -310,6 +310,7 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
     if event_name == "subscription.activated" or razorpay_status == "active":
         org.subscription_tier = "Pro"
         org.subscription_status = "active"
+        org.trial_ends_at = None
         current_end = subscription.get("current_end")
         if current_end:
             org.subscription_expires_at = datetime.fromtimestamp(current_end, tz=timezone.utc)
@@ -321,6 +322,7 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
         org.subscription_tier = "Free"
         org.subscription_status = "active"
         org.subscription_expires_at = None
+        org.trial_ends_at = None
 
     webhook_event.status = "processed"
     webhook_event.processed_at = datetime.now(timezone.utc)
