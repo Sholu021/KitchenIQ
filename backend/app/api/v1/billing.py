@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import logging
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Literal
@@ -251,14 +252,20 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
     signature = request.headers.get("X-Razorpay-Signature", "")
     expected = hmac.new(webhook_secret.encode(), body, hashlib.sha256).hexdigest()
     if not hmac.compare_digest(expected, signature):
-        # Never log the secret, body, or signatures. Keep enough diagnostic
-        # context to distinguish signature failures from malformed payloads.
-        import logging
-
+        # Log only non-sensitive fingerprints. These let us distinguish a
+        # wrong secret (including hidden whitespace) from a payload/signature
+        # handling issue without exposing credentials or webhook contents.
         logging.getLogger(__name__).warning(
-            "Razorpay webhook signature validation failed: body_bytes=%d signature_present=%s",
+            "Razorpay webhook signature validation failed: "
+            "body_bytes=%d signature_present=%s secret_len=%d "
+            "secret_sha256=%s expected_sha256=%s signature_sha256=%s body_sha256=%s",
             len(body),
             bool(signature),
+            len(webhook_secret),
+            hashlib.sha256(webhook_secret.encode()).hexdigest()[:12],
+            hashlib.sha256(expected.encode()).hexdigest()[:12],
+            hashlib.sha256(signature.encode()).hexdigest()[:12],
+            hashlib.sha256(body).hexdigest()[:12],
         )
         raise HTTPException(status_code=400, detail="Invalid webhook signature")
 
