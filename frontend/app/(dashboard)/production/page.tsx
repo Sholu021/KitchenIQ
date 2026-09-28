@@ -233,7 +233,7 @@ export default function ProductionPage() {
                     </p>
 
                     <p className="font-black text-slate-900">
-                      ${Number(selectedRecipe.cost_price ?? 0).toFixed(2)}
+                      ₹{Number(selectedRecipe.cost_price ?? 0).toFixed(2)}
                     </p>
                   </div>
                 </div>
