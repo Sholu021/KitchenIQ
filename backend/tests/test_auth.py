@@ -1,3 +1,7 @@
+from datetime import datetime, timedelta, timezone
+
+from app.models.models import Organization
+
 def test_login_success(client, seed_test_data):
     response = client.post(
         "/api/v1/auth/login",
@@ -72,3 +76,28 @@ def test_cookie_auth_requires_csrf_for_mutations(client, seed_test_data):
         headers={"X-CSRF-Token": csrf},
     )
     assert response.status_code == 200
+
+
+def test_expired_trial_is_downgraded_on_authenticated_request(client, db, seed_test_data):
+    org = db.query(Organization).filter(
+        Organization.id == seed_test_data["org_a_id"]
+    ).first()
+    org.subscription_tier = "Pro"
+    org.subscription_status = "trialing"
+    org.trial_ends_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+    db.commit()
+
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "owner_a@test.com", "password": "testpass"},
+    )
+    assert login_response.status_code == 200
+
+    response = client.get("/api/v1/auth/organization")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["subscription_tier"] == "Free"
+    assert data["subscription_status"] == "active"
+
+    db.refresh(org)
+    assert org.trial_ends_at is None
