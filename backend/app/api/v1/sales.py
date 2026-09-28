@@ -19,7 +19,7 @@ def list_sales(
     ).order_by(Sale.sale_date.desc()).all()
     return sales
 
-@router.post("/", response_model=SaleOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=SaleOut, status_code=status.HTTP_201_CREATED)
 def record_sale(
     payload: SaleCreate,
     db: Session = Depends(get_db),
