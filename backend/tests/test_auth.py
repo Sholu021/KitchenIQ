@@ -126,4 +126,7 @@ def test_register_creates_trial_organization(client, db):
     assert org.subscription_tier == "Pro"
     assert org.subscription_status == "trialing"
     assert org.trial_ends_at is not None
-    assert org.trial_ends_at > datetime.now(timezone.utc)
+    trial_ends_at = org.trial_ends_at
+    if trial_ends_at.tzinfo is None:
+        trial_ends_at = trial_ends_at.replace(tzinfo=timezone.utc)
+    assert trial_ends_at > datetime.now(timezone.utc)
