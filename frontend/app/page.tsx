@@ -20,7 +20,7 @@ import {
   Lock,
   Bot,
   SlidersHorizontal,
-  DollarSign
+  IndianRupee
 } from 'lucide-react';
 
 export default function Home() {
@@ -688,13 +688,13 @@ export default function Home() {
                       <div className="flex justify-between items-start">
                         <div>
                           <div className="font-bold text-white text-sm">Margherita Pizza 12"</div>
-                          <div className="text-slate-400 text-[10px]">Menu Price: $16.50</div>
+                          <div className="text-slate-400 text-[10px]">Menu Price: ₹1,650</div>
                         </div>
                         <span className="text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded text-[10px]">76.2% Margin</span>
                       </div>
                       <div className="pt-2 border-t border-slate-800 flex justify-between text-[11px]">
-                        <span className="text-slate-400">Raw Cost: $3.92</span>
-                        <span className="text-emerald-400 font-bold">Profit: $12.58</span>
+                        <span className="text-slate-400">Raw Cost: ₹392</span>
+                        <span className="text-emerald-400 font-bold">Profit: ₹1,258</span>
                       </div>
                     </div>
 
@@ -702,13 +702,13 @@ export default function Home() {
                       <div className="flex justify-between items-start">
                         <div>
                           <div className="font-bold text-white text-sm">Truffle Cream Pasta</div>
-                          <div className="text-slate-400 text-[10px]">Menu Price: $22.00</div>
+                          <div className="text-slate-400 text-[10px]">Menu Price: ₹2,200</div>
                         </div>
                         <span className="text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded text-[10px]">64.5% Margin</span>
                       </div>
                       <div className="pt-2 border-t border-slate-800 flex justify-between text-[11px]">
-                        <span className="text-slate-400">Raw Cost: $7.81</span>
-                        <span className="text-amber-400 font-bold">Profit: $14.19</span>
+                        <span className="text-slate-400">Raw Cost: ₹781</span>
+                        <span className="text-amber-400 font-bold">Profit: ₹1,419</span>
                       </div>
                     </div>
                   </div>
@@ -908,7 +908,7 @@ export default function Home() {
               onClick={() => applyPreset(10000, 15)}
               className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg text-xs font-semibold text-slate-300 transition-colors cursor-pointer"
             >
-              Small Café ($10k)
+              Small Café (₹10k)
             </button>
             <button
               onClick={() => applyPreset(25000, 18)}
@@ -937,7 +937,7 @@ export default function Home() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs sm:text-sm font-semibold">
                   <span className="text-slate-300 flex items-center gap-2">
-                    <DollarSign size={16} className="text-amber-400" /> Monthly Raw Food Spend
+                    <IndianRupee size={16} className="text-amber-400" /> Monthly Raw Food Spend
                   </span>
                   <span className="text-white font-mono text-base font-bold bg-slate-900 px-3 py-1 rounded-lg border border-slate-800">
                     ₹{monthlySpend.toLocaleString()}
