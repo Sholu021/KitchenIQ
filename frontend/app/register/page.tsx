@@ -17,6 +17,7 @@ export default function RegisterPage() {
   const [ownerName, setOwnerName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [acceptPolicies, setAcceptPolicies] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -30,6 +31,10 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (!acceptPolicies) {
+      setError('Please accept the Terms of Service and Privacy Policy to continue.');
+      return;
+    }
     setLoading(true);
 
     try {
@@ -149,6 +154,18 @@ export default function RegisterPage() {
                 <Lock size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
               </div>
             </div>
+
+            <label className="flex items-start gap-3 text-xs text-slate-500">
+              <input
+                type="checkbox"
+                checked={acceptPolicies}
+                onChange={(e) => setAcceptPolicies(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              <span>
+                I agree to the <Link href="/terms" className="font-semibold text-emerald-700 hover:underline">Terms of Service</Link> and acknowledge the <Link href="/privacy" className="font-semibold text-emerald-700 hover:underline">Privacy Policy</Link>.
+              </span>
+            </label>
 
             <button
               type="submit"
