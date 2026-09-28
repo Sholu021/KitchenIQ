@@ -1227,6 +1227,10 @@ export default function Home() {
             <a href="#roi" className="hover:text-amber-400 transition-colors">ROI Calculator</a>
             <a href="#pricing" className="hover:text-amber-400 transition-colors">Pricing</a>
             <a href="#faq" className="hover:text-amber-400 transition-colors">FAQ</a>
+            <Link href="/terms" className="hover:text-amber-400 transition-colors">Terms</Link>
+            <Link href="/privacy" className="hover:text-amber-400 transition-colors">Privacy</Link>
+            <Link href="/refund-cancellation" className="hover:text-amber-400 transition-colors">Refunds</Link>
+            <Link href="/support" className="hover:text-amber-400 transition-colors">Support</Link>
           </div>
 
           <div className="flex items-center gap-4 text-[11px] text-slate-500 font-mono">
