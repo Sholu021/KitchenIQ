@@ -354,7 +354,7 @@ def ask_ai_copilot(db: Session, organization_id: int, question: str) -> str:
                 expiring_batches.append(batch_text)
         
         # 0. Answer sales / best-selling questions
-        elif (
+        if (
             "sales" in q
             or "best-selling" in q
             or "best selling" in q
