@@ -275,6 +275,7 @@ def update_subscription(
     org.subscription_tier = "Free"
     org.subscription_status = "active"
     org.subscription_expires_at = None
+    org.trial_ends_at = None
 
     db.add(
         AuditLog(
