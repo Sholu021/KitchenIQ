@@ -353,46 +353,6 @@ def ask_ai_copilot(db: Session, organization_id: int, question: str) -> str:
             elif exp_date <= today + timedelta(days=7):
                 expiring_batches.append(batch_text)
         
-        # 0. Answer sales / best-selling questions
-        if (
-            "sales" in q
-            or "best-selling" in q
-            or "best selling" in q
-            or "top selling" in q
-            or "recent sale" in q
-        ):
-            sales = state["recent_sales_30_days"]
-            total_revenue = sum(float(s.get("amount") or 0) for s in sales)
-            item_totals = {}
-
-            for sale in sales:
-                for item in sale.get("items", []):
-                    name = item.get("recipe_name") or "Unknown"
-                    item_totals[name] = item_totals.get(name, 0) + float(item.get("quantity") or 0)
-
-            ranked_items = sorted(
-                item_totals.items(),
-                key=lambda item: (-item[1], item[0].lower()),
-            )
-
-            if not sales:
-                return (
-                    "There are no recorded sales in the last 30 days, "
-                    "so there is not enough sales history to identify best-selling items yet."
-                )
-
-            lines = [
-                f"- {name}: {quantity:g} sold"
-                for name, quantity in ranked_items[:5]
-            ]
-
-            return (
-                f"In the last 30 days, {len(sales)} sale(s) were recorded "
-                f"for total revenue of ₹{total_revenue:.2f}.\n"
-                "Best-selling items by quantity:\n"
-                + ("\n".join(lines) if lines else "- No item-level sales were recorded.")
-            )
-
         # 0b. Answer prioritization / daily action questions
         elif (
             "prioritize" in q
@@ -455,6 +415,47 @@ def ask_ai_copilot(db: Session, organization_id: int, question: str) -> str:
                 )
 
             return "Based on current kitchen data, today's priorities are:\n" + "\n".join(priority_lines)
+
+
+        # 0b. Answer sales / best-selling questions
+        elif (
+            "sales" in q
+            or "best-selling" in q
+            or "best selling" in q
+            or "top selling" in q
+            or "recent sale" in q
+        ):
+            sales = state["recent_sales_30_days"]
+            total_revenue = sum(float(s.get("amount") or 0) for s in sales)
+            item_totals = {}
+
+            for sale in sales:
+                for item in sale.get("items", []):
+                    name = item.get("recipe_name") or "Unknown"
+                    item_totals[name] = item_totals.get(name, 0) + float(item.get("quantity") or 0)
+
+            ranked_items = sorted(
+                item_totals.items(),
+                key=lambda item: (-item[1], item[0].lower()),
+            )
+
+            if not sales:
+                return (
+                    "There are no recorded sales in the last 30 days, "
+                    "so there is not enough sales history to identify best-selling items yet."
+                )
+
+            lines = [
+                f"- {name}: {quantity:g} sold"
+                for name, quantity in ranked_items[:5]
+            ]
+
+            return (
+                f"In the last 30 days, {len(sales)} sale(s) were recorded "
+                f"for total revenue of ₹{total_revenue:.2f}.\n"
+                "Best-selling items by quantity:\n"
+                + ("\n".join(lines) if lines else "- No item-level sales were recorded.")
+            )
 
         # 1. Answer reorder questions
         if "reorder" in q or "buy" in q or "purchase" in q:
