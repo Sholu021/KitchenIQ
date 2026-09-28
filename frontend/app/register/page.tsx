@@ -46,12 +46,15 @@ export default function RegisterPage() {
       });
       const { role, organization_id, user_name } = res.data;
       login(role, organization_id, user_name);
-      router.push('/dashboard');
+      router.push('/onboarding');
     } catch (err: any) {
-      setError(
-        err.response?.data?.detail || 
-        'Failed to register. Please check your inputs or email.'
-      );
+      const detail = err.response?.data?.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((item: any) => item?.msg || 'Invalid input').join(' ')
+        : typeof detail === 'string'
+          ? detail
+          : 'Registration failed. Please check your inputs and try again.';
+      setError(message);
     } finally {
       setLoading(false);
     }
