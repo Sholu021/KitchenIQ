@@ -18,6 +18,9 @@ export default function RecipesPage() {
   // New Recipe Form State
   const [recipeName, setRecipeName] = useState('');
   const [description, setDescription] = useState('');
+  const [yieldQuantity, setYieldQuantity] = useState('1');
+  const [yieldUnit, setYieldUnit] = useState('portion');
+  const [sellingPrice, setSellingPrice] = useState('0');
   const [ingredients, setIngredients] = useState<Array<{ product_id: string; quantity_required: string }>>([
     { product_id: '', quantity_required: '' }
   ]);
@@ -69,6 +72,9 @@ export default function RecipesPage() {
   const resetForm = () => {
     setRecipeName('');
     setDescription('');
+    setYieldQuantity('1');
+    setYieldUnit('portion');
+    setSellingPrice('0');
     setIngredients([{ product_id: '', quantity_required: '' }]);
     setFormError(null);
   };
@@ -114,6 +120,9 @@ export default function RecipesPage() {
     createRecipeMutation.mutate({
       name: recipeName,
       description: description || null,
+      yield_quantity: parseFloat(yieldQuantity),
+      yield_unit: yieldUnit.trim() || 'portion',
+      selling_price: parseFloat(sellingPrice),
       ingredients: items
     });
   };
@@ -266,6 +275,24 @@ export default function RecipesPage() {
                   className="w-full px-3.5 py-2.5 border border-slate-200 bg-white text-sm text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold h-16 resize-none"
                   placeholder="Describe recipe preparation or notes..."
                 />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Yield Qty *</label>
+                  <input type="number" min="0.001" step="any" required value={yieldQuantity} onChange={(e) => setYieldQuantity(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-slate-200 bg-white text-sm text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-bold" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Yield Unit *</label>
+                  <input type="text" required value={yieldUnit} onChange={(e) => setYieldUnit(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-slate-200 bg-white text-sm text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-bold" placeholder="portion" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Selling Price (₹) *</label>
+                  <input type="number" min="0" step="0.01" required value={sellingPrice} onChange={(e) => setSellingPrice(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-slate-200 bg-white text-sm text-slate-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-bold" />
+                </div>
               </div>
 
               {/* Dynamic ingredient selector list */}
