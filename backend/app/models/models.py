@@ -14,6 +14,7 @@ class Organization(Base):
     subscription_tier: Mapped[str] = mapped_column(String(20), default="Free")
     subscription_status: Mapped[str] = mapped_column(String(20), default="active")
     subscription_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    trial_ends_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
