@@ -1,5 +1,6 @@
 import os
 import secrets
+from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -7,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import decode_token
-from app.models.models import User
+from app.models.models import User, Organization
 
 reusable_oauth2 = HTTPBearer(auto_error=False)
 
@@ -67,6 +68,18 @@ def get_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user"
         )
+
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    if org and org.subscription_status == "trialing" and org.trial_ends_at:
+        trial_ends_at = org.trial_ends_at
+        if trial_ends_at.tzinfo is None:
+            trial_ends_at = trial_ends_at.replace(tzinfo=timezone.utc)
+        if trial_ends_at <= datetime.now(timezone.utc):
+            org.subscription_tier = "Free"
+            org.subscription_status = "active"
+            org.subscription_expires_at = None
+            org.trial_ends_at = None
+            db.commit()
 
     return user
 
