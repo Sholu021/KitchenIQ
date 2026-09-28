@@ -64,7 +64,7 @@ def register_organization_and_owner(
             )
 
         # Create Organization
-        org = Organization(name=req.organization_name)
+        org = Organization(name=req.organization_name, subscription_tier="Pro", subscription_status="trialing", trial_ends_at=datetime.now(timezone.utc) + timedelta(days=14))
         db.add(org)
         db.flush()
 
