@@ -101,3 +101,29 @@ def test_expired_trial_is_downgraded_on_authenticated_request(client, db, seed_t
 
     db.refresh(org)
     assert org.trial_ends_at is None
+
+
+def test_register_creates_trial_organization(client, db):
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "organization_name": "Trial Kitchen",
+            "owner_name": "Trial Owner",
+            "owner_email": "new-trial-owner@test.com",
+            "owner_password": "KitchenIQ2026",
+        },
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["role"] == "Owner"
+    assert data["user_name"] == "Trial Owner"
+
+    org = db.query(Organization).filter(
+        Organization.id == data["organization_id"]
+    ).first()
+    assert org is not None
+    assert org.subscription_tier == "Pro"
+    assert org.subscription_status == "trialing"
+    assert org.trial_ends_at is not None
+    assert org.trial_ends_at > datetime.now(timezone.utc)
