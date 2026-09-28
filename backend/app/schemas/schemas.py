@@ -280,7 +280,7 @@ class RecipeBase(BaseSchema):
 
 class RecipeCreate(RecipeBase):
     ingredients: List[RecipeIngredientCreate]
-    finished_product_id: int
+    finished_product_id: Optional[int] = None
 
 class RecipeOut(RecipeBase):
     id: int
