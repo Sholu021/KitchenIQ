@@ -353,8 +353,8 @@ def ask_ai_copilot(db: Session, organization_id: int, question: str) -> str:
             elif exp_date <= today + timedelta(days=7):
                 expiring_batches.append(batch_text)
         
-        # 0b. Answer prioritization / daily action questions
-        elif (
+        # 0. Answer prioritization / daily action questions
+        if (
             "prioritize" in q
             or "priority" in q
             or "what should i do" in q
