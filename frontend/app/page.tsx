@@ -1027,169 +1027,77 @@ export default function Home() {
       <section id="pricing" className="py-20 px-6 max-w-6xl mx-auto w-full z-10 border-t border-slate-200">
         <div className="text-center mb-12 space-y-4">
           <p className="text-sm font-semibold uppercase tracking-widest text-emerald-600">Simple, transparent pricing</p>
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900">Plans Built for Your Kitchen</h2>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900">One plan. Everything your kitchen needs.</h2>
           <p className="text-slate-500 max-w-2xl mx-auto">
-            Start with the essentials, then scale as your kitchen grows.
+            Built for independent restaurants, cafés, cloud kitchens, and small restaurant groups with 1–5 outlets.
           </p>
         </div>
 
-        <div className="flex justify-center items-center gap-3 mb-10">
+        <div className="flex flex-wrap justify-center items-center gap-3 mb-10">
           <div className="inline-flex rounded-full border border-slate-200 bg-white p-1 shadow-sm">
             <button
               type="button"
               onClick={() => setAnnualBilling(false)}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
-                !annualBilling
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition ${!annualBilling ? "bg-emerald-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-900"}`}
             >
               Monthly
             </button>
             <button
               type="button"
               onClick={() => setAnnualBilling(true)}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
-                annualBilling
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition ${annualBilling ? "bg-emerald-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-900"}`}
             >
               Annual
             </button>
           </div>
           <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold">
-            Save 20%
+            Save 20% annually
           </span>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 items-stretch">
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm flex flex-col">
-            <div className="mb-6">
-              <h3 className="text-xl font-bold text-slate-900">Starter</h3>
-              <p className="mt-2 text-sm text-slate-500">Everything you need to stay on top of your kitchen.</p>
+        <div className="max-w-2xl mx-auto">
+          <div className="relative rounded-3xl border-2 border-emerald-500 bg-white p-8 md:p-10 shadow-lg flex flex-col">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-emerald-600 px-4 py-1 text-xs font-bold text-white">
+              KitchenIQ Pro
             </div>
 
-            <div className="mb-6">
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-slate-900">&#8377;</span>
+            <div className="text-center mb-7">
+              <h3 className="text-2xl font-bold text-slate-900">Pro</h3>
+              <p className="mt-2 text-sm text-slate-500">
+                Complete inventory, purchasing, production, analytics, and AI intelligence for your kitchen.
+              </p>
+            </div>
+
+            <div className="mb-7 text-center">
+              <div className="flex items-baseline justify-center gap-1">
+                <span className="text-2xl font-bold text-slate-900">₹</span>
                 <span className="text-5xl font-bold tracking-tight text-slate-900">
                   {annualBilling ? "2,399" : "2,999"}
                 </span>
                 <span className="text-sm text-slate-500">
-                  {annualBilling ? "/month ? billed annually" : "/month"}
+                  {annualBilling ? "/month billed annually" : "/month"}
                 </span>
               </div>
-              <div className="mt-2 min-h-[18px] text-xs font-semibold text-slate-500">
-                {annualBilling ? "?28,788/year" : "?35,988/year"}
+              <div className="mt-2 text-xs font-semibold text-slate-500">
+                {annualBilling ? "₹28,788 billed annually" : "₹35,988 over 12 monthly payments"}
+              </div>
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700">
+                14-day free trial · No credit card required
               </div>
             </div>
 
-            <div className="space-y-3 flex-1">
+            <div className="grid sm:grid-cols-2 gap-x-8 gap-y-3">
               {[
-                "Up to 150 ingredients tracked",
-                "Real-time stock levels",
-                "Expiry & wastage alerts",
-                "Reorder notifications (SMS + email)",
-                "Mobile app access",
-                "Onboarding support",
-                "Demand forecasting",
-                "POS integration",
-                "Multi-outlet support",
-              ].map((feature, index) => (
-                <div key={feature} className="flex items-start gap-3 text-sm">
-                  <Check className={`w-4 h-4 mt-0.5 shrink-0 ${index < 6 ? "text-emerald-600" : "text-slate-300"}`} />
-                  <span className={index < 6 ? "text-slate-700" : "text-slate-400"}>{feature}</span>
-                </div>
-              ))}
-            </div>
-
-            <a
-              href="/register"
-              className="mt-8 w-full rounded-xl border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:border-emerald-500 hover:text-emerald-700 transition"
-            >
-              Start with Starter
-            </a>
-          </div>
-
-          <div className="relative rounded-2xl border-2 border-emerald-500 bg-white p-8 shadow-lg flex flex-col">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-emerald-600 px-4 py-1 text-xs font-bold text-white">
-              Most Popular
-            </div>
-
-            <div className="mb-6">
-              <h3 className="text-xl font-bold text-slate-900">Growth</h3>
-              <p className="mt-2 text-sm text-slate-500">AI-powered intelligence for growing restaurant operations.</p>
-            </div>
-
-            <div className="mb-6">
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-slate-900">&#8377;</span>
-                <span className="text-5xl font-bold tracking-tight text-slate-900">
-                  {annualBilling ? "4,399" : "5,499"}
-                </span>
-                <span className="text-sm text-slate-500">
-                  {annualBilling ? "/month ? billed annually" : "/month"}
-                </span>
-              </div>
-              <div className="mt-2 min-h-[18px] text-xs font-semibold text-slate-500">
-                {annualBilling ? "?52,788/year" : "?65,988/year"}
-              </div>
-            </div>
-
-            <div className="space-y-3 flex-1">
-              {[
-                "Unlimited ingredients",
-                "AI demand forecasting",
-                "Smart reorder recommendations",
-                "POS integration (Toast, Square, etc.)",
-                "Recipe cost tracking",
-                "Usage & wastage analytics",
-                "Up to 3 outlets",
-                "Priority chat support",
-                "Custom integrations",
-              ].map((feature, index) => (
-                <div key={feature} className="flex items-start gap-3 text-sm">
-                  <Check className={`w-4 h-4 mt-0.5 shrink-0 ${index < 8 ? "text-emerald-600" : "text-slate-300"}`} />
-                  <span className={index < 8 ? "text-slate-700" : "text-slate-400"}>{feature}</span>
-                </div>
-              ))}
-            </div>
-
-            <a
-              href="/register"
-              className="mt-8 w-full rounded-xl bg-emerald-600 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-emerald-700 transition shadow-sm"
-            >
-              Start with Growth
-            </a>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm flex flex-col">
-            <div className="mb-6">
-              <h3 className="text-xl font-bold text-slate-900">Enterprise</h3>
-              <p className="mt-2 text-sm text-slate-500">For multi-location restaurant groups with custom needs.</p>
-            </div>
-
-            <div className="mb-6">
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold tracking-tight text-slate-900">Custom</span>
-              </div>
-              <div className="mt-2 min-h-[18px] text-xs font-semibold text-slate-500">
-                Tailored to your operation
-              </div>
-            </div>
-
-            <div className="space-y-3 flex-1">
-              {[
-                "Unlimited outlets",
-                "Central dashboard for all locations",
-                "Custom demand models",
-                "Dedicated account manager",
-                "Custom POS & ERP integrations",
-                "Staff training & onboarding",
-                "SLA-backed uptime",
-                "White-label option",
-                "API access",
+                "Inventory & stock management",
+                "Purchasing & supplier management",
+                "Recipes & production tracking",
+                "Waste & expiry management",
+                "Sales & operational analytics",
+                "Reports & CSV exports",
+                "AI Insights",
+                "AI Copilot",
+                "Team management & role controls",
+                "Multi-outlet-ready organization model",
               ].map((feature) => (
                 <div key={feature} className="flex items-start gap-3 text-sm">
                   <Check className="w-4 h-4 mt-0.5 shrink-0 text-emerald-600" />
@@ -1200,10 +1108,13 @@ export default function Home() {
 
             <a
               href="/register"
-              className="mt-8 w-full rounded-xl border border-slate-300 px-5 py-3 text-center text-sm font-semibold text-slate-800 hover:border-emerald-500 hover:text-emerald-700 transition"
+              className="mt-9 w-full rounded-xl bg-emerald-600 px-5 py-3.5 text-center text-sm font-semibold text-white hover:bg-emerald-700 transition shadow-sm"
             >
-              Contact Sales
+              Start 14-Day Free Trial
             </a>
+            <p className="mt-3 text-center text-xs text-slate-400">
+              Cancel anytime. See our refund and cancellation policy before subscribing.
+            </p>
           </div>
         </div>
       </section>
