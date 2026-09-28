@@ -1,22 +1,5 @@
-import axios from "axios";
-
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-api.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  }
-
-  return config;
-});
-
-export default api;
+// Backward-compatible entry point for older frontend imports.
+// Keep all API traffic on the hardened same-origin client, which uses
+// HttpOnly auth cookies and CSRF protection. Do not reintroduce localStorage
+// bearer-token authentication here.
+export { apiClient as default, apiClient } from "./api-client";
