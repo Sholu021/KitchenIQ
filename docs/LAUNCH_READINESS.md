@@ -103,6 +103,17 @@ These are not application-code defects and should not be represented as complete
 
 The application should not claim that these policies exist merely because placeholder pages or links are added.
 
+## Customer-facing launch configuration
+
+- Target customer: independent restaurants, cafés, cloud kitchens, and small restaurant groups with 1–5 outlets.
+- Pro pricing: ₹2,999/month or ₹28,788/year.
+- Trial offer: 14 days, no credit card required.
+- Refund policy: 7 days from the first paid charge; annual subscriptions follow the same first-charge window.
+- Cancellation: cancel anytime; paid access remains through the current billing period.
+- Support target: email support with a target response within 1 business day.
+- Public pages: pricing, Terms, Privacy, Refund & Cancellation, Support.
+- Onboarding: new registrations enter a five-step setup checklist.
+
 ## Monitoring and incident response
 
 Minimum production checks:
