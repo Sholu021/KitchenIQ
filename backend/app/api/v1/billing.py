@@ -270,7 +270,10 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid webhook signature")
 
     event = await request.json()
-    # Razorpay webhook payloads do not reliably expose a top-level event ID.\n    # Use the verified raw request body as a stable idempotency key for retries.\n    event_id = event.get("id") or f"razorpay:{hashlib.sha256(body).hexdigest()}"\n    event_name = event.get("event", "")
+    # Razorpay webhook payloads do not reliably expose a top-level event ID.
+    # Use the verified raw request body as a stable idempotency key for retries.
+    event_id = event.get("id") or f"razorpay:{hashlib.sha256(body).hexdigest()}"
+    event_name = event.get("event", "")
     subscription = event.get("payload", {}).get("subscription", {}).get("entity", {})
     subscription_id = subscription.get("id")
 
