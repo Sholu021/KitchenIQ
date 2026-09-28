@@ -317,8 +317,8 @@ export default function ProductsPage() {
                         <td className="px-6 py-4 text-right font-mono text-slate-400">
                           {prod.reorder_level} <span className="text-xs text-slate-400 font-sans font-medium">{prod.unit}</span>
                         </td>
-                        <td className="px-6 py-4 text-right font-mono">${prod.cost_price.toFixed(4)}</td>
-                        <td className="px-6 py-4 text-right font-mono font-bold text-emerald-600">${prod.selling_price.toFixed(2)}</td>
+                        <td className="px-6 py-4 text-right font-mono">₹{prod.cost_price.toFixed(4)}</td>
+                        <td className="px-6 py-4 text-right font-mono font-bold text-emerald-600">₹{prod.selling_price.toFixed(2)}</td>
                         {!isReadOnly && (
                           <td className="px-6 py-4 text-center">
                             <div className="flex justify-center gap-1.5">
@@ -525,7 +525,7 @@ export default function ProductsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
-                        Cost Price ($) *
+                        Cost Price (₹) *
                       </label>
                       <input
                         type="number"
@@ -539,7 +539,7 @@ export default function ProductsPage() {
 
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">
-                        Selling Price ($) *
+                        Selling Price (₹) *
                       </label>
                       <input
                         type="number"
@@ -609,7 +609,7 @@ export default function ProductsPage() {
                     </div>
                     <div className="flex justify-between border-b border-slate-200/60 pb-2">
                       <span className="text-slate-400">Cost / Selling:</span>
-                      <span className="text-slate-900">${prodForm.cost_price.toFixed(2)} / ${prodForm.selling_price.toFixed(2)}</span>
+                      <span className="text-slate-900">₹{prodForm.cost_price.toFixed(2)} / ₹{prodForm.selling_price.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-400">Reorder Alert at:</span>
