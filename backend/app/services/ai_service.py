@@ -353,6 +353,109 @@ def ask_ai_copilot(db: Session, organization_id: int, question: str) -> str:
             elif exp_date <= today + timedelta(days=7):
                 expiring_batches.append(batch_text)
         
+        # 0. Answer sales / best-selling questions
+        elif (
+            "sales" in q
+            or "best-selling" in q
+            or "best selling" in q
+            or "top selling" in q
+            or "recent sale" in q
+        ):
+            sales = state["recent_sales_30_days"]
+            total_revenue = sum(float(s.get("amount") or 0) for s in sales)
+            item_totals = {}
+
+            for sale in sales:
+                for item in sale.get("items", []):
+                    name = item.get("recipe_name") or "Unknown"
+                    item_totals[name] = item_totals.get(name, 0) + float(item.get("quantity") or 0)
+
+            ranked_items = sorted(
+                item_totals.items(),
+                key=lambda item: (-item[1], item[0].lower()),
+            )
+
+            if not sales:
+                return (
+                    "There are no recorded sales in the last 30 days, "
+                    "so there is not enough sales history to identify best-selling items yet."
+                )
+
+            lines = [
+                f"- {name}: {quantity:g} sold"
+                for name, quantity in ranked_items[:5]
+            ]
+
+            return (
+                f"In the last 30 days, {len(sales)} sale(s) were recorded "
+                f"for total revenue of ₹{total_revenue:.2f}.\n"
+                "Best-selling items by quantity:\n"
+                + ("\n".join(lines) if lines else "- No item-level sales were recorded.")
+            )
+
+        # 0b. Answer prioritization / daily action questions
+        elif (
+            "prioritize" in q
+            or "priority" in q
+            or "what should i do" in q
+            or "what should i focus" in q
+            or "today" in q
+        ):
+            out_items = [
+                p for p in products
+                if p["current_stock"] <= 0
+            ]
+            low_items = [
+                p for p in products
+                if p["current_stock"] > 0
+                and p["current_stock"] <= p["reorder_level"]
+            ]
+
+            priority_lines = []
+
+            if out_items:
+                priority_lines.append(
+                    "1. Replenish out-of-stock items: "
+                    + ", ".join(p["name"] for p in out_items[:5])
+                )
+
+            if low_items:
+                priority_lines.append(
+                    f"{len(priority_lines) + 1}. Review {len(low_items)} low-stock item(s): "
+                    + ", ".join(p["name"] for p in low_items[:5])
+                )
+
+            if expiring_batches:
+                priority_lines.append(
+                    f"{len(priority_lines) + 1}. Use {len(expiring_batches)} batch(es) "
+                    "expiring within 7 days before they become waste."
+                )
+
+            sales = state["recent_sales_30_days"]
+            item_totals = {}
+            for sale in sales:
+                for item in sale.get("items", []):
+                    name = item.get("recipe_name") or "Unknown"
+                    item_totals[name] = item_totals.get(name, 0) + float(item.get("quantity") or 0)
+
+            if item_totals:
+                top_item, top_qty = sorted(
+                    item_totals.items(),
+                    key=lambda item: (-item[1], item[0].lower()),
+                )[0]
+                priority_lines.append(
+                    f"{len(priority_lines) + 1}. Monitor demand for {top_item}, "
+                    f"currently the highest-volume item at {top_qty:g} unit(s) sold in the last 30 days."
+                )
+
+            if not priority_lines:
+                return (
+                    "No urgent operational issues were detected from current inventory, "
+                    "expiry, and sales data."
+                )
+
+            return "Based on current kitchen data, today's priorities are:\n" + "\n".join(priority_lines)
+
         # 1. Answer reorder questions
         if "reorder" in q or "buy" in q or "purchase" in q:
             low_stock_products = [
