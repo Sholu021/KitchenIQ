@@ -136,3 +136,33 @@ def test_webhook_halted_returns_organization_to_free(
     assert org.subscription_tier == "Free"
     assert org.subscription_status == "active"
     assert org.subscription_expires_at is None
+
+
+def test_webhook_accepts_valid_signature_for_unknown_subscription(
+    client, db, monkeypatch
+):
+    secret = "test-secret"
+    monkeypatch.setenv("RAZORPAY_WEBHOOK_SECRET", secret)
+
+    payload = {
+        "id": "evt_unknown_subscription",
+        "event": "subscription.activated",
+        "payload": {
+            "subscription": {
+                "entity": {
+                    "id": "sub_standalone_razorpay_test",
+                    "status": "active",
+                }
+            }
+        },
+    }
+    body, signature = _signed_payload(payload, secret)
+
+    response = client.post(
+        "/api/v1/billing/webhook",
+        content=body,
+        headers={"X-Razorpay-Signature": signature},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ignored"}
