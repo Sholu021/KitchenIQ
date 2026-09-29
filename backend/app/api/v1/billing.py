@@ -305,6 +305,13 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
         .first()
     )
     if not record:
+        # A valid Razorpay delivery can refer to a subscription that
+        # KitchenIQ does not own, such as a standalone Test Mode subscription.
+        # Acknowledge it without mutating any organization or leaving the
+        # webhook event pending.
+        webhook_event.status = "ignored"
+        webhook_event.processed_at = datetime.now(timezone.utc)
+        db.commit()
         return {"status": "ignored"}
 
     razorpay_status = subscription.get("status", "")
