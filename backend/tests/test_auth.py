@@ -24,6 +24,23 @@ def test_login_success(client, seed_test_data):
     assert data["organization_id"] == seed_test_data["org_a_id"]
     assert data["user_name"] == "Owner A"
 
+
+def test_demo_login_creates_demo_account(client, db):
+    response = client.post("/api/v1/auth/demo")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["role"] == "Owner"
+    assert data["user_name"] == "KitchenIQ Demo"
+    assert "kitcheniq_access" in response.cookies
+    assert "kitcheniq_refresh" in response.cookies
+    assert "kitcheniq_csrf" in response.cookies
+
+    second_response = client.post("/api/v1/auth/demo")
+    assert second_response.status_code == 200
+    assert second_response.json()["organization_id"] == data["organization_id"]
+    assert db.query(Organization).count() == 1
+
 def test_login_invalid_password(client, seed_test_data):
     response = client.post(
         "/api/v1/auth/login",
