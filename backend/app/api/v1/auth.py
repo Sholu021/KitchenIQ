@@ -159,13 +159,13 @@ def demo_login(
 ):
     """Create/reuse the isolated public demo account and start a session."""
     demo_email = os.getenv("DEMO_EMAIL", "owner@kitcheniq.com")
-    demo_password = os.getenv("DEMO_PASSWORD", "password123")
     demo_org_name = os.getenv("DEMO_ORGANIZATION_NAME", "KitchenIQ Demo")
 
     user = db.query(User).filter(User.email == demo_email).first()
 
     if user:
-        if not user.is_active:
+        org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+        if not user.is_active or not org or org.name != demo_org_name:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Demo account is currently unavailable",
@@ -184,7 +184,7 @@ def demo_login(
             organization_id=org.id,
             full_name="KitchenIQ Demo",
             email=demo_email,
-            hashed_password=get_password_hash(demo_password),
+            hashed_password=get_password_hash(secrets.token_urlsafe(32)),
             role="Owner",
             is_active=True,
         )
