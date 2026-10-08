@@ -50,15 +50,13 @@ export default function Home() {
   const handleSeeDemo = async () => {
     setDemoLoading(true);
     try {
-      const res = await apiClient.post('/auth/login', {
-        email: 'owner@kitcheniq.com',
-        password: 'password123'
-      });
+      const res = await apiClient.post('/auth/demo');
       const { role, organization_id, user_name } = res.data;
       login(role, organization_id, user_name);
       router.push('/dashboard');
-    } catch {
-      alert('Failed to log in to demo mode. Please verify the backend is online.');
+    } catch (err: any) {
+      const detail = err.response?.data?.detail;
+      alert(detail || 'Failed to launch demo mode. Please try again.');
     } finally {
       setDemoLoading(false);
     }
