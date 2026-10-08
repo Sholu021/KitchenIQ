@@ -152,6 +152,77 @@ def login(
     return AuthSession(role=user.role, organization_id=user.organization_id, user_name=user.full_name)
 
 
+@router.post("/demo", response_model=AuthSession)
+def demo_login(
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    """Create/reuse the isolated public demo account and start a session."""
+    demo_email = os.getenv("DEMO_EMAIL", "owner@kitcheniq.com")
+    demo_password = os.getenv("DEMO_PASSWORD", "password123")
+    demo_org_name = os.getenv("DEMO_ORGANIZATION_NAME", "KitchenIQ Demo")
+
+    user = db.query(User).filter(User.email == demo_email).first()
+
+    if user:
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Demo account is currently unavailable",
+            )
+    else:
+        org = Organization(
+            name=demo_org_name,
+            subscription_tier="Pro",
+            subscription_status="trialing",
+            trial_ends_at=datetime.now(timezone.utc) + timedelta(days=14),
+        )
+        db.add(org)
+        db.flush()
+
+        user = User(
+            organization_id=org.id,
+            full_name="KitchenIQ Demo",
+            email=demo_email,
+            hashed_password=get_password_hash(demo_password),
+            role="Owner",
+            is_active=True,
+        )
+        db.add(user)
+        db.flush()
+
+        db.add(
+            AuditLog(
+                organization_id=org.id,
+                user_id=user.id,
+                action="CREATE_DEMO_ACCOUNT",
+                entity_type="organization",
+                entity_id=org.id,
+            )
+        )
+
+    db.add(
+        AuditLog(
+            organization_id=user.organization_id,
+            user_id=user.id,
+            action="DEMO_LOGIN",
+            entity_type="user",
+            entity_id=user.id,
+        )
+    )
+    db.commit()
+
+    access_token = create_access_token(subject=user.id)
+    refresh_token = create_refresh_token(subject=user.id)
+    _set_auth_cookies(response, access_token, refresh_token)
+
+    return AuthSession(
+        role=user.role,
+        organization_id=user.organization_id,
+        user_name=user.full_name,
+    )
+
+
 @router.post("/refresh", response_model=AuthSession)
 def refresh_token(
     req: RefreshTokenRequest,
