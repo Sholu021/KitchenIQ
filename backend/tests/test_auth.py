@@ -41,6 +41,33 @@ def test_demo_login_creates_demo_account(client, db):
     assert second_response.json()["organization_id"] == data["organization_id"]
     assert db.query(Organization).count() == 1
 
+
+def test_demo_login_accepts_legacy_seeded_demo_organization(client, db, monkeypatch):
+    monkeypatch.setenv("DEMO_EMAIL", "owner@kitcheniq.com")
+    monkeypatch.setenv("DEMO_ORGANIZATION_NAME", "KitchenIQ Demo")
+
+    org = Organization(name="KitchenIQ Demo Café")
+    db.add(org)
+    db.flush()
+    user = User(
+        organization_id=org.id,
+        full_name="KitchenIQ Demo",
+        email="owner@kitcheniq.com",
+        hashed_password=get_password_hash("unused-demo-password"),
+        role="Owner",
+        is_active=True,
+    )
+    db.add(user)
+    db.commit()
+    organization_id = org.id
+
+    response = client.post("/api/v1/auth/demo")
+
+    assert response.status_code == 200
+    assert response.json()["organization_id"] == organization_id
+    assert response.json()["user_name"] == "KitchenIQ Demo"
+    assert "kitcheniq_access" in response.cookies
+
 def test_login_invalid_password(client, seed_test_data):
     response = client.post(
         "/api/v1/auth/login",
