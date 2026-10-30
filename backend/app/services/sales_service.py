@@ -48,14 +48,15 @@ def create_sale(
             )
             
         recipe_cache[rec_id] = recipe
-        
+
+        if recipe.yield_quantity <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Recipe {recipe.name} must have a positive yield quantity",
+            )
+
         for ingredient in recipe.ingredients:
             prod_id = ingredient.product_id
-            if recipe.yield_quantity <= 0:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Recipe {recipe.name} must have a positive yield quantity",
-                )
             needed_qty = (ingredient.quantity_required / recipe.yield_quantity) * sale_qty
             needed_ingredients[prod_id] = needed_ingredients.get(prod_id, 0.0) + needed_qty
 
