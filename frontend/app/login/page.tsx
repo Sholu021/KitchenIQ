@@ -44,9 +44,23 @@ export default function LoginPage() {
     }
   };
 
-  const handleUseDemo = async (role: 'owner' | 'manager' | 'staff') => {
-    setEmail(`${role}@kitcheniq.com`);
-    setPassword('password123');
+  const handleDemoLogin = async () => {
+    setError(null);
+    setLoading(true);
+
+    try {
+      const res = await apiClient.post('/auth/demo');
+      const { role, organization_id, user_name } = res.data;
+      login(role, organization_id, user_name);
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(
+        err.response?.data?.detail ||
+        'Unable to launch demo. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -129,33 +143,21 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Demo Credentials */}
+          {/* Secure Demo Access */}
           <div className="mt-8 pt-6 border-t border-slate-100">
             <p className="text-[10px] text-slate-400 text-center mb-3.5 font-bold uppercase tracking-widest">
-              Quick Demo Access
+              Want to explore KitchenIQ?
             </p>
-            <div className="grid grid-cols-3 gap-2.5">
-              <button
-                onClick={() => handleUseDemo('owner')}
-                className="py-2 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-slate-700 text-xs font-semibold transition-all cursor-pointer text-center"
-              >
-                Owner
-              </button>
-              <button
-                onClick={() => handleUseDemo('manager')}
-                className="py-2 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-slate-700 text-xs font-semibold transition-all cursor-pointer text-center"
-              >
-                Manager
-              </button>
-              <button
-                onClick={() => handleUseDemo('staff')}
-                className="py-2 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl text-slate-700 text-xs font-semibold transition-all cursor-pointer text-center"
-              >
-                Staff
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleDemoLogin}
+              disabled={loading}
+              className="w-full py-3 px-4 bg-slate-50 hover:bg-slate-100 disabled:opacity-50 border border-slate-200/80 rounded-xl text-slate-700 text-sm font-semibold transition-all cursor-pointer text-center"
+            >
+              {loading ? 'Launching demo...' : 'Explore Demo Account'}
+            </button>
             <p className="text-[10px] text-slate-400 text-center mt-2.5">
-              Demo password is <code className="text-emerald-600 font-bold font-mono">password123</code>
+              Opens a separate demo workspace. No password required.
             </p>
           </div>
         </div>
