@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
-from app.models.models import Organization
+from app.core.security import get_password_hash
+from app.models.models import Organization, User
 
 def test_login_success(client, seed_test_data):
     response = client.post(
