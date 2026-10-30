@@ -3,6 +3,14 @@ from sqlalchemy.orm import Session
 from app.models.models import Organization, User, Category, Product, Supplier, Recipe, RecipeIngredient, Batch, Sale, SaleItem, InventoryTransaction
 from app.core.security import get_password_hash
 
+
+# Seed prices were authored in USD; convert them once for the INR-only demo UI.
+DEMO_USD_TO_INR = 83.5
+
+
+def inr(amount: float) -> float:
+    return round(amount * DEMO_USD_TO_INR, 4)
+
 def seed_db(db: Session):
     # Check if we already have seeded data
     if db.query(Organization).first() is not None:
@@ -87,8 +95,8 @@ def seed_db(db: Session):
         unit="g",
         current_stock=2500.0,
         reorder_level=1000.0,
-        cost_price=0.03,  # $30 per kg
-        selling_price=0.08
+        cost_price=inr(0.03),  # INR conversion of original 30 USD/kg sample cost
+        selling_price=inr(0.08)
     )
     p_milk = Product(
         organization_id=org.id,
@@ -98,8 +106,8 @@ def seed_db(db: Session):
         unit="ml",
         current_stock=6000.0,
         reorder_level=3000.0,
-        cost_price=0.002,  # $2 per Litre
-        selling_price=0.005
+        cost_price=inr(0.002),  # INR conversion of original 2 USD/L sample cost
+        selling_price=inr(0.005)
     )
     p_syrup = Product(
         organization_id=org.id,
@@ -109,8 +117,8 @@ def seed_db(db: Session):
         unit="ml",
         current_stock=1500.0,
         reorder_level=500.0,
-        cost_price=0.015,  # $11.25 per bottle
-        selling_price=0.04
+        cost_price=inr(0.015),  # INR conversion of original 11.25 USD/bottle sample cost
+        selling_price=inr(0.04)
     )
     p_croissant = Product(
         organization_id=org.id,
@@ -120,8 +128,8 @@ def seed_db(db: Session):
         unit="pcs",
         current_stock=15.0,
         reorder_level=8.0,
-        cost_price=1.25,
-        selling_price=3.50
+        cost_price=inr(1.25),
+        selling_price=inr(3.50)
     )
     p_tea = Product(
         organization_id=org.id,
@@ -131,8 +139,8 @@ def seed_db(db: Session):
         unit="g",
         current_stock=50.0,  # Below reorder level (low stock!)
         reorder_level=200.0,
-        cost_price=0.15,
-        selling_price=0.45
+        cost_price=inr(0.15),
+        selling_price=inr(0.45)
     )
 
     # Finished products used by recipes
@@ -144,8 +152,8 @@ def seed_db(db: Session):
         unit="serving",
         current_stock=0.0,
         reorder_level=0.0,
-        cost_price=1.34,
-        selling_price=3.49,
+        cost_price=inr(1.34),
+        selling_price=inr(3.49),
         is_finished_product=True,
     )
 
@@ -157,8 +165,8 @@ def seed_db(db: Session):
         unit="serving",
         current_stock=0.0,
         reorder_level=0.0,
-        cost_price=0.54,
-        selling_price=1.44,
+        cost_price=inr(0.54),
+        selling_price=inr(1.44),
         is_finished_product=True,
     )
 
@@ -170,8 +178,8 @@ def seed_db(db: Session):
         unit="serving",
         current_stock=0.0,
         reorder_level=0.0,
-        cost_price=1.40,
-        selling_price=3.95,
+        cost_price=inr(1.40),
+        selling_price=inr(3.95),
         is_finished_product=True,
     )
 
@@ -270,7 +278,7 @@ def seed_db(db: Session):
         description="Classic 12oz iced or hot vanilla latte",
         yield_quantity=1,
         yield_unit="serving",
-        selling_price=3.49,
+        selling_price=inr(3.49),
         finished_product_id=p_vanilla_latte.id,
     )
     db.add(r_latte)
@@ -305,7 +313,7 @@ def seed_db(db: Session):
         description="Double shot of signature roast",
         yield_quantity=1,
         yield_unit="serving",
-        selling_price=1.44,
+        selling_price=inr(1.44),
         finished_product_id=p_espresso.id,
     )
     db.add(r_espresso)
@@ -325,7 +333,7 @@ def seed_db(db: Session):
         description="Organic stone-ground green tea latte",
         yield_quantity=1,
         yield_unit="serving",
-        selling_price=3.95,
+        selling_price=inr(3.95),
         finished_product_id=p_matcha_latte.id,
     )
     db.add(r_matcha)
@@ -357,13 +365,7 @@ def seed_db(db: Session):
     # Today: 8 Lattes, 4 Espressos
 
     # We will simulate sales using DB records. Note: we are NOT deducting stock for historical seeds so that current_stock remains high and populated.
-    # But we calculate the total amount correctly:
-    # Vanilla Latte cost = 18*0.03 + 250*0.002 + 20*0.015 = 0.54 + 0.50 + 0.30 = $1.34 cost
-    # Vanilla Latte selling = 18*0.08 + 250*0.005 + 20*0.04 = 1.44 + 1.25 + 0.80 = $3.49 selling price
-    # Espresso Double cost = 18*0.03 = $0.54 cost
-    # Espresso Double selling = 18*0.08 = $1.44 selling price
-    # Matcha Latte cost = 6*0.15 + 250*0.002 = 0.90 + 0.50 = $1.40 cost
-    # Matcha Latte selling = 6*0.45 + 250*0.005 = 2.70 + 1.25 = $3.95 selling price
+    # Recipe ingredient prices and derived sale totals are stored in INR.
 
     sales_history = [
         (4, {r_latte: 10, r_espresso: 5}),
