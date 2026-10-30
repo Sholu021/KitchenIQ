@@ -12,7 +12,7 @@ def seed_db(db: Session):
     print("Seeding database with demo organization, users, inventory, batches, recipes, and sales...")
 
     # 1. Create Organization
-    org = Organization(name="KitchenIQ Demo Café")
+    org = Organization(name="KitchenIQ Demo")
     db.add(org)
     db.flush()
 
