@@ -165,7 +165,15 @@ def demo_login(
 
     if user:
         org = db.query(Organization).filter(Organization.id == user.organization_id).first()
-        if not user.is_active or not org or org.name != demo_org_name:
+        # The dedicated DEMO_EMAIL is the primary ownership key. Accept the
+        # two historical demo tenant names used by previous seed/demo flows;
+        # otherwise an existing seeded demo user is incorrectly rejected.
+        allowed_demo_org_names = {
+            demo_org_name,
+            "KitchenIQ Demo",
+            "KitchenIQ Demo Café",
+        }
+        if not user.is_active or not org or org.name not in allowed_demo_org_names:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Demo account is currently unavailable",
