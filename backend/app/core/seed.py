@@ -204,14 +204,16 @@ def seed_db(db: Session):
         product_id=p_milk.id,
         batch_number="MILK-LOT-A",
         expiry_date=today + timedelta(days=3),  # Expiring in 3 days!
-        quantity=2000.0
+        quantity=2000.0,
+        remaining_quantity=2000.0
     )
     b_milk_2 = Batch(
         organization_id=org.id,
         product_id=p_milk.id,
         batch_number="MILK-LOT-B",
         expiry_date=today + timedelta(days=10),
-        quantity=4000.0
+        quantity=4000.0,
+        remaining_quantity=4000.0
     )
 
     # Coffee beans batch (long shelf life)
@@ -220,7 +222,8 @@ def seed_db(db: Session):
         product_id=p_beans.id,
         batch_number="ESP-ROAST-99",
         expiry_date=today + timedelta(days=90),
-        quantity=2500.0
+        quantity=2500.0,
+        remaining_quantity=2500.0
     )
 
     # Syrup batch
@@ -229,7 +232,8 @@ def seed_db(db: Session):
         product_id=p_syrup.id,
         batch_number="SYR-VAN-02",
         expiry_date=today + timedelta(days=180),
-        quantity=1500.0
+        quantity=1500.0,
+        remaining_quantity=1500.0
     )
 
     # Croissant batches (already expired, and fresh)
@@ -238,14 +242,16 @@ def seed_db(db: Session):
         product_id=p_croissant.id,
         batch_number="CROIS-YESTERDAY",
         expiry_date=today - timedelta(days=1),  # Already expired!
-        quantity=5.0
+        quantity=5.0,
+        remaining_quantity=5.0
     )
     b_crois_fresh = Batch(
         organization_id=org.id,
         product_id=p_croissant.id,
         batch_number="CROIS-TODAY",
         expiry_date=today + timedelta(days=1),
-        quantity=10.0
+        quantity=10.0,
+        remaining_quantity=10.0
     )
 
     # Matcha batch
@@ -254,7 +260,8 @@ def seed_db(db: Session):
         product_id=p_tea.id,
         batch_number="MATCHA-08",
         expiry_date=today + timedelta(days=45),
-        quantity=50.0
+        quantity=50.0,
+        remaining_quantity=50.0
     )
 
     db.add_all([b_milk_1, b_milk_2, b_beans, b_syrup, b_crois_expired, b_crois_fresh, b_matcha])
@@ -378,27 +385,49 @@ def seed_db(db: Session):
     for days_ago, items in sales_history:
         sale_time = datetime.now(UTC) - timedelta(days=days_ago)
 
-        # Calculate total price
-        total = 0.0
+        total_revenue = 0.0
+        total_cogs = 0.0
+        sale_items = []
+
         for recipe, qty in items.items():
-            price = sum(ing.product.selling_price * ing.quantity_required for ing in recipe.ingredients)
-            total += price * qty
+            unit_price = sum(
+                ing.product.selling_price * ing.quantity_required
+                for ing in recipe.ingredients
+            )
+            unit_cost = sum(
+                ing.product.cost_price * ing.quantity_required
+                for ing in recipe.ingredients
+            )
+            revenue = round(unit_price * qty, 2)
+            cogs = round(unit_cost * qty, 2)
+            gross_profit = round(revenue - cogs, 2)
+
+            total_revenue += revenue
+            total_cogs += cogs
+            sale_items.append(
+                SaleItem(
+                    recipe_id=recipe.id,
+                    quantity=qty,
+                    unit_price=round(unit_price, 2),
+                    revenue=revenue,
+                    cost_of_goods_sold=cogs,
+                    gross_profit=gross_profit,
+                )
+            )
 
         sale = Sale(
             organization_id=org.id,
             sale_date=sale_time,
-            total_amount=total
+            total_amount=round(total_revenue, 2),
+            cost_of_goods_sold=round(total_cogs, 2),
+            gross_profit=round(total_revenue - total_cogs, 2),
         )
         db.add(sale)
         db.flush()
 
-        for recipe, qty in items.items():
-            s_item = SaleItem(
-                sale_id=sale.id,
-                recipe_id=recipe.id,
-                quantity=qty
-            )
-            db.add(s_item)
+        for item in sale_items:
+            item.sale_id = sale.id
+            db.add(item)
 
     db.commit()
     print("Database seeding completed successfully!")
