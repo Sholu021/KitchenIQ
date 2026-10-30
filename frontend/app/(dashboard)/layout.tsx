@@ -38,7 +38,6 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isHydrated = useAuthStore((state) => state.isHydrated);
-  const hydrate = useAuthStore((state) => state.hydrate);
   const logout = useAuthStore((state) => state.logout);
   const role = useAuthStore((state) => state.role);
   const userName = useAuthStore((state) => state.userName);
@@ -46,11 +45,6 @@ export default function DashboardLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [currentDate, setCurrentDate] = useState("");
-
-  // Hydrate auth store
-  useEffect(() => {
-    hydrate();
-  }, [hydrate]);
 
   // Set formatted current date
   useEffect(() => {
