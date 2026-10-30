@@ -83,7 +83,7 @@ export default function DashboardPage() {
   });
 
   const { data: organization } = useQuery({
-    queryKey: ["organization"],
+    queryKey: ["org-details-layout"],
     queryFn: async () => {
       const res = await apiClient.get("/auth/organization");
       return res.data;
