@@ -41,3 +41,35 @@ def test_inventory_analytics_reads_do_not_create_notifications(db):
         .count()
     )
     assert notification_count == 0
+
+
+
+def test_repeated_inventory_alerts_are_deduplicated_until_read(db):
+    from app.services.notification_service import create_notification
+
+    organization = Organization(name="Alert Deduplication Test")
+    db.add(organization)
+    db.flush()
+
+    first = create_notification(
+        db=db,
+        organization_id=organization.id,
+        title="Low Stock Alert",
+        message="One or more products are below the reorder level. Review current stock levels.",
+        notification_type="WARNING",
+    )
+    second = create_notification(
+        db=db,
+        organization_id=organization.id,
+        title="Low Stock Alert",
+        message="One or more products are below the reorder level. Review current stock levels.",
+        notification_type="WARNING",
+    )
+
+    assert first.id == second.id
+    assert (
+        db.query(Notification)
+        .filter(Notification.organization_id == organization.id)
+        .count()
+        == 1
+    )
