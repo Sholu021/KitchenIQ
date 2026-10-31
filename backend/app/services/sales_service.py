@@ -123,6 +123,19 @@ def create_sale(
     db.add(sale)
     db.flush()
 
+    # Calculate each ingredient's FEFO cost once for the aggregate demand.
+    # Calculating each recipe line independently would repeatedly price the
+    # same earliest batch when several menu items consume the same ingredient.
+    ingredient_costs = {
+        product_id: calculate_fefo_cost(
+            db=db,
+            organization_id=organization_id,
+            product_id=product_id,
+            quantity=total_needed,
+        )
+        for product_id, total_needed in needed_ingredients.items()
+    }
+
     # 4. Deduct stock and write SaleItems
     total_sale_amount = 0.0
     total_cogs = 0.0
@@ -162,11 +175,10 @@ def create_sale(
         for ingredient in recipe.ingredients:
             ingredient_qty = (ingredient.quantity_required / recipe.yield_quantity) * sale_qty
 
-            recipe_cogs += calculate_fefo_cost(
-                db=db,
-                organization_id=organization_id,
-                product_id=ingredient.product_id,
-                quantity=ingredient_qty,
+            total_product_needed = needed_ingredients[ingredient.product_id]
+            product_total_cost = ingredient_costs[ingredient.product_id]
+            recipe_cogs += (
+                product_total_cost * ingredient_qty / total_product_needed
             )
 
         sale_item = SaleItem(
