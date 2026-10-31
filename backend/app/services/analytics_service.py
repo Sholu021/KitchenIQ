@@ -460,7 +460,18 @@ def inventory_health(
         reorder_trigger = lead_time + safety_days
         warning_trigger = reorder_trigger * 2
 
-        if item["days_remaining"] is None:
+        # Physical stock thresholds must take precedence over demand history.
+        # Otherwise a product with zero recent sales can be labelled
+        # "NO CONSUMPTION" and excluded from the health score even when it is
+        # critically low or completely out of stock.
+        current_stock = float(item["current_stock"] or 0)
+        reorder_level = float(product.reorder_level or 0) if product else 0
+
+        if current_stock <= 0:
+            status = "REORDER NOW"
+        elif reorder_level > 0 and current_stock <= reorder_level:
+            status = "REORDER NOW"
+        elif item["days_remaining"] is None:
             status = "NO CONSUMPTION"
         elif item["days_remaining"] <= reorder_trigger:
             status = "REORDER NOW"
