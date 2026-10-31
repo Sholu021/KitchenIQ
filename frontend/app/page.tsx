@@ -53,7 +53,7 @@ export default function Home() {
       const res = await apiClient.post('/auth/demo');
       const { role, organization_id, user_name } = res.data;
       login(role, organization_id, user_name);
-      router.push('/dashboard');
+      // The auth-state effect below performs the single post-login redirect.
     } catch (err: any) {
       const detail = err.response?.data?.detail;
       alert(detail || 'Failed to launch demo mode. Please try again.');
@@ -64,7 +64,7 @@ export default function Home() {
 
   useEffect(() => {
     if (isHydrated && isAuthenticated) {
-      router.push('/dashboard');
+      router.replace('/dashboard');
     }
   }, [isAuthenticated, isHydrated, router]);
 
