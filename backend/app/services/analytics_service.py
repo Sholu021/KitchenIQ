@@ -7,6 +7,7 @@ from app.models.models import (
     Batch,
     Sale,
     SaleItem,
+    Recipe,
     RecipeIngredient,
     InventoryTransaction,
 )
@@ -352,7 +353,8 @@ def demand_forecast(
                func.coalesce(
                    func.sum(
                        SaleItem.quantity *
-                       RecipeIngredient.quantity_required
+                       RecipeIngredient.quantity_required /
+                       func.nullif(Recipe.yield_quantity, 0)
                     ),
                     0,
                 )
@@ -365,6 +367,10 @@ def demand_forecast(
                 RecipeIngredient,
                 RecipeIngredient.recipe_id == SaleItem.recipe_id,
             )
+            .join(
+                Recipe,
+                Recipe.id == SaleItem.recipe_id,
+            )
             .filter(
                 Sale.organization_id == organization_id,
                 RecipeIngredient.product_id == product.id,
@@ -373,11 +379,12 @@ def demand_forecast(
             .scalar()
         )
 
-        avg_daily_usage = round(total_used / 30, 2)
+        raw_avg_daily_usage = float(total_used or 0) / 30
+        avg_daily_usage = round(raw_avg_daily_usage, 2)
 
-        if avg_daily_usage > 0:
+        if raw_avg_daily_usage > 0:
             days_remaining = round(
-                product.current_stock / avg_daily_usage,
+                product.current_stock / raw_avg_daily_usage,
                 1,
             )
 
@@ -385,7 +392,7 @@ def demand_forecast(
             safety_stock = 7       # safety buffer
 
             target_stock = (
-                avg_daily_usage *
+                raw_avg_daily_usage *
                 (lead_time + safety_stock)
             )
 
@@ -408,9 +415,9 @@ def demand_forecast(
                 "product_name": product.name,
                 "current_stock": float(product.current_stock),
                 "avg_daily_usage": avg_daily_usage,
-                "forecast_7_days": round(avg_daily_usage * 7, 2),
-                "forecast_15_days": round(avg_daily_usage * 15, 2),
-                "forecast_30_days": round(avg_daily_usage * 30, 2),
+                "forecast_7_days": round(raw_avg_daily_usage * 7, 2),
+                "forecast_15_days": round(raw_avg_daily_usage * 15, 2),
+                "forecast_30_days": round(raw_avg_daily_usage * 30, 2),
                 "days_remaining": days_remaining,
                 "recommended_order": recommended_order,
                 "lead_time_days": product.lead_time_days,
