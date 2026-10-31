@@ -10,7 +10,6 @@ from app.models.models import (
     RecipeIngredient,
     InventoryTransaction,
 )
-from app.services.notification_service import create_notification
 
 def calculate_inventory_value(
     db: Session,
@@ -266,15 +265,6 @@ def get_low_stock_products(
                 "unit": product.unit,
             }
         )
-    if result:
-        create_notification(
-            db=db,
-            organization_id=organization_id,
-            title="Low Stock Alert",
-            message=f"{len(result)} product(s) are below the reorder level.",
-            notification_type="WARNING",
-        )
-
     return result
 
 def get_expiring_batches(
@@ -316,14 +306,6 @@ def get_expiring_batches(
                 "remaining_quantity": batch.remaining_quantity,
                 "unit": batch.product.unit,
             }
-        )
-    if batches:
-        create_notification(
-            db=db,
-            organization_id=organization_id,
-            title="Expiring Inventory",
-            message=f"{len(batches)} batch(es) are approaching expiry.",
-            notification_type="WARNING",
         )
     return results
 
