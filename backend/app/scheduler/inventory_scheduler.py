@@ -30,7 +30,7 @@ def daily_inventory_scan():
                     db=db,
                     organization_id=org.id,
                     title="Low Stock Alert",
-                    message=f"{len(low_stock)} product(s) are below the reorder level.",
+                    message="One or more products are below the reorder level. Review current stock levels.",
                     notification_type="WARNING",
                 )
 
@@ -43,7 +43,7 @@ def daily_inventory_scan():
                     db=db,
                     organization_id=org.id,
                     title="Expiring Inventory",
-                    message=f"{len(expiring)} batch(es) are approaching expiry.",
+                    message="One or more inventory batches are approaching expiry. Review expiry dates.",
                     notification_type="WARNING",
                 )
 
