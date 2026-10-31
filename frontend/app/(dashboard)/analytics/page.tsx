@@ -89,6 +89,12 @@ export default function AnalyticsPage() {
   const totalWastage = wastage_trend.reduce((acc: number, item: any) => acc + item.amount, 0);
   const periodLabel = days === 'all' ? 'All Time' : `${days}d`;
   const trendLabel = trend_granularity === 'weekly' ? 'Weekly' : 'Daily';
+  const inventoryVelocityByUnit = inventory_velocity.reduce((groups: Record<string, any[]>, item: any) => {
+    const unit = item.unit || 'unit';
+    if (!groups[unit]) groups[unit] = [];
+    groups[unit].push(item);
+    return groups;
+  }, {} as Record<string, any[]>);
 
   return (
     <div className="space-y-8">
@@ -281,13 +287,13 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        {/* Stock Flow Velocity Double Bar */}
+        {/* Stock Flow Velocity grouped by native measurement unit */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6 lg:col-span-2">
           <div>
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <Calendar size={18} className="text-emerald-500" /> Inventory Flow Velocity ({periodLabel})
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5 font-medium">Comparison of total quantities received (Stock In) vs consumed (Stock Out) by ingredient.</p>
+            <p className="text-xs text-slate-500 mt-0.5 font-medium">Stock received and consumed, grouped by measurement unit so unlike quantities are never compared on the same scale.</p>
           </div>
 
           {inventory_velocity.length === 0 ? (
@@ -295,21 +301,29 @@ export default function AnalyticsPage() {
               No stock transaction records found.
             </div>
           ) : (
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height={256} minWidth={0}>
-                <BarChart data={inventory_velocity} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                  <CartesianGrid stroke="#f1f5f9" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="product_name" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    contentStyle={{ background: '#ffffff', borderColor: '#e5e7eb', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}
-                    itemStyle={{ color: '#1e293b', fontWeight: 'bold', fontSize: '12px' }}
-                  />
-                  <Legend iconSize={10} wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b', paddingTop: '10px' }} />
-                  <Bar dataKey="stock_in" name="Stock In" fill="#3b82f6" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="stock_out" name="Stock Out" fill="#f43f5e" radius={[3, 3, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              {(Object.entries(inventoryVelocityByUnit) as [string, any[]][]).map(([unit, items]) => (
+                <div key={unit} className="min-w-0">
+                  <h4 className="text-sm font-bold text-slate-700 mb-2">Quantities ({unit})</h4>
+                  <div className="h-64 w-full">
+                    <ResponsiveContainer width="100%" height={256} minWidth={0}>
+                      <BarChart data={items} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                        <CartesianGrid stroke="#f1f5f9" strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="product_name" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} interval={0} />
+                        <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
+                        <Tooltip
+                          contentStyle={{ background: '#ffffff', borderColor: '#e5e7eb', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}
+                          itemStyle={{ color: '#1e293b', fontWeight: 'bold', fontSize: '12px' }}
+                          formatter={(value: any) => [`${Number(value).toLocaleString()} ${unit}`]}
+                        />
+                        <Legend iconSize={10} wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b', paddingTop: '10px' }} />
+                        <Bar dataKey="stock_in" name="Stock In" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+                        <Bar dataKey="stock_out" name="Stock Out" fill="#f43f5e" radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
