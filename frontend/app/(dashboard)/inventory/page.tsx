@@ -37,7 +37,6 @@ export default function InventoryPage() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
-  const inventoryHealth = inventoryHealthData?.health_score;
 
   // Drawer states
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
@@ -114,6 +113,7 @@ export default function InventoryPage() {
       return res.data;
     },
   });
+  const inventoryHealth = inventoryHealthData?.health_score;
   
   const filteredLedgerTransactions =
     ledgerData?.transactions?.filter((transaction: any) => {
