@@ -271,6 +271,8 @@ def get_low_stock_items(
         db.query(Product)
         .filter(
             Product.organization_id == organization_id,
+            Product.is_finished_product.is_(False),
+            Product.reorder_level > 0,
             Product.current_stock <= Product.reorder_level,
         )
         .order_by(Product.current_stock.asc())
