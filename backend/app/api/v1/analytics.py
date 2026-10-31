@@ -213,6 +213,7 @@ def get_analytics_dashboard(
 
     velocity_data = db.query(
         Product.name,
+        Product.unit,
         func.coalesce(
             func.sum(
                 case(
@@ -244,7 +245,8 @@ def get_analytics_dashboard(
         Product.organization_id == org_id,
         InventoryTransaction.created_at >= transaction_start
     ).group_by(
-        Product.name
+        Product.name,
+        Product.unit
     ).order_by(
         Product.name.asc()
     ).limit(10).all()
@@ -252,8 +254,9 @@ def get_analytics_dashboard(
     inventory_velocity = [
         {
             "product_name": item[0],
-            "stock_in": float(item[1]),
-            "stock_out": float(item[2])
+            "unit": item[1],
+            "stock_in": float(item[2]),
+            "stock_out": float(item[3])
         }
         for item in velocity_data
     ]
