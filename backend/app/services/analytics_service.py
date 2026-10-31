@@ -23,16 +23,55 @@ def calculate_inventory_value(
         .all()
     )
 
+    # Value batch-tracked stock at receipt cost, but never count more batch
+    # quantity than the product ledger reports. Consume batches in FEFO order
+    # so an inconsistent batch ledger cannot inflate inventory valuation.
+    batches = (
+        db.query(Batch)
+        .filter(
+            Batch.organization_id == organization_id,
+            Batch.remaining_quantity > 0,
+        )
+        .order_by(
+            Batch.product_id.asc(),
+            Batch.expiry_date.is_(None),
+            Batch.expiry_date.asc(),
+            Batch.received_at.asc(),
+            Batch.id.asc(),
+        )
+        .all()
+    )
+    batches_by_product = {}
+    for batch in batches:
+        batches_by_product.setdefault(batch.product_id, []).append(batch)
+
     inventory_value = 0.0
     raw_material_value = 0.0
     finished_goods_value = 0.0
     total_units = 0.0
+    active_batches = 0
 
     for product in products:
-        stock = float(product.current_stock or 0)
+        stock = max(float(product.current_stock or 0), 0.0)
         cost = float(product.cost_price or 0)
+        remaining_stock = stock
+        batch_value = 0.0
 
-        value = stock * cost
+        for batch in batches_by_product.get(product.id, []):
+            if remaining_stock <= 0:
+                break
+            valued_quantity = min(
+                max(float(batch.remaining_quantity or 0), 0.0),
+                remaining_stock,
+            )
+            if valued_quantity <= 0:
+                continue
+            batch_value += valued_quantity * float(batch.purchase_price or 0)
+            remaining_stock -= valued_quantity
+            active_batches += 1
+
+        # Any stock without a corresponding batch is legacy/manual stock.
+        value = batch_value + remaining_stock * cost
 
         inventory_value += value
         total_units += stock
@@ -41,15 +80,6 @@ def calculate_inventory_value(
             finished_goods_value += value
         else:
             raw_material_value += value
-
-    active_batches = (
-        db.query(Batch)
-        .filter(
-            Batch.organization_id == organization_id,
-            Batch.remaining_quantity > 0,
-        )
-        .count()
-    )
 
     return {
         "inventory_value": round(inventory_value, 2),
