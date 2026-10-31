@@ -175,3 +175,40 @@ def test_register_creates_trial_organization(client, db):
     if trial_ends_at.tzinfo is None:
         trial_ends_at = trial_ends_at.replace(tzinfo=timezone.utc)
     assert trial_ends_at > datetime.now(timezone.utc)
+
+
+
+def test_demo_account_is_recognized_for_demo_entitlements(db, monkeypatch):
+    from app.api.v1.ai import is_demo_account
+
+    monkeypatch.setenv("DEMO_EMAIL", "owner@kitcheniq.com")
+    monkeypatch.setenv("DEMO_ORGANIZATION_NAME", "KitchenIQ Demo")
+
+    demo_org = Organization(name="KitchenIQ Demo Café", subscription_tier="Free")
+    db.add(demo_org)
+    db.flush()
+    demo_user = User(
+        organization_id=demo_org.id,
+        full_name="Demo Owner",
+        email="owner@kitcheniq.com",
+        hashed_password=get_password_hash("unused"),
+        role="Owner",
+        is_active=True,
+    )
+
+    other_org = Organization(name="Another Restaurant", subscription_tier="Free")
+    db.add(other_org)
+    db.flush()
+    other_user = User(
+        organization_id=other_org.id,
+        full_name="Other Owner",
+        email="other@example.com",
+        hashed_password=get_password_hash("unused"),
+        role="Owner",
+        is_active=True,
+    )
+
+    assert is_demo_account(demo_user, demo_org) is True
+    assert is_demo_account(other_user, other_org) is False
+    assert is_demo_account(demo_user, other_org) is False
+    assert demo_org.subscription_tier == "Free"
