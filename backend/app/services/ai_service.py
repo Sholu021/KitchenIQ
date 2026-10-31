@@ -35,7 +35,8 @@ def serialize_kitchen_state(db: Session, organization_id: int) -> Dict[str, Any]
             "current_stock": p.current_stock,
             "reorder_level": p.reorder_level,
             "cost_price": p.cost_price,
-            "selling_price": p.selling_price
+            "selling_price": p.selling_price,
+            "is_finished_product": bool(p.is_finished_product)
         })
 
     # 2. Batches (expiring / active)
@@ -46,7 +47,9 @@ def serialize_kitchen_state(db: Session, organization_id: int) -> Dict[str, Any]
     batches_data = []
     for b in batches:
         batches_data.append({
+            "product_id": b.product_id,
             "product_name": b.product.name if b.product else "Unknown",
+            "purchase_price": float(b.purchase_price or 0),
             "batch_number": b.batch_number,
             "expiry_date": b.expiry_date.isoformat() if b.expiry_date else None,
             "quantity": b.remaining_quantity
@@ -85,8 +88,8 @@ def generate_mock_insights(db: Session, organization_id: int) -> Dict[str, Any]:
     in_30_days = today + timedelta(days=30)
 
     # Calculate metrics
-    low_stock = [p for p in products if p["current_stock"] <= p["reorder_level"]]
-    out_of_stock = [p for p in products if p["current_stock"] == 0]
+    low_stock = [p for p in products if not p["is_finished_product"] and p["reorder_level"] > 0 and p["current_stock"] <= p["reorder_level"]]
+    out_of_stock = [p for p in products if not p["is_finished_product"] and p["current_stock"] <= 0]
     
     expired_batches = []
     expiring_soon_batches = []  # < 7 days
@@ -106,21 +109,11 @@ def generate_mock_insights(db: Session, organization_id: int) -> Dict[str, Any]:
     # 1. Health Summary
 
     expired_waste_value = sum(
-        b["quantity"]
-        * next(
-            (p["cost_price"] for p in products if p["name"] == b["product_name"]),
-            0.0,
-        )
-        for b in expired_batches
+b["quantity"] * b["purchase_price"] for b in expired_batches
      )
 
     expiring_soon_waste_value = sum(
-        b["quantity"]
-        * next(
-            (p["cost_price"] for p in products if p["name"] == b["product_name"]),
-            0.0,
-        )
-        for b in expiring_soon_batches
+b["quantity"] * b["purchase_price"] for b in expiring_soon_batches
     )
 
     total_waste_exposure = (
@@ -230,7 +223,7 @@ def generate_mock_insights(db: Session, organization_id: int) -> Dict[str, Any]:
             pass
 
     for p in products:
-        if p["current_stock"] > p["reorder_level"] * 3 and p["current_stock"] > 20:
+        if not p["is_finished_product"] and p["current_stock"] > p["reorder_level"] * 3 and p["current_stock"] > 20:
             dead_stock.append({
                 "product_name": p["name"],
                 "current_stock": p["current_stock"],
@@ -328,8 +321,8 @@ def ask_ai_copilot(db: Session, organization_id: int, question: str) -> str:
         products = state["products"]
         batches = state["active_batches"]
         
-        low_stock_names = [p["name"] for p in products if p["current_stock"] <= p["reorder_level"]]
-        out_of_stock_names = [p["name"] for p in products if p["current_stock"] == 0]
+        low_stock_names = [p["name"] for p in products if not p["is_finished_product"] and p["reorder_level"] > 0 and p["current_stock"] <= p["reorder_level"]]
+        out_of_stock_names = [p["name"] for p in products if not p["is_finished_product"] and p["current_stock"] <= 0]
         
         today = date.today()
         expiring_batches = []
@@ -363,11 +356,13 @@ def ask_ai_copilot(db: Session, organization_id: int, question: str) -> str:
         ):
             out_items = [
                 p for p in products
-                if p["current_stock"] <= 0
+                if not p["is_finished_product"] and p["current_stock"] <= 0
             ]
             low_items = [
                 p for p in products
-                if p["current_stock"] > 0
+                if not p["is_finished_product"]
+                and p["reorder_level"] > 0
+                and p["current_stock"] > 0
                 and p["current_stock"] <= p["reorder_level"]
             ]
 
