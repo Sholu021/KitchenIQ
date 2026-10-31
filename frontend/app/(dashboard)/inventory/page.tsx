@@ -37,7 +37,7 @@ export default function InventoryPage() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
-  const [inventoryHealth] = useState(100);
+  const inventoryHealth = inventoryHealthData?.health_score;
 
   // Drawer states
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
@@ -405,19 +405,20 @@ export default function InventoryPage() {
   };
 
   // 1. Calculate values for summary cards dynamically
-  const totalIngredientsCount = products.length;
+  const ingredientProducts = products.filter((p: any) => !p.is_finished_product);
+  const totalIngredientsCount = ingredientProducts.length;
 
   const totalValuation = products.reduce(
     (acc: number, p: any) => acc + (p.current_stock * p.cost_price),
     0
   );
   
-  const lowStockCount = products.filter(
-    (p: any) => p.current_stock > 0 && p.current_stock <= p.reorder_level
+  const lowStockCount = ingredientProducts.filter(
+    (p: any) => p.current_stock > 0 && p.reorder_level > 0 && p.current_stock <= p.reorder_level
   ).length;
 
-  const outOfStockCount = products.filter(
-    (p: any) => p.current_stock === 0
+  const outOfStockCount = ingredientProducts.filter(
+    (p: any) => p.current_stock <= 0
   ).length;
 
   const expiringCount =
@@ -808,41 +809,43 @@ export default function InventoryPage() {
           <div className="flex items-center gap-2 mt-2">
             <div
               className={`w-8 h-8 rounded-full border-4 ${
-                (inventoryHealthData?.health_score ?? inventoryHealth) >= 80
+                (inventoryHealth ?? -1) >= 80
                   ? "border-emerald-500"
-                  : (inventoryHealthData?.health_score ?? inventoryHealth) >= 60
+                  : (inventoryHealth ?? -1) >= 60
                   ? "border-amber-500"
                   : "border-rose-500"
               }`}
             ></div>
             <span
               className={`text-xl font-extrabold ${
-                (inventoryHealthData?.health_score ?? inventoryHealth) >= 80
+                (inventoryHealth ?? -1) >= 80
                   ? "text-emerald-600"
-                  : (inventoryHealthData?.health_score ?? inventoryHealth) >= 60
+                  : (inventoryHealth ?? -1) >= 60
                   ? "text-amber-600"
                   : "text-rose-600"
               }`}
             >
               {inventoryHealthLoading
                 ? "..."
-                : `${inventoryHealthData?.health_score ?? inventoryHealth}%`}
+                : `${inventoryHealth == null ? "—" : `${inventoryHealth}%`}`}
             </span>
           </div>
           <span
             className={`text-[9px] font-bold rounded px-1.5 py-0.5 mt-2 self-start ${
-              (inventoryHealthData?.health_score ?? inventoryHealth) >= 80
+              (inventoryHealth ?? -1) >= 80
                 ? "text-emerald-600 bg-emerald-50 border border-emerald-100/50"
-                : (inventoryHealthData?.health_score ?? inventoryHealth) >= 60
+                : (inventoryHealth ?? -1) >= 60
                 ? "text-amber-600 bg-amber-50 border border-amber-100/50"
                 : "text-rose-600 bg-rose-50 border border-rose-100/50"
             }`}
           >
             {inventoryHealthLoading
               ? "Calculating"
-              : (inventoryHealthData?.health_score ?? inventoryHealth) >= 80
+              : inventoryHealth == null
+              ? "Unavailable"
+              : inventoryHealth >= 80
               ? "Healthy"
-              : (inventoryHealthData?.health_score ?? inventoryHealth) >= 60
+              : inventoryHealth >= 60
               ? "Needs Attention"
               : "Critical"}
           </span> 
