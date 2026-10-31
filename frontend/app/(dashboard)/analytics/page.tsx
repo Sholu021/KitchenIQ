@@ -302,7 +302,7 @@ export default function AnalyticsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              {Object.entries(inventoryVelocityByUnit).map(([unit, items]: [string, any[]]) => (
+              {(Object.entries(inventoryVelocityByUnit) as [string, any[]][]).map(([unit, items]) => (
                 <div key={unit} className="min-w-0">
                   <h4 className="text-sm font-bold text-slate-700 mb-2">Quantities ({unit})</h4>
                   <div className="h-64 w-full">
