@@ -100,6 +100,13 @@ def generate_ai_insights(
             "message": f"{supplier['supplier_name']} has supplied the highest purchase value."
         })
 
+    if not insights:
+        insights.append({
+            "type": "success",
+            "title": "Inventory Stable",
+            "message": "No reorder, expiry, or dead-stock risks were detected in the current inventory."
+        })
+
     return {
         "count": len(insights),
         "insights": insights,
