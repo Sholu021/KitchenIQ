@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 import pytest
 
 from app.models.models import Batch, Organization, Product
@@ -74,7 +76,6 @@ def test_inventory_value_uses_batch_cost_and_legacy_product_cost(db):
     assert result["finished_goods_value"] == pytest.approx(30)
     assert result["total_units"] == pytest.approx(23)
     assert result["active_batches"] == 2
-
 
 
 def test_inventory_value_caps_batches_at_product_ledger_stock(db):
