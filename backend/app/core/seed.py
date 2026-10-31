@@ -390,10 +390,9 @@ def seed_db(db: Session):
         sale_items = []
 
         for recipe, qty in items.items():
-            unit_price = sum(
-                ing.product.selling_price * ing.quantity_required
-                for ing in recipe.ingredients
-            )
+            # Keep seeded historical revenue consistent with live sales:
+            # the finished menu product is the source of truth for menu price.
+            unit_price = recipe.finished_product.selling_price
             unit_cost = sum(
                 ing.product.cost_price * ing.quantity_required
                 for ing in recipe.ingredients
