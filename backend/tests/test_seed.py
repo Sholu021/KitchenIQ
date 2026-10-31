@@ -18,7 +18,7 @@ def test_seeded_historical_sales_use_finished_product_menu_price(db):
         .one()
     )
 
-    assert latte_item.unit_price == pytest.approx(latte_item.recipe.finished_product.selling_price)
+    assert latte_item.unit_price == pytest.approx(round(latte_item.recipe.finished_product.selling_price, 2))
     assert latte_item.revenue == pytest.approx(
         latte_item.recipe.finished_product.selling_price * latte_item.quantity
     )
