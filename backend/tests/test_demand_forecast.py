@@ -77,5 +77,6 @@ def test_demand_forecast_normalizes_ingredient_usage_by_recipe_yield(db):
     item = next(row for row in forecast if row["product_id"] == ingredient.id)
 
     # Two portions of a four-portion recipe consume 4g, not 16g.
-    assert item["avg_daily_usage"] == pytest.approx(4.0 / 30.0)
+    # The API intentionally rounds the displayed daily usage to 2 decimals.
+    assert item["avg_daily_usage"] == pytest.approx(round(4.0 / 30.0, 2))
     assert item["forecast_30_days"] == pytest.approx(4.0)
