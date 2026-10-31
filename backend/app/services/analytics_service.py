@@ -24,6 +24,31 @@ def calculate_inventory_value(
         .all()
     )
 
+    # Batch-tracked stock is valued at its actual receipt cost (the same
+    # basis used by FEFO COGS, wastage, aging, and expiry-risk reports).
+    # Preserve support for legacy/manual stock that has no batch record by
+    # valuing only the unbatched remainder at Product.cost_price.
+    batch_totals = (
+        db.query(
+            Batch.product_id,
+            func.coalesce(func.sum(Batch.remaining_quantity), 0.0),
+            func.coalesce(
+                func.sum(Batch.remaining_quantity * Batch.purchase_price),
+                0.0,
+            ),
+        )
+        .filter(
+            Batch.organization_id == organization_id,
+            Batch.remaining_quantity > 0,
+        )
+        .group_by(Batch.product_id)
+        .all()
+    )
+    batch_by_product = {
+        product_id: (float(quantity or 0), float(value or 0))
+        for product_id, quantity, value in batch_totals
+    }
+
     inventory_value = 0.0
     raw_material_value = 0.0
     finished_goods_value = 0.0
@@ -32,8 +57,9 @@ def calculate_inventory_value(
     for product in products:
         stock = float(product.current_stock or 0)
         cost = float(product.cost_price or 0)
-
-        value = stock * cost
+        batch_quantity, batch_value = batch_by_product.get(product.id, (0.0, 0.0))
+        legacy_quantity = max(stock - batch_quantity, 0.0)
+        value = batch_value + legacy_quantity * cost
 
         inventory_value += value
         total_units += stock
