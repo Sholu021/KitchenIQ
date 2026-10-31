@@ -7,6 +7,7 @@ from app.models.models import (
     Batch,
     Sale,
     SaleItem,
+    Recipe,
     RecipeIngredient,
     InventoryTransaction,
 )
@@ -352,7 +353,8 @@ def demand_forecast(
                func.coalesce(
                    func.sum(
                        SaleItem.quantity *
-                       RecipeIngredient.quantity_required
+                       RecipeIngredient.quantity_required /
+                       func.nullif(Recipe.yield_quantity, 0)
                     ),
                     0,
                 )
@@ -364,6 +366,10 @@ def demand_forecast(
             .join(
                 RecipeIngredient,
                 RecipeIngredient.recipe_id == SaleItem.recipe_id,
+            )
+            .join(
+                Recipe,
+                Recipe.id == SaleItem.recipe_id,
             )
             .filter(
                 Sale.organization_id == organization_id,
