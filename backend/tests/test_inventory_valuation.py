@@ -74,3 +74,51 @@ def test_inventory_value_uses_batch_cost_and_legacy_product_cost(db):
     assert result["finished_goods_value"] == pytest.approx(30)
     assert result["total_units"] == pytest.approx(23)
     assert result["active_batches"] == 2
+
+
+
+def test_inventory_value_caps_batches_at_product_ledger_stock(db):
+    organization = Organization(name="Batch Overstatement Test")
+    db.add(organization)
+    db.flush()
+
+    product = Product(
+        organization_id=organization.id,
+        name="Milk",
+        unit="ml",
+        current_stock=5,
+        cost_price=10,
+        is_finished_product=False,
+    )
+    db.add(product)
+    db.flush()
+
+    # FEFO batch is valued first; later-expiring excess is excluded.
+    db.add_all([
+        Batch(
+            organization_id=organization.id,
+            product_id=product.id,
+            batch_number="LATER",
+            expiry_date=date.today() + timedelta(days=10),
+            quantity=5,
+            remaining_quantity=5,
+            purchase_price=8,
+        ),
+        Batch(
+            organization_id=organization.id,
+            product_id=product.id,
+            batch_number="SOONER",
+            expiry_date=date.today() + timedelta(days=2),
+            quantity=5,
+            remaining_quantity=5,
+            purchase_price=4,
+        ),
+    ])
+    db.commit()
+
+    result = calculate_inventory_value(db, organization.id)
+
+    assert result["inventory_value"] == pytest.approx(20)
+    assert result["raw_material_value"] == pytest.approx(20)
+    assert result["total_units"] == pytest.approx(5)
+    assert result["active_batches"] == 1
