@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.services.audit_service import AuditService
 from app.core.deps import get_db, get_current_user, require_manager, require_staff
-from app.models.models import Product, Category, User, AuditLog, Organization
+from app.models.models import (\n    Product, Category, User, AuditLog, Organization,\n    InventoryTransaction, PurchaseOrderItem, PurchaseOrder, Batch,\n    RecipeIngredient, Recipe, WastageLog,\n)
 from app.api.v1.ai import is_demo_account
 from app.schemas.schemas import (
     ProductCreate,
@@ -244,8 +244,55 @@ def delete_product(
             detail="Product not found"
         )
 
-    product_id_for_audit = product.id
+    # Never cascade-delete stock, purchasing, recipe, or wastage history.
+    references = []
+    if product.current_stock != 0:
+        references.append("current stock")
 
+    checks = [
+        (db.query(InventoryTransaction.id).filter(
+            InventoryTransaction.product_id == product_id,
+            InventoryTransaction.organization_id == current_user.organization_id
+        ).first(), "inventory transactions"),
+        (db.query(PurchaseOrderItem.id).join(
+            PurchaseOrder, PurchaseOrder.id == PurchaseOrderItem.purchase_order_id
+        ).filter(
+            PurchaseOrderItem.product_id == product_id,
+            PurchaseOrder.organization_id == current_user.organization_id
+        ).first(), "purchase order history"),
+        (db.query(Batch.id).filter(
+            Batch.product_id == product_id,
+            Batch.organization_id == current_user.organization_id
+        ).first(), "inventory batches"),
+        (db.query(RecipeIngredient.id).join(
+            Recipe, Recipe.id == RecipeIngredient.recipe_id
+        ).filter(
+            RecipeIngredient.product_id == product_id,
+            Recipe.organization_id == current_user.organization_id
+        ).first(), "recipe ingredients"),
+        (db.query(Recipe.id).filter(
+            Recipe.finished_product_id == product_id,
+            Recipe.organization_id == current_user.organization_id
+        ).first(), "finished-product recipes"),
+        (db.query(WastageLog.id).filter(
+            WastageLog.product_id == product_id,
+            WastageLog.organization_id == current_user.organization_id
+        ).first(), "wastage records"),
+    ]
+    references.extend(label for record, label in checks if record)
+
+    if references:
+        details = ", ".join(references)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f'Cannot delete "{product.name}" because it is linked to {details}. '
+                "Historical and inventory records have been preserved. "
+                "Use the product as inactive instead of deleting it."
+            )
+        )
+
+    product_id_for_audit = product.id
     db.delete(product)
 
     AuditService.log(
@@ -258,5 +305,4 @@ def delete_product(
     )
 
     db.commit()
-
     return
