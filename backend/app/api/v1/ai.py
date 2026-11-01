@@ -50,9 +50,11 @@ def get_insights(
     # The public demo workspace gets the Pro demonstration experience without
     # changing the organization's stored subscription or billing state.
     if (
-        organization
-        and organization.subscription_tier == "Free"
-        and not is_demo_account(current_user, organization)
+        organization is None
+        or (
+            organization.subscription_tier == "Free"
+            and not is_demo_account(current_user, organization)
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -75,9 +77,11 @@ def chat_copilot(
         .first()
     )
     if (
-        organization
-        and organization.subscription_tier == "Free"
-        and not is_demo_account(current_user, organization)
+        organization is None
+        or (
+            organization.subscription_tier == "Free"
+            and not is_demo_account(current_user, organization)
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
