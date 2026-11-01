@@ -5,6 +5,7 @@ from sqlalchemy import or_
 from app.services.audit_service import AuditService
 from app.core.deps import get_db, get_current_user, require_manager, require_staff
 from app.models.models import Product, Category, User, AuditLog, Organization
+from app.api.v1.ai import is_demo_account
 from app.schemas.schemas import (
     ProductCreate,
     ProductUpdate,
@@ -67,7 +68,7 @@ def create_product(
 ):
     # Check subscription limits
     org = db.query(Organization).filter(Organization.id == current_user.organization_id).first()
-    if org and org.subscription_tier == "Free":
+    if org and org.subscription_tier == "Free" and not is_demo_account(current_user, org):
         products_count = db.query(Product).filter(Product.organization_id == current_user.organization_id).count()
         if products_count >= 3:
             raise HTTPException(
