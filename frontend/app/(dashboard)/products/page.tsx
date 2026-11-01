@@ -116,6 +116,10 @@ export default function ProductsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+      window.alert('Product deleted successfully.');
+    },
+    onError: (err: any) => {
+      window.alert(err.response?.data?.detail || 'Failed to delete product. Please try again.');
     }
   });
 
