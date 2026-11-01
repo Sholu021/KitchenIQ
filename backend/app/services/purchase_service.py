@@ -195,19 +195,13 @@ def update_po_status(
         po.status = "SENT"
         po.sent_date = datetime.now(UTC)
 
-    # -----------------------------
-    # SENT -> RECEIVED
-    # -----------------------------
-    elif po.status.upper() == "SENT" and new_status == "RECEIVED":
-        po.status = "RECEIVED"
-        po.received_date = datetime.now(UTC)
-
-        create_notification(
-            db=db,
-            organization_id=organization_id,
-            title="Purchase Order Received",
-            message=f"{po.po_number} has been fully received.",
-            notification_type="SUCCESS",
+    # A PO can only become RECEIVED through the receive endpoint, which
+    # updates product stock, batches, inventory transactions, and line-level
+    # received quantities atomically. A status-only update must never bypass it.
+    elif current_status in ["SENT", "PARTIALLY_RECEIVED"] and new_status == "RECEIVED":
+        raise HTTPException(
+            status_code=400,
+            detail="Use the purchase order receive endpoint to record received stock.",
         )
     # -----------------------------
     # SENT -> CANCELLED
