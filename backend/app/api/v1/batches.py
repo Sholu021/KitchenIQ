@@ -154,19 +154,24 @@ def get_inventory_value(
             Batch.organization_id == org_id,
             Batch.remaining_quantity > 0,
         )
-        .order_by(
-            Batch.product_id.asc(),
-            Batch.expiry_date.is_(None),
-            Batch.expiry_date.asc(),
-            Batch.received_at.asc(),
-            Batch.id.asc(),
-        )
         .all()
     )
 
     batches_by_product = {}
     for batch in batches:
         batches_by_product.setdefault(batch.product_id, []).append(batch)
+
+    # Sort in Python so NULL expiry dates are consistently last across
+    # SQLite tests and PostgreSQL production.
+    for product_batches in batches_by_product.values():
+        product_batches.sort(
+            key=lambda batch: (
+                batch.expiry_date is None,
+                batch.expiry_date or date.max,
+                batch.received_at,
+                batch.id,
+            )
+        )
 
     total_value = 0.0
     product_summary = []
