@@ -156,7 +156,8 @@ def get_inventory_value(
         )
         .order_by(
             Batch.product_id.asc(),
-            Batch.expiry_date.asc().nullslast(),
+            Batch.expiry_date.is_(None),
+            Batch.expiry_date.asc(),
             Batch.received_at.asc(),
             Batch.id.asc(),
         )
