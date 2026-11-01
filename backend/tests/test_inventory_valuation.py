@@ -232,3 +232,58 @@ def test_stock_out_does_not_consume_expired_stock_as_legacy(db):
     assert db.query(InventoryTransaction).filter(
         InventoryTransaction.product_id == product.id
     ).count() == 0
+
+
+def test_batch_value_includes_legacy_stock_and_caps_batch_overstatement(db):
+    from types import SimpleNamespace
+
+    from app.api.v1.batches import get_inventory_value
+
+    organization = Organization(name="Batch Endpoint Valuation Test")
+    db.add(organization)
+    db.flush()
+
+    product = Product(
+        organization_id=organization.id,
+        name="Rice",
+        unit="kg",
+        current_stock=10,
+        cost_price=6,
+        is_finished_product=False,
+    )
+    db.add(product)
+    db.flush()
+    db.add_all([
+        Batch(
+            organization_id=organization.id,
+            product_id=product.id,
+            batch_number="RICE-1",
+            expiry_date=date.today() + timedelta(days=5),
+            quantity=8,
+            remaining_quantity=8,
+            purchase_price=4,
+        ),
+        Batch(
+            organization_id=organization.id,
+            product_id=product.id,
+            batch_number="RICE-2",
+            expiry_date=date.today() + timedelta(days=10),
+            quantity=8,
+            remaining_quantity=8,
+            purchase_price=100,
+        ),
+    ])
+    db.commit()
+
+    result = get_inventory_value(
+        db,
+        SimpleNamespace(organization_id=organization.id),
+    )
+
+    # Eight units are valued at the first batch cost; two unbatched units
+    # use product cost. The excess second batch must not inflate valuation.
+    assert result["total_inventory_value"] == pytest.approx(44)
+    assert result["total_products"] == 1
+    assert result["products"][0]["total_quantity"] == pytest.approx(10)
+    assert result["products"][0]["inventory_value"] == pytest.approx(44)
+    assert result["products"][0]["batch_count"] == 1
