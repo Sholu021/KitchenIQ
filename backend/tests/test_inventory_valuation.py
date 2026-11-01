@@ -243,7 +243,7 @@ def test_batch_value_includes_legacy_stock_and_caps_batch_overstatement(db):
     db.add(organization)
     db.flush()
 
-    product = Product(
+    legacy_product = Product(
         organization_id=organization.id,
         name="Rice",
         unit="kg",
@@ -251,13 +251,33 @@ def test_batch_value_includes_legacy_stock_and_caps_batch_overstatement(db):
         cost_price=6,
         is_finished_product=False,
     )
-    db.add(product)
+    overstocked_batches_product = Product(
+        organization_id=organization.id,
+        name="Flour",
+        unit="kg",
+        current_stock=10,
+        cost_price=6,
+        is_finished_product=False,
+    )
+    db.add_all([legacy_product, overstocked_batches_product])
     db.flush()
     db.add_all([
+        # Eight batch-tracked units plus two legacy units.
         Batch(
             organization_id=organization.id,
-            product_id=product.id,
+            product_id=legacy_product.id,
             batch_number="RICE-1",
+            expiry_date=date.today() + timedelta(days=5),
+            quantity=8,
+            remaining_quantity=8,
+            purchase_price=4,
+        ),
+        # Sixteen batch units against ten product-ledger units: only the
+        # earliest-expiring eight plus two from the next batch are valued.
+        Batch(
+            organization_id=organization.id,
+            product_id=overstocked_batches_product.id,
+            batch_number="FLOUR-1",
             expiry_date=date.today() + timedelta(days=5),
             quantity=8,
             remaining_quantity=8,
@@ -265,8 +285,8 @@ def test_batch_value_includes_legacy_stock_and_caps_batch_overstatement(db):
         ),
         Batch(
             organization_id=organization.id,
-            product_id=product.id,
-            batch_number="RICE-2",
+            product_id=overstocked_batches_product.id,
+            batch_number="FLOUR-2",
             expiry_date=date.today() + timedelta(days=10),
             quantity=8,
             remaining_quantity=8,
@@ -280,10 +300,12 @@ def test_batch_value_includes_legacy_stock_and_caps_batch_overstatement(db):
         SimpleNamespace(organization_id=organization.id),
     )
 
-    # Eight units are valued at the first batch cost; two unbatched units
-    # use product cost. The excess second batch must not inflate valuation.
-    assert result["total_inventory_value"] == pytest.approx(44)
-    assert result["total_products"] == 1
-    assert result["products"][0]["total_quantity"] == pytest.approx(10)
-    assert result["products"][0]["inventory_value"] == pytest.approx(44)
-    assert result["products"][0]["batch_count"] == 1
+    products = {item["product_name"]: item for item in result["products"]}
+    assert result["total_inventory_value"] == pytest.approx(276)
+    assert result["total_products"] == 2
+    assert products["Rice"]["total_quantity"] == pytest.approx(10)
+    assert products["Rice"]["inventory_value"] == pytest.approx(44)
+    assert products["Rice"]["batch_count"] == 1
+    assert products["Flour"]["total_quantity"] == pytest.approx(10)
+    assert products["Flour"]["inventory_value"] == pytest.approx(232)
+    assert products["Flour"]["batch_count"] == 2
