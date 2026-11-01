@@ -66,6 +66,9 @@ export default function RecipesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recipes-list'] });
+    },
+    onError: (err: any) => {
+      window.alert(err.response?.data?.detail || 'Failed to delete recipe. Please try again.');
     }
   });
 
