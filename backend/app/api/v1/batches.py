@@ -142,61 +142,92 @@ def get_inventory_value(
 ):
     org_id = current_user.organization_id
 
+    products = (
+        db.query(Product)
+        .filter(Product.organization_id == org_id)
+        .order_by(Product.name.asc())
+        .all()
+    )
     batches = (
         db.query(Batch)
         .filter(
             Batch.organization_id == org_id,
             Batch.remaining_quantity > 0,
         )
-        .order_by(Batch.product_id, Batch.expiry_date.asc().nullslast())
+        .order_by(
+            Batch.product_id.asc(),
+            Batch.expiry_date.asc().nullslast(),
+            Batch.received_at.asc(),
+            Batch.id.asc(),
+        )
         .all()
     )
 
+    batches_by_product = {}
+    for batch in batches:
+        batches_by_product.setdefault(batch.product_id, []).append(batch)
+
     total_value = 0.0
-    product_summary = {}
+    product_summary = []
     today = date.today()
     in_30_days = today + timedelta(days=30)
-
     expired_value = 0.0
     expiring_value = 0.0
-    for batch in batches:
 
-        value = batch.remaining_quantity * batch.purchase_price
-        if batch.expiry_date:
+    for product in products:
+        remaining_stock = max(float(product.current_stock or 0), 0.0)
+        product_value = 0.0
+        batch_count = 0
+        product_expired_value = 0.0
+        product_expiring_value = 0.0
 
-           if batch.expiry_date < today:
-               expired_value += value
+        for batch in batches_by_product.get(product.id, []):
+            if remaining_stock <= 0:
+                break
 
-           elif batch.expiry_date <= in_30_days:
-               expiring_value += value
-        total_value += value
+            # Match the main inventory valuation: never value more batch
+            # quantity than the product-level stock ledger reports.
+            valued_quantity = min(
+                max(float(batch.remaining_quantity or 0), 0.0),
+                remaining_stock,
+            )
+            if valued_quantity <= 0:
+                continue
 
-        key = batch.product_id
+            value = valued_quantity * float(batch.purchase_price or 0)
+            product_value += value
+            batch_count += 1
+            remaining_stock -= valued_quantity
 
-        if key not in product_summary:
-            product_summary[key] = {
-                "product_id": batch.product_id,
-                "product_name": batch.product.name,
-                "total_quantity": 0.0,
-                "inventory_value": 0.0,
-                "batch_count": 0,
-            }
+            if batch.expiry_date:
+                if batch.expiry_date < today:
+                    product_expired_value += value
+                elif batch.expiry_date <= in_30_days:
+                    product_expiring_value += value
 
-        product_summary[key]["total_quantity"] += batch.remaining_quantity
-        product_summary[key]["inventory_value"] += value
-        product_summary[key]["batch_count"] += 1
+        # Include inventory that predates batch tracking or was entered
+        # manually, using the product's current cost price.
+        product_value += remaining_stock * float(product.cost_price or 0)
+        total_value += product_value
+        expired_value += product_expired_value
+        expiring_value += product_expiring_value
+
+        if product.current_stock > 0:
+            product_summary.append({
+                "product_id": product.id,
+                "product_name": product.name,
+                "total_quantity": round(float(product.current_stock), 2),
+                "inventory_value": round(product_value, 2),
+                "batch_count": batch_count,
+            })
 
     return {
         "total_inventory_value": round(total_value, 2),
-
         "expired_inventory_value": round(expired_value, 2),
-
         "inventory_at_risk": round(expiring_value, 2),
-
         "total_products": len(product_summary),
-
         "products": sorted(
-            product_summary.values(),
+            product_summary,
             key=lambda x: x["inventory_value"],
             reverse=True,
         ),
