@@ -212,3 +212,22 @@ def test_demo_account_is_recognized_for_demo_entitlements(db, monkeypatch):
     assert is_demo_account(other_user, other_org) is False
     assert is_demo_account(demo_user, other_org) is False
     assert demo_org.subscription_tier == "Free"
+
+
+def test_free_tier_copilot_is_blocked_but_demo_entitlement_is_preserved(
+    client, seed_test_data, monkeypatch
+):
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "owner_a@test.com", "password": "testpass"},
+    )
+    assert login.status_code == 200
+    csrf = login.cookies["kitcheniq_csrf"]
+
+    response = client.post(
+        "/api/v1/ai/copilot",
+        json={"question": "Summarize my kitchen performance"},
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert response.status_code == 403
+    assert "premium Pro feature" in response.json()["detail"]
