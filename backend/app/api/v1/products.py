@@ -4,7 +4,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.services.audit_service import AuditService
 from app.core.deps import get_db, get_current_user, require_manager, require_staff
-from app.models.models import (\n    Product, Category, User, AuditLog, Organization,\n    InventoryTransaction, PurchaseOrderItem, PurchaseOrder, Batch,\n    RecipeIngredient, Recipe, WastageLog,\n)
+from app.models.models import (
+    Product, Category, User, AuditLog, Organization,
+    InventoryTransaction, PurchaseOrderItem, PurchaseOrder, Batch,
+    RecipeIngredient, Recipe, WastageLog,
+)
 from app.api.v1.ai import is_demo_account
 from app.schemas.schemas import (
     ProductCreate,
