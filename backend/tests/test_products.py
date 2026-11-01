@@ -269,3 +269,89 @@ def test_update_product_other_organization(client, db, seed_test_data):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Product not found"
+
+
+def test_demo_account_can_create_products_beyond_free_limit_without_plan_change(client, db):
+    from app.models.models import Organization, User
+
+    from app.core.security import get_password_hash
+
+    organization = Organization(name="KitchenIQ Demo Café", subscription_tier="Free")
+    db.add(organization)
+    db.flush()
+    db.add(User(
+        organization_id=organization.id,
+        full_name="KitchenIQ Demo",
+        email="owner@kitcheniq.com",
+        hashed_password=get_password_hash("unused"),
+        role="Owner",
+        is_active=True,
+    ))
+    db.commit()
+
+    demo_login = client.post("/api/v1/auth/demo")
+    assert demo_login.status_code == 200
+    csrf = demo_login.cookies["kitcheniq_csrf"]
+
+    organization_response = client.get("/api/v1/auth/organization")
+    assert organization_response.status_code == 200
+    assert organization_response.json()["products_limit"] is None
+
+    for number in range(1, 5):
+        response = client.post(
+            "/api/v1/products",
+            headers={"X-CSRF-Token": csrf},
+            json={
+                "name": f"Demo Product {number}",
+                "sku": f"DEMO-{number:03d}",
+                "unit": "kg",
+                "reorder_level": 5,
+                "cost_price": 100,
+                "selling_price": 150,
+            },
+        )
+        assert response.status_code == 201
+
+    db.refresh(organization)
+    assert organization.subscription_tier == "Free"
+
+
+def test_regular_free_account_still_has_three_product_limit(client, db, seed_test_data):
+    from app.models.models import Product, Organization
+
+    organization = db.query(Organization).filter(
+        Organization.id == seed_test_data["org_a_id"]
+    ).one()
+    organization.subscription_tier = "Free"
+    for number in range(1, 4):
+        db.add(Product(
+            organization_id=organization.id,
+            name=f"Existing Product {number}",
+            sku=f"EXIST-{number:03d}",
+            unit="kg",
+            current_stock=0,
+            reorder_level=5,
+            cost_price=100,
+            selling_price=150,
+        ))
+    db.commit()
+
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "manager_a@test.com", "password": "testpass"},
+    )
+    token = login.cookies["kitcheniq_access"]
+    response = client.post(
+        "/api/v1/products",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "name": "Fourth Product",
+            "sku": "FOURTH-001",
+            "unit": "kg",
+            "reorder_level": 5,
+            "cost_price": 100,
+            "selling_price": 150,
+        },
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Organization product limit (3) reached on Free tier. Upgrade to Pro."
