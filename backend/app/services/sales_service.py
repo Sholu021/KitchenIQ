@@ -126,6 +126,11 @@ def create_sale(
     # 4. Deduct stock and write SaleItems
     total_sale_amount = 0.0
     total_cogs = 0.0
+    # Track cumulative ingredient consumption across every sale line. The
+    # FEFO cost helper is read-only, so marginal cumulative cost prevents two
+    # recipes sharing an ingredient from pricing the same batch units twice.
+    cumulative_ingredient_qty: Dict[int, float] = {}
+    cumulative_ingredient_cost: Dict[int, float] = {}
     for item in items_data:
         rec_id = item["recipe_id"]
         sale_qty = item["quantity"]
@@ -162,12 +167,18 @@ def create_sale(
         for ingredient in recipe.ingredients:
             ingredient_qty = (ingredient.quantity_required / recipe.yield_quantity) * sale_qty
 
-            recipe_cogs += calculate_fefo_cost(
+            product_id = ingredient.product_id
+            cumulative_qty = cumulative_ingredient_qty.get(product_id, 0.0) + ingredient_qty
+            cumulative_cost = calculate_fefo_cost(
                 db=db,
                 organization_id=organization_id,
-                product_id=ingredient.product_id,
-                quantity=ingredient_qty,
+                product_id=product_id,
+                quantity=cumulative_qty,
             )
+            previous_cost = cumulative_ingredient_cost.get(product_id, 0.0)
+            recipe_cogs += cumulative_cost - previous_cost
+            cumulative_ingredient_qty[product_id] = cumulative_qty
+            cumulative_ingredient_cost[product_id] = cumulative_cost
 
         sale_item = SaleItem(
             sale_id=sale.id,
