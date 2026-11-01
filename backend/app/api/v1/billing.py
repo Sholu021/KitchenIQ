@@ -319,6 +319,11 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
     record.updated_at = datetime.now(timezone.utc)
 
     org = db.query(Organization).filter(Organization.id == record.organization_id).first()
+    if org is None:
+        webhook_event.status = "ignored"
+        webhook_event.processed_at = datetime.now(timezone.utc)
+        db.commit()
+        return {"status": "ignored", "reason": "organization_not_found"}
 
     if event_name == "subscription.activated" or razorpay_status == "active":
         org.subscription_tier = "Pro"
