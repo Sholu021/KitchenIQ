@@ -134,3 +134,99 @@ def test_sale_rejects_non_positive_recipe_yield_even_without_ingredients(db):
 
     assert exc_info.value.status_code == 400
     assert "positive yield quantity" in exc_info.value.detail
+
+
+def test_multi_item_sale_allocates_shared_ingredient_batches_once(db):
+    organization = Organization(name="Shared Ingredient COGS Test")
+    db.add(organization)
+    db.flush()
+
+    ingredient = Product(
+        organization_id=organization.id,
+        name="Shared Coffee",
+        unit="g",
+        current_stock=20.0,
+        cost_price=9.0,
+        selling_price=12.0,
+        is_finished_product=False,
+    )
+    menu_a = Product(
+        organization_id=organization.id,
+        name="Coffee A",
+        unit="portion",
+        current_stock=0.0,
+        cost_price=0.0,
+        selling_price=30.0,
+        is_finished_product=True,
+    )
+    menu_b = Product(
+        organization_id=organization.id,
+        name="Coffee B",
+        unit="portion",
+        current_stock=0.0,
+        cost_price=0.0,
+        selling_price=35.0,
+        is_finished_product=True,
+    )
+    db.add_all([ingredient, menu_a, menu_b])
+    db.flush()
+
+    recipe_a = Recipe(
+        organization_id=organization.id,
+        name="Recipe A",
+        yield_quantity=1,
+        yield_unit="portion",
+        selling_price=30.0,
+        finished_product_id=menu_a.id,
+    )
+    recipe_b = Recipe(
+        organization_id=organization.id,
+        name="Recipe B",
+        yield_quantity=1,
+        yield_unit="portion",
+        selling_price=35.0,
+        finished_product_id=menu_b.id,
+    )
+    db.add_all([recipe_a, recipe_b])
+    db.flush()
+    db.add_all([
+        RecipeIngredient(recipe_id=recipe_a.id, product_id=ingredient.id, quantity_required=6.0),
+        RecipeIngredient(recipe_id=recipe_b.id, product_id=ingredient.id, quantity_required=6.0),
+        Batch(
+            organization_id=organization.id,
+            product_id=ingredient.id,
+            batch_number="LOW-COST",
+            quantity=10.0,
+            remaining_quantity=10.0,
+            purchase_price=2.0,
+        ),
+        Batch(
+            organization_id=organization.id,
+            product_id=ingredient.id,
+            batch_number="HIGH-COST",
+            quantity=10.0,
+            remaining_quantity=10.0,
+            purchase_price=5.0,
+        ),
+    ])
+    db.commit()
+
+    sale = create_sale(
+        db=db,
+        organization_id=organization.id,
+        items_data=[
+            {"recipe_id": recipe_a.id, "quantity": 1},
+            {"recipe_id": recipe_b.id, "quantity": 1},
+        ],
+    )
+
+    sale_items = (
+        db.query(SaleItem)
+        .filter(SaleItem.sale_id == sale.id)
+        .order_by(SaleItem.id.asc())
+        .all()
+    )
+    assert [item.cost_of_goods_sold for item in sale_items] == pytest.approx([12.0, 22.0])
+    assert sale.cost_of_goods_sold == pytest.approx(34.0)
+    db.refresh(ingredient)
+    assert ingredient.current_stock == pytest.approx(8.0)
