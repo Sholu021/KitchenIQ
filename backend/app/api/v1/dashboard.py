@@ -33,6 +33,7 @@ from app.services.report_service import sales_trend, abc_inventory_analysis, sup
 from app.services.customer_report_service import customer_dashboard
 from app.services.sales_report_service import sales_dashboard
 from app.services.ai_insights_service import generate_ai_insights
+from app.services.analytics_service import calculate_inventory_value, get_low_stock_products
 
 router = APIRouter(
     prefix="/dashboard",
@@ -62,19 +63,9 @@ def get_dashboard_summary(
         Sale.sale_date >= month_start
     ).scalar()
 
-    # 3. Inventory Value (Total cost value of stock: current_stock * cost_price)
-    # We can do this in Python or database. Let's do it in database for efficiency.
-    inventory_value = db.query(
-        func.coalesce(func.sum(Product.current_stock * Product.cost_price), 0.0)
-    ).filter(
-        Product.organization_id == org_id
-    ).scalar()
-
-    # 4. Low Stock Products Count
-    low_stock_count = db.query(func.count(Product.id)).filter(
-        Product.organization_id == org_id,
-        Product.current_stock <= Product.reorder_level
-    ).scalar()
+    # Use the same batch-aware valuation and low-stock rules as analytics.
+    inventory_value = calculate_inventory_value(db, org_id)["inventory_value"]
+    low_stock_count = len(get_low_stock_products(db, org_id))
 
     # 5. Expiring Products (Expiring in <= 30 days, or already expired)
         # 5. Expiring Products (Expiring in <= 30 days, or already expired)
@@ -783,20 +774,7 @@ def executive_summary(
     )
 
     # Inventory Value
-    inventory_value = (
-        db.query(
-            func.coalesce(
-                func.sum(
-                    Product.current_stock * Product.cost_price
-                ),
-                0.0,
-            )
-        )
-        .filter(
-            Product.organization_id == org_id,
-        )
-        .scalar()
-    )
+    inventory_value = calculate_inventory_value(db, org_id)["inventory_value"]
     
     # Today's Waste Cost
     today = datetime.utcnow().date()
@@ -835,14 +813,7 @@ def executive_summary(
     )
 
     # Low Stock
-    low_stock = (
-        db.query(func.count(Product.id))
-        .filter(
-            Product.organization_id == org_id,
-            Product.current_stock <= Product.reorder_level,
-        )
-        .scalar()
-    )
+    low_stock = len(get_low_stock_products(db, org_id))
 
     # Purchase Orders
     pending_po = (

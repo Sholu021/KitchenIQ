@@ -194,7 +194,7 @@ def adjust_stock(
                     db.query(Batch)
                     .filter(
                         Batch.organization_id == organization_id,
-                        Batch.quantity > 0,
+                        Batch.remaining_quantity > 0,
                     )
                     .count()
                 )

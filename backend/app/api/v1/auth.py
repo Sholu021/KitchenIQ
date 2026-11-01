@@ -310,7 +310,7 @@ def get_organization_details(
     recipes_count = db.query(Recipe).filter(Recipe.organization_id == org.id).count()
     batches_count = db.query(Batch).filter(
         Batch.organization_id == org.id,
-        Batch.quantity > 0
+        Batch.remaining_quantity > 0
     ).count()
 
     # Define limits
@@ -372,7 +372,7 @@ def update_subscription(
     recipes_count = db.query(Recipe).filter(Recipe.organization_id == org.id).count()
     batches_count = db.query(Batch).filter(
         Batch.organization_id == org.id,
-        Batch.quantity > 0
+        Batch.remaining_quantity > 0
     ).count()
 
     return OrganizationDetailsOut(

@@ -50,9 +50,11 @@ def get_insights(
     # The public demo workspace gets the Pro demonstration experience without
     # changing the organization's stored subscription or billing state.
     if (
-        organization
-        and organization.subscription_tier == "Free"
-        and not is_demo_account(current_user, organization)
+        organization is None
+        or (
+            organization.subscription_tier == "Free"
+            and not is_demo_account(current_user, organization)
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -68,9 +70,26 @@ def chat_copilot(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_staff),
 ):
+    organization_id = current_user.organization_id
+    organization = (
+        db.query(Organization)
+        .filter(Organization.id == organization_id)
+        .first()
+    )
+    if (
+        organization is None
+        or (
+            organization.subscription_tier == "Free"
+            and not is_demo_account(current_user, organization)
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="AI Copilot is a premium Pro feature. Please upgrade to Pro in Settings.",
+        )
+
     question = request.question.strip()
     question_lower = question.lower()
-    organization_id = current_user.organization_id
 
     if (
         "out of stock" in question_lower

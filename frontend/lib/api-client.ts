@@ -46,7 +46,8 @@ apiClient.interceptors.response.use(
       error.response?.status === 401 &&
       !originalRequest?._retry &&
       !String(originalRequest?.url || "").includes("/auth/refresh") &&
-      !String(originalRequest?.url || "").includes("/auth/login")
+      !String(originalRequest?.url || "").includes("/auth/login") &&
+      !String(originalRequest?.url || "").includes("/auth/me")
     ) {
       originalRequest._retry = true;
 
