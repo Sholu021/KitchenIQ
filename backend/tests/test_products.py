@@ -274,9 +274,28 @@ def test_update_product_other_organization(client, db, seed_test_data):
 def test_demo_account_can_create_products_beyond_free_limit_without_plan_change(client, db):
     from app.models.models import Organization, User
 
+    from app.core.security import get_password_hash
+
+    organization = Organization(name="KitchenIQ Demo Café", subscription_tier="Free")
+    db.add(organization)
+    db.flush()
+    db.add(User(
+        organization_id=organization.id,
+        full_name="KitchenIQ Demo",
+        email="owner@kitcheniq.com",
+        hashed_password=get_password_hash("unused"),
+        role="Owner",
+        is_active=True,
+    ))
+    db.commit()
+
     demo_login = client.post("/api/v1/auth/demo")
     assert demo_login.status_code == 200
     csrf = demo_login.cookies["kitcheniq_csrf"]
+
+    organization_response = client.get("/api/v1/auth/organization")
+    assert organization_response.status_code == 200
+    assert organization_response.json()["products_limit"] is None
 
     for number in range(1, 5):
         response = client.post(
@@ -293,10 +312,8 @@ def test_demo_account_can_create_products_beyond_free_limit_without_plan_change(
         )
         assert response.status_code == 201
 
-    organization = db.query(Organization).filter(
-        Organization.id == demo_login.json()["organization_id"]
-    ).one()
-    assert organization.subscription_tier == "Pro"
+    db.refresh(organization)
+    assert organization.subscription_tier == "Free"
 
 
 def test_regular_free_account_still_has_three_product_limit(client, db, seed_test_data):
