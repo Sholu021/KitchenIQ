@@ -16,6 +16,7 @@ from app.core.security import (
     decode_token
 )
 from app.models.models import Organization, User, AuditLog, Product, Recipe, Batch
+from app.api.v1.ai import is_demo_account
 from app.schemas.schemas import (
     RegisterOrgOwnerRequest,
     LoginRequest,
@@ -314,7 +315,7 @@ def get_organization_details(
     ).count()
 
     # Define limits
-    products_limit = 3 if org.subscription_tier == "Free" else None
+    products_limit = 3 if org.subscription_tier == "Free" and not is_demo_account(current_user, org) else None
     recipes_limit = 2 if org.subscription_tier == "Free" else None
     batches_limit = 5 if org.subscription_tier == "Free" else None
 
