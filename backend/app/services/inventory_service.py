@@ -63,7 +63,19 @@ def calculate_fefo_cost(
             .first()
         )
 
-        total_batch_qty = sum(batch.remaining_quantity for batch in batches)
+        # Expired batches are excluded from FEFO consumption, but they still
+        # occupy part of the product ledger. Do not misclassify them as legacy
+        # unbatched stock.
+        all_batch_quantities = (
+            db.query(Batch.remaining_quantity)
+            .filter(
+                Batch.organization_id == organization_id,
+                Batch.product_id == product_id,
+                Batch.remaining_quantity > 0,
+            )
+            .all()
+        )
+        total_batch_qty = sum(row[0] for row in all_batch_quantities)
         legacy_unbatched_qty = max(
             (product.current_stock if product else 0.0) - total_batch_qty,
             0.0,
@@ -316,9 +328,18 @@ def adjust_stock(
                 .all()
             )
 
-            total_batch_qty = sum(
-                b.remaining_quantity for b in batches
+            # Count every outstanding batch (including expired ones) when
+            # deriving legacy stock. Only eligible batches are consumed below.
+            all_batch_quantities = (
+                db.query(Batch.remaining_quantity)
+                .filter(
+                    Batch.product_id == product_id,
+                    Batch.organization_id == organization_id,
+                    Batch.remaining_quantity > 0,
+                )
+                .all()
             )
+            total_batch_qty = sum(row[0] for row in all_batch_quantities)
 
             # Consume active batches first using FEFO.
             for batch in batches:
