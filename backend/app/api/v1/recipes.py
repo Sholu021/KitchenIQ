@@ -7,7 +7,7 @@ from app.core.deps import (
     require_manager,
     require_staff,
 )
-from app.models.models import Recipe, User, AuditLog, Organization
+from app.models.models import Recipe, User, AuditLog, Organization, Production, SaleItem
 from app.schemas.schemas import RecipeCreate, RecipeOut
 from app.services.recipe_service import create_recipe, calculate_recipe_cost
 
@@ -146,8 +146,38 @@ def delete_recipe(
             detail="Recipe not found"
         )
 
+    # Preserve historical records: production batches and sale line items
+    # must continue to reference the recipe used at the time.
+    production_count = db.query(Production).filter(
+        Production.recipe_id == recipe_id,
+        Production.organization_id == current_user.organization_id,
+    ).count()
+    sales_count = (
+        db.query(SaleItem)
+        .join(Recipe, SaleItem.recipe_id == Recipe.id)
+        .filter(
+            SaleItem.recipe_id == recipe_id,
+            Recipe.organization_id == current_user.organization_id,
+        )
+        .count()
+    )
+    if production_count or sales_count:
+        reasons = []
+        if production_count:
+            reasons.append(f"{production_count} production record(s)")
+        if sales_count:
+            reasons.append(f"{sales_count} sale record(s)")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "This recipe cannot be deleted because it is used by "
+                + " and ".join(reasons)
+                + ". Historical records have been preserved."
+            ),
+        )
+
     db.delete(recipe)
-    
+
     audit = AuditLog(
         organization_id=current_user.organization_id,
         user_id=current_user.id,
