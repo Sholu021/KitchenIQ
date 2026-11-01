@@ -67,7 +67,20 @@ export default function InventoryPage() {
   });
   const [error, setError] = useState<string | null>(null);
 
+  const formatUnitCost = (value: unknown) => {
+    const amount = Number(value ?? 0);
+    if (!Number.isFinite(amount)) return "0.00";
+    const decimals = amount === 0 ? 2 : amount < 0.01 ? 6 : amount < 1 ? 4 : 2;
+    return amount.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  };
+
   // Queries
+  const { data: inventoryValuation } = useQuery({
+    queryKey: ["inventory-valuation"],
+    queryFn: async () => (await apiClient.get("/batches/value")).data,
+    staleTime: 60 * 1000,
+  });
+
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
@@ -408,10 +421,9 @@ export default function InventoryPage() {
   const ingredientProducts = products.filter((p: any) => !p.is_finished_product);
   const totalIngredientsCount = ingredientProducts.length;
 
-  const totalValuation = products.reduce(
-    (acc: number, p: any) => acc + (p.current_stock * p.cost_price),
-    0
-  );
+  const totalValuation = Number.isFinite(Number(inventoryValuation?.total_inventory_value))
+    ? Number(inventoryValuation.total_inventory_value)
+    : products.reduce((acc: number, p: any) => acc + Number(p.current_stock ?? 0) * Number(p.cost_price ?? 0), 0);
   
   const lowStockCount = ingredientProducts.filter(
     (p: any) => p.current_stock > 0 && p.reorder_level > 0 && p.current_stock <= p.reorder_level
@@ -448,6 +460,10 @@ export default function InventoryPage() {
 
       return b.product_id === p.id;
     });
+    const hasExpiredBatch = productBatches.some((b: any) =>
+      b.expiry_date && Number(b.remaining_quantity ?? 0) > 0 &&
+      new Date(b.expiry_date).getTime() < new Date(new Date().toDateString()).getTime()
+    );
     const hasExpiringBatch = productBatches.some((b: any) => {
       if (!b.expiry_date) return false;
       const daysLeft = Math.ceil((new Date(b.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
@@ -461,6 +477,7 @@ export default function InventoryPage() {
       else if (selectedStatus === 'Low') matchesStatus = isLow;
       else if (selectedStatus === 'Healthy') matchesStatus = isHealthy;
       else if (selectedStatus === 'Expiring') matchesStatus = hasExpiringBatch;
+      else if (selectedStatus === 'Expired') matchesStatus = hasExpiredBatch;
     }
 
     return matchesSearch && matchesCategory && matchesStatus;
@@ -893,7 +910,7 @@ export default function InventoryPage() {
             {/* Status Filter Chips */}
             <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-100">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-4">Status:</span>
-              {['All', 'Healthy', 'Low', 'Critical', 'Expiring', 'Out of Stock'].map((status) => (
+              {['All', 'Healthy', 'Low', 'Critical', 'Expiring', 'Expired', 'Out of Stock'].map((status) => (
                 <button
                   key={status}
                   onClick={() => setSelectedStatus(status)}
@@ -952,6 +969,10 @@ export default function InventoryPage() {
                         expanded: isExpanded,
                         batchCount: productBatches.length,
                       });
+                      const hasExpiredBatch = productBatches.some((b: any) =>
+                        b.expiry_date && Number(b.remaining_quantity ?? 0) > 0 &&
+                        new Date(b.expiry_date).getTime() < new Date(new Date().toDateString()).getTime()
+                      );
                       const daysLeft = productBatches.reduce((acc: number | null, b: any) => {
                         if (!b.expiry_date) return acc;
                         const diff = Math.ceil((new Date(b.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
@@ -995,12 +1016,13 @@ export default function InventoryPage() {
                               ) : (
                                 <span className="text-[9px] font-bold px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-full">Healthy</span>
                               )}
+                              {hasExpiredBatch && <span className="mt-1 inline-block text-[9px] font-bold px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-full">Expired Batch</span>}
                             </td>
                             <td className="px-6 py-4">
                               {daysLeft !== null ? (
                                 <span className={`text-[10px] font-bold ${daysLeft <= 3 ? 'text-rose-600' : daysLeft <= 7 ? 'text-amber-600' : 'text-slate-500'
                                   }`}>
-                                  {daysLeft} Days Left
+                                  {daysLeft < 0 ? `Expired ${Math.abs(daysLeft)} days ago` : daysLeft === 0 ? "Expires today" : `${daysLeft} Days Left`}
                                 </span>
                               ) : (
                                 <span className="text-slate-400 italic text-xs">No Expiry</span>
@@ -1012,7 +1034,7 @@ export default function InventoryPage() {
                               </Link>
                             </td>
                             <td className="px-6 py-4 text-right font-mono text-slate-900 text-xs">
-                              ₹{Number(p.cost_price ?? 0).toFixed(2)}/{p.unit}
+                              ₹{formatUnitCost(p.cost_price)}/{p.unit}
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center justify-center gap-1.5">
