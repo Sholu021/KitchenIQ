@@ -136,6 +136,10 @@ class ProductUpdate(BaseSchema):
     selling_price: Optional[float] = None
     category_id: Optional[int] = None
 
+class ProductStatusUpdate(BaseSchema):
+    is_active: bool
+
+
 class ProductOut(ProductBase):
     id: int
     organization_id: int
