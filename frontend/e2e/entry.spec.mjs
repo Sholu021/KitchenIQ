@@ -1047,7 +1047,11 @@ test('renders AI health, reorder, and waste insights with isolated fixtures', as
     },
   };
 
+  const aiInsightRequests = [];
   await enterIsolatedDemo(page, async (route, path) => {
+    if (path.includes('/ai/insights')) {
+      aiInsightRequests.push({ path, method: route.request().method() });
+    }
     if (path.endsWith('/ai/insights') && route.request().method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -1069,6 +1073,9 @@ test('renders AI health, reorder, and waste insights with isolated fixtures', as
 
   await page.getByRole('link', { name: /AI Insights/i }).click();
   await expect(page.getByRole('heading', { name: 'AI Intelligence Hub' })).toBeVisible();
+  await expect.poll(() => aiInsightRequests.some((request) => request.method === 'GET' && request.path.endsWith('/ai/insights')), {
+    message: `Expected AI insights GET fixture to be requested; observed: ${JSON.stringify(aiInsightRequests)}`,
+  }).toBe(true);
   await expect(page.getByText('Synthetic inventory health summary for browser regression.')).toBeVisible();
   await expect(page.getByText('₹125.50', { exact: true })).toBeVisible();
 
