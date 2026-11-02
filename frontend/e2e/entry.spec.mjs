@@ -279,9 +279,9 @@ test('creates, views, and deletes a recipe using isolated synthetic API fixtures
   await expect(page.getByText('18 g', { exact: true })).toBeVisible();
 
   page.once('dialog', (dialog) => dialog.accept());
-  await page.locator('button').filter({ has: page.locator('svg') }).first().click({ force: true }).catch(() => {});
-  const recipeCard = page.locator('div').filter({ has: page.getByRole('heading', { name: 'Playwright Test Cappuccino' }) }).last();
-  await recipeCard.locator('button').first().click();
+  const recipeHeading = page.getByRole('heading', { name: 'Playwright Test Cappuccino' });
+  const recipeCard = recipeHeading.locator('xpath=../../..');
+  await recipeCard.getByRole('button').first().click();
   await expect(page.getByText(/No recipes defined/)).toBeVisible();
   expect(deletedId).toBe(801);
 });
