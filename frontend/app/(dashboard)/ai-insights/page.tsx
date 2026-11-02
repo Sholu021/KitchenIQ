@@ -28,7 +28,7 @@ export default function AIInsightsPage() {
 
   // Fetch AI Insights
   const { data: insights, isLoading, isError, error, refetch, isRefetching } = useQuery({
-    queryKey: ['ai-insights'],
+    queryKey: ['ai-insights-page'],
     queryFn: async () => {
       const res = await apiClient.get('/ai/insights');
       return res.data;
