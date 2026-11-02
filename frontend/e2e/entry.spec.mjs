@@ -635,3 +635,80 @@ test('records an isolated stock-out movement with reason and batch allocation', 
   expect(adjustmentPayload).toHaveProperty('batch_id');
   await expect(page.getByRole('heading', { name: 'Record Stock Movement' })).toBeHidden();
 });
+
+
+test('records an isolated inventory correction with a reason', async ({ page }) => {
+  const product = {
+    id: 1601,
+    name: 'Playwright Correction Sugar',
+    sku: 'PW-COR-1601',
+    unit: 'kg',
+    reorder_level: 1,
+    cost_price: 30,
+    selling_price: 45,
+    current_stock: 6,
+    is_active: true,
+    is_finished_product: false,
+    category: null,
+  };
+  const batch = {
+    id: 1602,
+    product_id: product.id,
+    batch_number: 'PW-COR-BATCH',
+    expiry_date: '2099-12-31',
+    remaining_quantity: 6,
+  };
+  let adjustmentPayload;
+
+  await enterIsolatedDemo(page, async (route, path) => {
+    const method = route.request().method();
+    if (path.endsWith('/products') && method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items: [product], total: 1 }),
+      });
+      return true;
+    }
+    if (path.endsWith('/batches') && method === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([batch]) });
+      return true;
+    }
+    if (path.endsWith('/batches/alerts') && method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ expired: [], expiring_7: [], expiring_30: [] }),
+      });
+      return true;
+    }
+    if (path.endsWith('/batches/adjust') && method === 'POST') {
+      adjustmentPayload = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Stock movement recorded' }),
+      });
+      return true;
+    }
+    return false;
+  });
+
+  await page.getByRole('link', { name: 'Inventory & Batches' }).click();
+  const productRow = page.getByRole('row').filter({ hasText: 'Playwright Correction Sugar' });
+  await expect(productRow).toBeVisible();
+  await productRow.getByRole('button').last().click();
+
+  await page.getByRole('button', { name: 'Correction' }).click();
+  await page.getByPlaceholder('e.g. 50').fill('2');
+  await page.getByPlaceholder('e.g. Spoilage disposal, fresh delivery...').fill('Isolated correction test');
+  await page.getByRole('button', { name: 'Save Movement' }).click();
+
+  expect(adjustmentPayload).toMatchObject({
+    product_id: 1601,
+    quantity: 2,
+    transaction_type: 'ADJUSTMENT',
+    notes: 'Isolated correction test',
+  });
+  await expect(page.getByRole('heading', { name: 'Record Stock Movement' })).toBeHidden();
+});
