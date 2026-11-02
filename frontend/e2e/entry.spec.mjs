@@ -49,14 +49,16 @@ test.describe('core workspace pages with isolated API fixtures', () => {
     await enterIsolatedDemo(page);
 
     const pages = [
-      { path: '/products', heading: /Products Registry/ },
-      { path: '/recipes', heading: /Recipe Book & Margins/ },
-      { path: '/inventory', heading: /Inventory/ },
-      { path: '/purchase-orders', heading: /Purchase Orders/ },
+      { link: 'Menu Items', heading: /Products Registry/ },
+      { link: 'Recipes', heading: /Recipe Book & Margins/ },
+      { link: 'Inventory & Batches', heading: /Inventory/ },
+      { link: 'Purchase Orders', heading: /Purchase Orders/ },
     ];
 
+    // Use the authenticated SPA navigation. Full page reloads intentionally
+    // clear the in-memory test auth state because this fixture has no real cookie.
     for (const item of pages) {
-      await page.goto(item.path);
+      await page.getByRole('link', { name: item.link }).click();
       await expect(page.getByRole('heading', { name: item.heading }).first()).toBeVisible();
     }
   });
