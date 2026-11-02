@@ -712,3 +712,86 @@ test('records an isolated inventory correction with a reason', async ({ page }) 
   });
   await expect(page.getByRole('heading', { name: 'Record Stock Movement' })).toBeHidden();
 });
+
+
+test('filters an isolated inventory ledger by movement type', async ({ page }) => {
+  const product = {
+    id: 1701,
+    name: 'Playwright Ledger Oats',
+    sku: 'PW-LED-1701',
+    unit: 'kg',
+    reorder_level: 1,
+    cost_price: 25,
+    selling_price: 40,
+    current_stock: 7,
+    is_active: true,
+    is_finished_product: false,
+    category: null,
+  };
+  const transactions = [
+    {
+      id: 1702,
+      transaction_type: 'STOCK_IN',
+      quantity: 10,
+      balance: 10,
+      notes: 'Synthetic receipt',
+      created_at: '2026-10-30T10:00:00Z',
+    },
+    {
+      id: 1703,
+      transaction_type: 'STOCK_OUT',
+      quantity: -3,
+      balance: 7,
+      notes: 'Synthetic usage',
+      created_at: '2026-10-31T10:00:00Z',
+    },
+  ];
+
+  await enterIsolatedDemo(page, async (route, path) => {
+    const method = route.request().method();
+    if (path.endsWith('/products') && method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items: [product], total: 1 }),
+      });
+      return true;
+    }
+    if (path.endsWith('/batches') && method === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+      return true;
+    }
+    if (path.endsWith('/batches/alerts') && method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ expired: [], expiring_7: [], expiring_30: [] }),
+      });
+      return true;
+    }
+    if (path.endsWith('/batches/products/1701/ledger') && method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ current_stock: 7, unit: 'kg', transactions }),
+      });
+      return true;
+    }
+    return false;
+  });
+
+  await page.getByRole('link', { name: 'Inventory & Batches' }).click();
+  const productRow = page.getByRole('row').filter({ hasText: 'Playwright Ledger Oats' });
+  await expect(productRow).toBeVisible();
+  await productRow.getByTitle('View inventory ledger').click();
+
+  await expect(page.getByText('Inventory Ledger')).toBeVisible();
+  await expect(page.getByText('Synthetic receipt')).toBeVisible();
+  await expect(page.getByText('Synthetic usage')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'STOCK OUT (1)' })).toBeVisible();
+  await page.getByRole('button', { name: 'STOCK OUT (1)' }).click();
+  await expect(page.getByText('Synthetic usage')).toBeVisible();
+  await expect(page.getByText('Synthetic receipt')).toBeHidden();
+  await expect(page.getByText('Filtered Net')).toBeVisible();
+  await expect(page.getByText('-3 kg')).toBeVisible();
+});
