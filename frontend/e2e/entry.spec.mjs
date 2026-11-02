@@ -377,3 +377,80 @@ test('creates and sends a purchase order using isolated synthetic API fixtures',
   await expect(poRow).toContainText('SENT');
   expect(statusPayload).toEqual({ status: 'SENT' });
 });
+
+
+test('receives a sent purchase order using isolated synthetic API fixtures', async ({ page }) => {
+  const supplier = { id: 1301, name: 'Playwright Receiving Supplier', email: 'receiving@example.test' };
+  const product = {
+    id: 1302,
+    name: 'Playwright Test Cocoa',
+    sku: 'PW-PO-1302',
+    unit: 'kg',
+    cost_price: 80,
+    is_active: true,
+  };
+  let purchaseOrders = [{
+    id: 1303,
+    status: 'SENT',
+    total_amount: 160,
+    created_at: '2026-01-15T10:00:00Z',
+    supplier,
+    items: [{
+      id: 1304,
+      product_id: product.id,
+      quantity: 2,
+      unit_price: 80,
+      batch_number: 'PW-BATCH-1304',
+      expiry_date: '2027-12-31',
+      product,
+    }],
+  }];
+  let receivePayload;
+
+  await enterIsolatedDemo(page, async (route, path) => {
+    const method = route.request().method();
+    if (path.endsWith('/suppliers') && method === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([supplier]) });
+      return true;
+    }
+    if (path.endsWith('/products') && method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items: [product], total: 1 }),
+      });
+      return true;
+    }
+    if (path.endsWith('/purchase-orders') && method === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(purchaseOrders) });
+      return true;
+    }
+    if (path.endsWith('/purchase-orders/1303/receive') && method === 'POST') {
+      receivePayload = route.request().postDataJSON();
+      purchaseOrders = purchaseOrders.map((po) => ({ ...po, status: 'RECEIVED' }));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Purchase order received successfully' }),
+      });
+      return true;
+    }
+    return false;
+  });
+
+  await page.getByRole('link', { name: 'Purchase Orders' }).click();
+  const poRow = page.getByRole('row').filter({ hasText: 'Playwright Receiving Supplier' });
+  await expect(poRow).toContainText('SENT');
+  await poRow.getByRole('button', { name: /Receive Stock/ }).click();
+
+  await expect(poRow).toContainText('RECEIVED');
+  expect(receivePayload).toEqual({
+    items: [{
+      purchase_order_item_id: 1304,
+      batch_number: 'PW-BATCH-1304',
+      expiry_date: '2027-12-31',
+      quantity: 2,
+      unit_price: 80,
+    }],
+  });
+});
