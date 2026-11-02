@@ -3,7 +3,9 @@ import { test, expect } from '@playwright/test';
 async function enterIsolatedDemo(page, routeHandler) {
   await page.route('**/api/v1/**', async (route) => {
     const url = new URL(route.request().url());
-    const path = url.pathname;
+    // Normalize trailing slashes so fixtures match FastAPI's slash redirects
+    // and the browser's final request path consistently.
+    const path = url.pathname.replace(/\/+$/, '') || '/';
 
     if (path.endsWith('/auth/me')) {
       await route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ detail: 'Not authenticated' }) });
