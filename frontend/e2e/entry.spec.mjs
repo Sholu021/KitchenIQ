@@ -288,3 +288,92 @@ test('creates, views, and deletes a recipe using isolated synthetic API fixtures
   await expect(page.getByText(/No recipes defined/)).toBeVisible();
   expect(deletedId).toBe(801);
 });
+
+
+test('creates and sends a purchase order using isolated synthetic API fixtures', async ({ page }) => {
+  const supplier = { id: 1001, name: 'Playwright Test Supplier', email: 'supplier@example.test' };
+  const product = {
+    id: 1002,
+    name: 'Playwright Test Flour',
+    sku: 'PW-PO-1002',
+    unit: 'kg',
+    cost_price: 40,
+    is_active: true,
+  };
+  let purchaseOrders = [];
+  let createPayload;
+  let statusPayload;
+
+  await enterIsolatedDemo(page, async (route, path) => {
+    const method = route.request().method();
+
+    if (path.endsWith('/suppliers') && method === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([supplier]) });
+      return true;
+    }
+    if (path.endsWith('/products') && method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items: [product], total: 1 }),
+      });
+      return true;
+    }
+    if (path.endsWith('/purchase-orders') && method === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(purchaseOrders) });
+      return true;
+    }
+    if (path.endsWith('/purchase-orders') && method === 'POST') {
+      createPayload = route.request().postDataJSON();
+      purchaseOrders = [{
+        id: 1101,
+        status: 'DRAFT',
+        total_amount: 120,
+        created_at: '2026-01-15T10:00:00Z',
+        supplier,
+        items: [{
+          id: 1201,
+          product_id: product.id,
+          quantity: 3,
+          unit_price: 40,
+          product,
+        }],
+      }];
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(purchaseOrders[0]) });
+      return true;
+    }
+    if (path.endsWith('/purchase-orders/1101/status') && method === 'PATCH') {
+      statusPayload = route.request().postDataJSON();
+      purchaseOrders = purchaseOrders.map((po) => ({ ...po, status: statusPayload.status }));
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(purchaseOrders[0]) });
+      return true;
+    }
+    return false;
+  });
+
+  await page.getByRole('link', { name: 'Purchase Orders' }).click();
+  await page.getByRole('button', { name: 'Draft PO' }).click();
+  const selects = page.locator('select');
+  await selects.nth(0).selectOption('1001');
+  await selects.nth(1).selectOption('1002');
+  await page.getByPlaceholder('Qty').fill('3');
+  await page.getByRole('button', { name: 'Create Draft Purchase Order' }).click();
+
+  const poRow = page.getByRole('row').filter({ hasText: 'Playwright Test Supplier' });
+  await expect(poRow).toBeVisible();
+  await expect(poRow).toContainText('DRAFT');
+  expect(createPayload).toMatchObject({
+    supplier_id: 1001,
+    items: [{
+      product_id: 1002,
+      quantity: 3,
+      unit_price: 40,
+      batch_number: null,
+      expiry_date: null,
+    }],
+  });
+
+  await poRow.getByRole('button', { name: /Send Vendor/ }).click();
+  await expect(poRow).toContainText('SENT');
+  expect(statusPayload).toEqual({ status: 'SENT' });
+});
