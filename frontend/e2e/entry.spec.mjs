@@ -557,3 +557,81 @@ test('tracks stock movements, batch metadata, and expired stock with isolated fi
   await expect(page.getByText('PW-EXPIRED-1402')).toBeVisible();
   await expect(page.getByText('PW-FRESH-1403')).toBeVisible();
 });
+
+
+test('records an isolated stock-out movement with reason and batch allocation', async ({ page }) => {
+  const product = {
+    id: 1501,
+    name: 'Playwright Stock Out Flour',
+    sku: 'PW-OUT-1501',
+    unit: 'kg',
+    reorder_level: 1,
+    cost_price: 40,
+    selling_price: 60,
+    current_stock: 8,
+    is_active: true,
+    is_finished_product: false,
+    category: null,
+  };
+  const batch = {
+    id: 1502,
+    product_id: product.id,
+    batch_number: 'PW-OUT-BATCH',
+    expiry_date: '2099-12-31',
+    remaining_quantity: 8,
+  };
+  let adjustmentPayload;
+
+  await enterIsolatedDemo(page, async (route, path) => {
+    const method = route.request().method();
+    if (path.endsWith('/products') && method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items: [product], total: 1 }),
+      });
+      return true;
+    }
+    if (path.endsWith('/batches') && method === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([batch]) });
+      return true;
+    }
+    if (path.endsWith('/batches/alerts') && method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ expired: [], expiring_7: [], expiring_30: [] }),
+      });
+      return true;
+    }
+    if (path.endsWith('/batches/adjust') && method === 'POST') {
+      adjustmentPayload = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Stock movement recorded' }),
+      });
+      return true;
+    }
+    return false;
+  });
+
+  await page.getByRole('link', { name: 'Inventory & Batches' }).click();
+  const productRow = page.getByRole('row').filter({ hasText: 'Playwright Stock Out Flour' });
+  await expect(productRow).toBeVisible();
+  await productRow.getByRole('button').last().click();
+
+  await page.getByRole('button', { name: '- Remove Stock' }).click();
+  await page.getByPlaceholder('e.g. 50').fill('3');
+  await page.getByPlaceholder('e.g. Spoilage disposal, fresh delivery...').fill('Isolated stock-out test');
+  await page.getByRole('button', { name: 'Save Movement' }).click();
+
+  expect(adjustmentPayload).toMatchObject({
+    product_id: 1501,
+    quantity: 3,
+    transaction_type: 'STOCK_OUT',
+    notes: 'Isolated stock-out test',
+  });
+  expect(adjustmentPayload).toHaveProperty('batch_id');
+  await expect(page.getByRole('heading', { name: 'Record Stock Movement' })).toBeHidden();
+});
