@@ -1070,7 +1070,10 @@ test('renders AI health, reorder, and waste insights with isolated fixtures', as
   });
 
   await page.getByRole('link', { name: /AI Insights/i }).click();
+  await expect(page).toHaveURL(/\/ai-insights$/);
   await expect(page.getByRole('heading', { name: 'AI Intelligence Hub' })).toBeVisible();
+  // Force a fresh query so the assertion does not depend on any cached query state.
+  await page.getByRole('button', { name: 'Refresh AI' }).click();
   await expect.poll(() => aiInsightRequests.some((request) => request.method === 'GET' && request.path.endsWith('/ai/insights')), {
     message: `Expected AI insights GET fixture to be requested; observed: ${JSON.stringify(aiInsightRequests)}`,
   }).toBe(true);
