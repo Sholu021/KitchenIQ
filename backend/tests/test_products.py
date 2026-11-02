@@ -355,3 +355,52 @@ def test_regular_free_account_still_has_three_product_limit(client, db, seed_tes
     )
     assert response.status_code == 403
     assert response.json()["detail"] == "Organization product limit (3) reached on Free tier. Upgrade to Pro."
+
+
+
+def test_delete_product_blocked_when_recipe_references_finished_product_across_orgs(client, db, seed_test_data):
+    from app.models.models import Product, Recipe
+
+    # The FK is global, so even inconsistent cross-organization references
+    # must be detected before SQLAlchemy attempts to NULL the non-nullable FK.
+    product = Product(
+        organization_id=seed_test_data["org_a_id"],
+        name="Finished Croissant",
+        sku="FIN-001",
+        unit="pcs",
+        current_stock=0,
+        reorder_level=0,
+        cost_price=20,
+        selling_price=50,
+    )
+    db.add(product)
+    db.flush()
+
+    recipe = Recipe(
+        organization_id=seed_test_data["org_b_id"],
+        name="Cross-org reference",
+        yield_quantity=1,
+        yield_unit="pcs",
+        selling_price=50,
+        finished_product_id=product.id,
+    )
+    db.add(recipe)
+    db.commit()
+    product_id = product.id
+
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "manager_a@test.com", "password": "testpass"},
+    )
+    token = login.cookies["kitcheniq_access"]
+
+    response = client.delete(
+        f"/api/v1/products/{product_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 409
+    assert "finished-product recipes" in response.json()["detail"]
+    assert db.query(Product).filter(Product.id == product_id).one() is not None
+    db.refresh(recipe)
+    assert recipe.finished_product_id == product_id
