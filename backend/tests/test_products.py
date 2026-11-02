@@ -404,3 +404,75 @@ def test_delete_product_blocked_when_recipe_references_finished_product_across_o
     assert db.query(Product).filter(Product.id == product_id).one() is not None
     db.refresh(recipe)
     assert recipe.finished_product_id == product_id
+
+
+def test_product_can_be_deactivated_and_reactivated(client, seed_test_data):
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "manager_a@test.com", "password": "testpass"},
+    )
+    token = login.cookies["kitcheniq_access"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    created = client.post(
+        "/api/v1/products",
+        headers=headers,
+        json={
+            "name": "Status Test Product",
+            "sku": "STATUS-001",
+            "unit": "kg",
+            "reorder_level": 0,
+            "cost_price": 10,
+            "selling_price": 15,
+        },
+    )
+    assert created.status_code == 201
+    product_id = created.json()["id"]
+    assert created.json()["is_active"] is True
+
+    deactivated = client.patch(
+        f"/api/v1/products/{product_id}/status",
+        headers=headers,
+        json={"is_active": False},
+    )
+    assert deactivated.status_code == 200
+    assert deactivated.json()["is_active"] is False
+
+    reactivated = client.patch(
+        f"/api/v1/products/{product_id}/status",
+        headers=headers,
+        json={"is_active": True},
+    )
+    assert reactivated.status_code == 200
+    assert reactivated.json()["is_active"] is True
+
+
+def test_product_status_cannot_be_changed_across_organizations(client, db, seed_test_data):
+    from app.models.models import Product
+
+    product = Product(
+        organization_id=seed_test_data["org_b_id"],
+        name="Other Organization Product",
+        sku="OTHER-STATUS-001",
+        unit="kg",
+        current_stock=0,
+        reorder_level=0,
+        cost_price=10,
+        selling_price=15,
+    )
+    db.add(product)
+    db.commit()
+    db.refresh(product)
+
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "manager_a@test.com", "password": "testpass"},
+    )
+    token = login.cookies["kitcheniq_access"]
+    response = client.patch(
+        f"/api/v1/products/{product.id}/status",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"is_active": False},
+    )
+    assert response.status_code == 404
+    assert product.is_active is True
