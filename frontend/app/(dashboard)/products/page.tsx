@@ -307,6 +307,7 @@ export default function ProductsPage() {
                     <th className="px-6 py-4 text-right font-bold">Reorder Point</th>
                     <th className="px-6 py-4 text-right font-bold">Cost Price</th>
                     <th className="px-6 py-4 text-right font-bold">Selling Price</th>
+                    <th className="px-6 py-4 text-center font-bold">Status</th>
                     {!isReadOnly && <th className="px-6 py-4 text-center font-bold">Actions</th>}
                   </tr>
                 </thead>
@@ -342,9 +343,18 @@ export default function ProductsPage() {
                         </td>
                         <td className="px-6 py-4 text-right font-mono">₹{prod.cost_price.toFixed(4)}</td>
                         <td className="px-6 py-4 text-right font-mono font-bold text-emerald-600">₹{prod.selling_price.toFixed(2)}</td>
+                        <td className="px-6 py-4 text-center"><span className="px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-700">{prod.is_active ? "Active" : "Inactive"}</span></td>
                         {!isReadOnly && (
                           <td className="px-6 py-4 text-center">
                             <div className="flex justify-center gap-1.5">
+                              <button
+                                onClick={() => updateProductStatusMutation.mutate({ id: prod.id, is_active: !prod.is_active })}
+                                disabled={updateProductStatusMutation.isPending}
+                                title={prod.is_active ? "Deactivate product" : "Activate product"}
+                                className="px-2 py-1 text-[10px] font-bold rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer disabled:opacity-50"
+                              >
+                                {prod.is_active ? "Deactivate" : "Activate"}
+                              </button>
                               <button
                                 onClick={() => handleOpenEditModal(prod)}
                                 className="p-2 bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 rounded-xl border border-slate-200/60 hover:border-emerald-200 transition-colors cursor-pointer"
