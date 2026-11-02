@@ -274,9 +274,11 @@ def delete_product(
             RecipeIngredient.product_id == product_id,
             Recipe.organization_id == current_user.organization_id
         ).first(), "recipe ingredients"),
+        # finished_product_id is a global FK. Check it without tenant scoping
+        # so inconsistent cross-organization references cannot trigger an ORM
+        # attempt to NULL a non-nullable FK during product deletion.
         (db.query(Recipe.id).filter(
-            Recipe.finished_product_id == product_id,
-            Recipe.organization_id == current_user.organization_id
+            Recipe.finished_product_id == product_id
         ).first(), "finished-product recipes"),
         (db.query(WastageLog.id).filter(
             WastageLog.product_id == product_id,
