@@ -972,3 +972,46 @@ test('shows supplier API validation errors without losing the form', async ({ pa
   await expect(page.getByPlaceholder('e.g. Arabica Roast Co.')).toHaveValue('Duplicate Test Supplier');
   await expect(page.getByRole('button', { name: 'Save Supplier' })).toBeVisible();
 });
+
+test('renders analytics metrics and switches reporting periods with isolated fixtures', async ({ page }) => {
+  const requestedPeriods = [];
+  const analyticsFixture = {
+    sales_trend: [{ date: '2026-11-01', amount: 120.5 }],
+    wastage_trend: [{ date: '2026-11-01', amount: 15.25 }],
+    category_breakdown: [{ name: 'Beverages', value: 80 }],
+    inventory_velocity: [],
+    trend_granularity: 'daily',
+  };
+
+  await enterIsolatedDemo(page, async (route, path) => {
+    if (path.endsWith('/analytics') && route.request().method() === 'GET') {
+      const url = new URL(route.request().url());
+      requestedPeriods.push(url.searchParams.get('days'));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(analyticsFixture),
+      });
+      return true;
+    }
+    return false;
+  });
+
+  await page.getByRole('link', { name: 'Reports & Analytics' }).click();
+  await expect(page.getByRole('heading', { name: /Executive Analytics & Reports/ })).toBeVisible();
+  await expect(page.getByText('₹120.50', { exact: true })).toBeVisible();
+  await expect(page.getByText('₹15.25', { exact: true })).toBeVisible();
+  await expect(page.getByText('Beverages', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: '30 Days' }).click();
+  await expect.poll(() => requestedPeriods).toContain('30');
+  await expect(page.getByText('Total Sales Revenue (30d)')).toBeVisible();
+
+  await page.getByRole('button', { name: 'All Time' }).click();
+  await expect.poll(() => requestedPeriods).toContain('all');
+  await expect(page.getByText('Total Sales Revenue (All Time)')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Refresh' }).click();
+  await expect.poll(() => requestedPeriods.filter((period) => period === 'all').length).toBeGreaterThanOrEqual(2);
+});
+
