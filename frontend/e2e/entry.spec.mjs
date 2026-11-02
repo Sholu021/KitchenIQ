@@ -118,3 +118,76 @@ test.describe('core workspace pages with isolated API fixtures', () => {
     });
   });
 });
+
+
+  test('edits and deletes a product using isolated synthetic API fixtures', async ({ page }) => {
+    let products = [{
+      id: 601,
+      name: 'Editable Test Beans',
+      sku: 'PW-EDIT-601',
+      unit: 'g',
+      reorder_level: 5,
+      cost_price: 10,
+      selling_price: 18,
+      current_stock: 0,
+      is_active: true,
+      category_id: null,
+      category: null,
+    }];
+    let updatePayload;
+    let deletedId;
+
+    await enterIsolatedDemo(page, async (route, path) => {
+      const method = route.request().method();
+      if (path.endsWith('/products') && method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ items: products, total: products.length }),
+        });
+        return true;
+      }
+      if (path.endsWith('/products/601') && method === 'PATCH') {
+        updatePayload = route.request().postDataJSON();
+        products = products.map((product) => ({ ...product, ...updatePayload }));
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(products[0]) });
+        return true;
+      }
+      if (path.endsWith('/products/601') && method === 'DELETE') {
+        deletedId = 601;
+        products = [];
+        await route.fulfill({ status: 204, body: '' });
+        return true;
+      }
+      return false;
+    });
+
+    await page.getByRole('link', { name: 'Menu Items' }).click();
+    const row = page.getByRole('row').filter({ hasText: 'Editable Test Beans' });
+    await expect(row).toBeVisible();
+    await row.getByRole('button').nth(1).click();
+
+    await page.getByPlaceholder('e.g. Arabica Beans').fill('Edited Test Beans');
+    await page.getByRole('button', { name: /Continue/ }).click();
+    await page.locator('input[type="number"]').nth(0).fill('11');
+    await page.locator('input[type="number"]').nth(1).fill('21');
+    await page.locator('input[type="number"]').nth(2).fill('6');
+    await page.getByRole('button', { name: /Review/ }).click();
+    await page.getByRole('button', { name: 'Save Product' }).click();
+
+    await expect(page.getByText('Edited Test Beans', { exact: true })).toBeVisible();
+    expect(updatePayload).toMatchObject({
+      name: 'Edited Test Beans',
+      sku: 'PW-EDIT-601',
+      unit: 'g',
+      cost_price: 11,
+      selling_price: 21,
+      reorder_level: 6,
+    });
+
+    page.once('dialog', (dialog) => dialog.accept());
+    const editedRow = page.getByRole('row').filter({ hasText: 'Edited Test Beans' });
+    await editedRow.getByRole('button').nth(2).click();
+    await expect(page.getByText('No products found in database.', { exact: false })).toBeVisible();
+    expect(deletedId).toBe(601);
+  });
