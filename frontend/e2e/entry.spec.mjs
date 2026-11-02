@@ -454,3 +454,106 @@ test('receives a sent purchase order using isolated synthetic API fixtures', asy
     }],
   });
 });
+
+
+test('tracks stock movements, batch metadata, and expired stock with isolated fixtures', async ({ page }) => {
+  const product = {
+    id: 1401,
+    name: 'Playwright Inventory Cocoa',
+    sku: 'PW-INV-1401',
+    unit: 'kg',
+    reorder_level: 2,
+    cost_price: 80,
+    selling_price: 120,
+    current_stock: 5,
+    is_active: true,
+    is_finished_product: false,
+    category: null,
+  };
+  let products = [{ ...product }];
+  let batches = [{
+    id: 1402,
+    product_id: product.id,
+    batch_number: 'PW-EXPIRED-1402',
+    expiry_date: '2020-01-01',
+    remaining_quantity: 5,
+  }];
+  let adjustmentPayload;
+
+  await enterIsolatedDemo(page, async (route, path) => {
+    const method = route.request().method();
+    if (path.endsWith('/products') && method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items: products, total: products.length }),
+      });
+      return true;
+    }
+    if (path.endsWith('/batches') && method === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(batches) });
+      return true;
+    }
+    if (path.endsWith('/batches/adjust') && method === 'POST') {
+      adjustmentPayload = route.request().postDataJSON();
+      const newBatch = {
+        id: 1403,
+        product_id: product.id,
+        batch_number: adjustmentPayload.batch_number,
+        expiry_date: adjustmentPayload.expiry_date,
+        remaining_quantity: adjustmentPayload.quantity,
+      };
+      batches = [...batches, newBatch];
+      products = products.map((item) => ({
+        ...item,
+        current_stock: item.current_stock + adjustmentPayload.quantity,
+      }));
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Stock movement recorded', batch: newBatch }),
+      });
+      return true;
+    }
+    if (path.endsWith('/batches/alerts') && method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ expired: batches.filter((batch) => batch.expiry_date < '2026-01-01'), expiring_7: [], expiring_30: [] }),
+      });
+      return true;
+    }
+    return false;
+  });
+
+  await page.getByRole('link', { name: 'Inventory & Batches' }).click();
+  const productRow = page.getByRole('row').filter({ hasText: 'Playwright Inventory Cocoa' });
+  await expect(productRow).toBeVisible();
+
+  // The only recorded stock is expired, so it must not be treated as usable.
+  await expect(productRow).toContainText(/Out of Stock/i);
+  await productRow.getByRole('button').last().click();
+
+  await expect(page.getByRole('heading', { name: 'Record Stock Movement' })).toBeVisible();
+  await page.getByPlaceholder('e.g. 50').fill('4');
+  await page.getByPlaceholder('e.g. BATCH-A').fill('PW-FRESH-1403');
+  await page.locator('input[type="date"]').fill('2099-12-31');
+  await page.getByPlaceholder('e.g. Spoilage disposal, fresh delivery...').fill('Isolated Playwright stock receipt');
+  await page.getByRole('button', { name: 'Save Movement' }).click();
+
+  expect(adjustmentPayload).toEqual({
+    product_id: 1401,
+    quantity: 4,
+    transaction_type: 'STOCK_IN',
+    notes: 'Isolated Playwright stock receipt',
+    batch_id: null,
+    batch_number: 'PW-FRESH-1403',
+    expiry_date: '2099-12-31',
+  });
+
+  await expect(page.getByRole('heading', { name: 'Record Stock Movement' })).toBeHidden();
+  await productRow.getByRole('button').first().click();
+  await expect(page.getByText('Available Batches (FEFO Inventory)')).toBeVisible();
+  await expect(page.getByText('PW-EXPIRED-1402')).toBeVisible();
+  await expect(page.getByText('PW-FRESH-1403')).toBeVisible();
+});
