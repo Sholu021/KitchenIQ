@@ -351,8 +351,40 @@ def test_expired_batches_cannot_be_used_for_sale_or_as_legacy_stock(db):
             items_data=[{"recipe_id": recipe.id, "quantity": 1}],
         )
     assert exc_info.value.status_code == 400
+    assert "Available 0.0" in exc_info.value.detail
     db.rollback()
     db.refresh(ingredient)
     assert ingredient.current_stock == pytest.approx(5.0)
+    assert db.query(Sale).count() == 0
+    assert db.query(InventoryTransaction).count() == 0
+
+
+def test_sale_counts_only_true_legacy_stock_when_expired_batches_exist(db):
+    from datetime import date, timedelta
+    from fastapi import HTTPException
+    from app.models.models import Sale, InventoryTransaction
+
+    organization, ingredient, recipe = _build_sale_fixture(
+        db,
+        stock=5.0,
+        batch_expiry=date.today() - timedelta(days=1),
+    )
+    # Two units are genuine unbatched legacy stock; the expired batch still
+    # occupies five units in current_stock but cannot be sold.
+    ingredient.current_stock = 7.0
+    db.commit()
+
+    with pytest.raises(HTTPException) as exc_info:
+        create_sale(
+            db=db,
+            organization_id=organization.id,
+            items_data=[{"recipe_id": recipe.id, "quantity": 1}],
+        )
+
+    assert exc_info.value.status_code == 400
+    assert "Available 2.0" in exc_info.value.detail
+    db.rollback()
+    db.refresh(ingredient)
+    assert ingredient.current_stock == pytest.approx(7.0)
     assert db.query(Sale).count() == 0
     assert db.query(InventoryTransaction).count() == 0

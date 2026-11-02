@@ -99,10 +99,20 @@ def create_sale(
             .scalar()
         )
 
-        # current_stock includes both batch-backed and legacy unbatched stock.
-        # Only the portion not represented by active batches is legacy stock.
+        # current_stock includes batch-backed stock (including expired batches)
+        # and any legacy unbatched stock. Expired batches are not sellable and
+        # must not be reclassified as legacy inventory.
+        all_batch_quantity = (
+            db.query(func.coalesce(func.sum(Batch.remaining_quantity), 0))
+            .filter(
+                Batch.organization_id == organization_id,
+                Batch.product_id == prod_id,
+                Batch.remaining_quantity > 0,
+            )
+            .scalar()
+        )
         legacy_unbatched = max(
-            product.current_stock - float(available_batch or 0),
+            product.current_stock - float(all_batch_quantity or 0),
             0.0,
         )
         available = float(available_batch or 0) + legacy_unbatched
