@@ -14,6 +14,7 @@ export default function ProductsPage() {
   // State filters
   const [search, setSearch] = useState('');
   const [categoryId, setCategoryId] = useState<number | ''>('');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [page, setPage] = useState(0);
   const limit = 10;
 
@@ -54,7 +55,7 @@ export default function ProductsPage() {
 
   // Fetch Products
   const { data: productsData, isLoading } = useQuery({
-    queryKey: ['products', search, categoryId, page],
+    queryKey: ['products', search, categoryId, activeFilter, page],
     queryFn: async () => {
       const params: any = {
         skip: page * limit,
@@ -62,6 +63,7 @@ export default function ProductsPage() {
       };
       if (search) params.search = search;
       if (categoryId) params.category_id = categoryId;
+      if (activeFilter !== 'all') params.is_active = activeFilter === 'active';
       
       const res = await apiClient.get('/products', { params });
       return res.data;
@@ -105,6 +107,20 @@ export default function ProductsPage() {
     },
     onError: (err: any) => {
       setProductError(err.response?.data?.detail || 'Failed to save product.');
+    }
+  });
+
+  const updateProductStatusMutation = useMutation({
+    mutationFn: async ({ id, is_active }: { id: number; is_active: boolean }) => {
+      const res = await apiClient.patch(`/products/${id}/status`, { is_active });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+    },
+    onError: (err: any) => {
+      window.alert(err.response?.data?.detail || 'Failed to update product status.');
     }
   });
 
@@ -262,6 +278,9 @@ export default function ProductsPage() {
           </select>
           <Filter size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
         </div>
+        <select value={activeFilter} onChange={(e) => { setActiveFilter(e.target.value as "all" | "active" | "inactive"); setPage(0); }} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 font-semibold">
+          <option value="all">All Products</option><option value="active">Active Only</option><option value="inactive">Inactive Only</option>
+        </select>
       </div>
 
       {/* Products Table Card */}
