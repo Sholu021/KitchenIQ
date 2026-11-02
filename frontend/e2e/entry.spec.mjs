@@ -796,3 +796,77 @@ test('opens and filters an isolated product inventory ledger', async ({ page }) 
   await page.getByTitle('Close ledger').click();
   await expect(page.getByText('Inventory Ledger')).toBeHidden();
 });
+
+
+test('records and views a sale using isolated synthetic API fixtures', async ({ page }) => {
+  const recipe = { id: 1801, name: 'Playwright Test Latte', cost_price: 42 };
+  let sales = [];
+  let salePayload;
+  await enterIsolatedDemo(page, async (route, path) => {
+    const method = route.request().method();
+    if (path.endsWith('/recipes') && method === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([recipe]) });
+      return true;
+    }
+    if (path.endsWith('/sales') && method === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sales) });
+      return true;
+    }
+    if (path.endsWith('/sales') && method === 'POST') {
+      salePayload = route.request().postDataJSON();
+      sales = [{ id: 1803, sale_date: '2026-11-02T10:00:00Z', total_amount: 240,
+        items: [{ id: 1804, quantity: 2, recipe: { id: 1801, name: recipe.name } }] }];
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(sales[0]) });
+      return true;
+    }
+    return false;
+  });
+  await page.getByRole('link', { name: 'Sales' }).click();
+  await expect(page.getByRole('heading', { name: 'Sales Register' })).toBeVisible();
+  await page.getByRole('button', { name: 'Record Sale' }).click();
+  await page.locator('select').selectOption('1801');
+  await page.locator('input[type="number"]').fill('2');
+  await page.getByRole('button', { name: 'Submit Sale & Deduct Inventory' }).click();
+  await expect(page.getByRole('row').filter({ hasText: 'SALE-1803' })).toContainText('₹240.00');
+  expect(salePayload).toEqual({ items: [{ recipe_id: 1801, quantity: 2 }] });
+  await page.getByRole('button', { name: 'View Items' }).click();
+  await expect(page.getByText('Sale # SALE-1803')).toBeVisible();
+  await expect(page.getByText('Playwright Test Latte', { exact: true })).toBeVisible();
+  await expect(page.getByText('₹240.00', { exact: true }).last()).toBeVisible();
+});
+
+test('rejects an insufficient-stock sale without persisting a sale', async ({ page }) => {
+  const recipe = { id: 1901, name: 'Playwright Low Stock Cappuccino', cost_price: 35 };
+  let sales = [];
+  let attemptedPayload;
+  let salePostCount = 0;
+  await enterIsolatedDemo(page, async (route, path) => {
+    const method = route.request().method();
+    if (path.endsWith('/recipes') && method === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([recipe]) });
+      return true;
+    }
+    if (path.endsWith('/sales') && method === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sales) });
+      return true;
+    }
+    if (path.endsWith('/sales') && method === 'POST') {
+      salePostCount += 1;
+      attemptedPayload = route.request().postDataJSON();
+      await route.fulfill({ status: 400, contentType: 'application/json',
+        body: JSON.stringify({ detail: 'Insufficient inventory for Playwright Test Milk. Required 20, Available 5' }) });
+      return true;
+    }
+    return false;
+  });
+  await page.getByRole('link', { name: 'Sales' }).click();
+  await page.getByRole('button', { name: 'Record Sale' }).click();
+  await page.locator('select').selectOption('1901');
+  await page.locator('input[type="number"]').fill('2');
+  await page.getByRole('button', { name: 'Submit Sale & Deduct Inventory' }).click();
+  await expect(page.getByText(/Insufficient inventory for Playwright Test Milk/)).toBeVisible();
+  expect(attemptedPayload).toEqual({ items: [{ recipe_id: 1901, quantity: 2 }] });
+  expect(salePostCount).toBe(1);
+  expect(sales).toHaveLength(0);
+  await expect(page.getByText('No sales recorded yet.', { exact: false })).toBeVisible();
+});
