@@ -785,8 +785,8 @@ test('opens and filters an isolated product inventory ledger', async ({ page }) 
 
   await expect(page.getByText('Inventory Ledger')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Playwright Ledger Lentils' })).toBeVisible();
-  await expect(page.getByText('12 kg', { exact: true })).toBeVisible();
-  await expect(page.getByText('-3 kg', { exact: true })).toBeVisible();
+  await expect(page.getByText('+12', { exact: true })).toBeVisible();
+  await expect(page.getByText('-3', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'STOCK OUT (1)' }).click();
   await expect(page.getByText('Synthetic usage')).toBeVisible();
