@@ -326,7 +326,7 @@ export default function RecipesPage() {
                             className="w-full px-3 py-2 border border-slate-200 bg-white text-xs text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-semibold"
                           >
                             <option value="">Select product...</option>
-                            {products.map((p: any) => (
+                            {products.filter((p: any) => p.is_active).map((p: any) => (
                               <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
                             ))}
                           </select>

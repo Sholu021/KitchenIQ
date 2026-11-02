@@ -115,64 +115,35 @@ def create_recipe(
     if ingredients_data is None:
         ingredients_data = []
 
-    # 1. Create finished product
-    finished_product = Product(
-        organization_id=organization_id,
-        name=name,
-        sku=None,
-        unit=yield_unit,
-        current_stock=0,
-        reorder_level=0,
-        preferred_order_quantity=0,
-        minimum_order_quantity=0,
-        cost_price=0,
-        selling_price=selling_price,
-        is_finished_product=True,
-    )
+    # Validate ingredient references before creating any records.
+    validated_products = []
+    for ing in ingredients_data:
+        product = db.query(Product).filter(Product.id == ing["product_id"], Product.organization_id == organization_id).first()
+        if not product:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Product {ing['product_id']} not found")
+        if not product.is_active:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'Product "{product.name}" is inactive and cannot be added to a new recipe.')
+        validated_products.append((product, ing))
 
+    finished_product = Product(
+        organization_id=organization_id, name=name, sku=None, unit=yield_unit,
+        current_stock=0, reorder_level=0, preferred_order_quantity=0,
+        minimum_order_quantity=0, cost_price=0, selling_price=selling_price,
+        is_finished_product=True, is_active=True,
+    )
     db.add(finished_product)
     db.flush()
 
-    # 2. Create recipe
     recipe = Recipe(
-        organization_id=organization_id,
-        name=name,
-        description=description,
-        yield_quantity=yield_quantity,
-        yield_unit=yield_unit,
-        selling_price=selling_price,
-        finished_product_id=finished_product.id,
+        organization_id=organization_id, name=name, description=description,
+        yield_quantity=yield_quantity, yield_unit=yield_unit,
+        selling_price=selling_price, finished_product_id=finished_product.id,
     )
-
     db.add(recipe)
     db.flush()
 
-    # 3. Add ingredients
-    for ing in ingredients_data:
-
-        product = (
-            db.query(Product)
-            .filter(
-                Product.id == ing["product_id"],
-                Product.organization_id == organization_id,
-            )
-            .first()
-        )
-
-        if not product:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Product {ing['product_id']} not found",
-            )
-
-        db.add(
-            RecipeIngredient(
-                recipe_id=recipe.id,
-                product_id=product.id,
-                quantity_required=ing["quantity_required"],
-            )
-        )
-
+    for product, ing in validated_products:
+        db.add(RecipeIngredient(recipe_id=recipe.id, product_id=product.id, quantity_required=ing["quantity_required"]))
     # 4. Audit log
     audit = AuditLog(
         organization_id=organization_id,

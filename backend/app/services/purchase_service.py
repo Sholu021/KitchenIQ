@@ -87,6 +87,9 @@ def create_purchase_order(
                 detail=f"Product ID {prod_id} not found"
             )
 
+        if not prod.is_active:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'Product "{prod.name}" is inactive and cannot be added to a new purchase order.')
+
         po_item = PurchaseOrderItem(
             purchase_order_id=po.id,
             product_id=prod_id,
@@ -263,7 +266,7 @@ def generate_purchase_orders_from_recommendations(
             .first()
         )
 
-        if not product or not product.supplier_id:
+        if not product or not product.is_active or not product.supplier_id:
             continue
 
         supplier_groups[product.supplier_id].append(
