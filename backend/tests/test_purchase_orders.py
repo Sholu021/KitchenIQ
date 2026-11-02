@@ -54,7 +54,7 @@ def test_create_purchase_order_success(client, db, seed_test_data):
         headers=headers,
         json={
             "supplier_id": supplier.id,
-            "items": [{"product_id": product.id, "quantity": 10, "unit_price": 500}],
+            "items": [{"product_id": product.id, "quantity": 10, "unit_price": 10}],
         },
     )
 
@@ -106,7 +106,7 @@ def test_receive_purchase_order_creates_stock_batch_and_transaction(client, db, 
         headers=headers,
         json={
             "supplier_id": supplier.id,
-            "items": [{"product_id": product.id, "quantity": 5, "unit_price": 500}],
+            "items": [{"product_id": product.id, "quantity": 5, "unit_price": 10}],
         },
     )
     assert created.status_code == 201
@@ -163,7 +163,7 @@ def test_receive_purchase_order_supports_partial_receipts(client, db, seed_test_
         headers=headers,
         json={
             "supplier_id": supplier.id,
-            "items": [{"product_id": product.id, "quantity": 5, "unit_price": 500}],
+            "items": [{"product_id": product.id, "quantity": 5, "unit_price": 10}],
         },
     )
     assert created.status_code == 201
@@ -218,7 +218,7 @@ def test_receive_purchase_order_rejects_over_receipt_without_changing_stock(clie
         headers=headers,
         json={
             "supplier_id": supplier.id,
-            "items": [{"product_id": product.id, "quantity": 2, "unit_price": 500}],
+            "items": [{"product_id": product.id, "quantity": 2, "unit_price": 10}],
         },
     )
     assert created.status_code == 201
@@ -258,7 +258,7 @@ def test_receive_purchase_order_is_tenant_scoped(client, db, seed_test_data):
         headers=headers,
         json={
             "supplier_id": supplier.id,
-            "items": [{"product_id": product.id, "quantity": 1, "unit_price": 500}],
+            "items": [{"product_id": product.id, "quantity": 1, "unit_price": 10}],
         },
     )
     assert created.status_code == 201
