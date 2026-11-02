@@ -1015,3 +1015,40 @@ test('renders analytics metrics and switches reporting periods with isolated fix
   await expect.poll(() => requestedPeriods.filter((period) => period === 'all').length).toBeGreaterThanOrEqual(2);
 });
 
+test('loads the AI Insights page from its dedicated endpoint without reusing dashboard cache data', async ({ page }) => {
+  const insightRequests = [];
+  const insightsFixture = {
+    health_summary: {
+      status: 'HEALTHY',
+      summary: 'Synthetic AI insight response for the isolated browser test.',
+      recommendations: ['Review stock levels weekly.'],
+      waste_risk_value: 25.5,
+    },
+    reorder_suggestions: [],
+    waste_analysis: {
+      expired_batches_value: 0,
+      expiring_7_days_value: 0,
+      expired_items_list: [],
+      dead_stock_recommendations: [],
+    },
+  };
+
+  await enterIsolatedDemo(page, async (route, path) => {
+    if (path.endsWith('/ai/insights') && route.request().method() === 'GET') {
+      insightRequests.push(route.request().url());
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(insightsFixture),
+      });
+      return true;
+    }
+    return false;
+  });
+
+  await page.getByRole('link', { name: 'AI Insights' }).click();
+  await expect(page.getByRole('heading', { name: 'AI Intelligence Hub' })).toBeVisible();
+  await expect(page.getByText(insightsFixture.health_summary.summary, { exact: true })).toBeVisible();
+  await expect.poll(() => insightRequests.length).toBeGreaterThan(0);
+  expect(new URL(insightRequests[0]).pathname).toBe('/api/v1/ai/insights');
+});
