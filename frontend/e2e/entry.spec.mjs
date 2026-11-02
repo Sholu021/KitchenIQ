@@ -832,7 +832,7 @@ test('records and views a sale using isolated synthetic API fixtures', async ({ 
   await page.getByRole('button', { name: 'View Items' }).click();
   await expect(page.getByText('Sale # SALE-1803')).toBeVisible();
   await expect(page.getByText('Playwright Test Latte', { exact: true })).toBeVisible();
-  await expect(page.getByText('₹240.00')).toBeVisible();
+  await expect(page.getByText('₹240.00', { exact: true }).last()).toBeVisible();
 });
 
 test('rejects an insufficient-stock sale without persisting a sale', async ({ page }) => {
