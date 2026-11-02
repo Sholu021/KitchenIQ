@@ -191,3 +191,97 @@ test.describe('core workspace pages with isolated API fixtures', () => {
     await expect(page.getByText('No products found in database.', { exact: false })).toBeVisible();
     expect(deletedId).toBe(601);
   });
+
+
+test('creates, views, and deletes a recipe using isolated synthetic API fixtures', async ({ page }) => {
+  const products = [{
+    id: 701,
+    name: 'Playwright Test Beans',
+    sku: 'PW-RECIPE-701',
+    unit: 'g',
+    is_active: true,
+    current_stock: 0,
+  }];
+  let recipes = [];
+  let createPayload;
+  let deletedId;
+
+  await enterIsolatedDemo(page, async (route, path) => {
+    const method = route.request().method();
+    if (path.endsWith('/products') && method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items: products, total: products.length }),
+      });
+      return true;
+    }
+    if (path.endsWith('/recipes') && method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(recipes),
+      });
+      return true;
+    }
+    if (path.endsWith('/recipes') && method === 'POST') {
+      createPayload = route.request().postDataJSON();
+      recipes = [{
+        id: 801,
+        ...createPayload,
+        cost_price: 4.5,
+        ingredients: [{
+          id: 901,
+          product_id: 701,
+          quantity_required: createPayload.ingredients[0].quantity_required,
+          product: products[0],
+        }],
+      }];
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify(recipes[0]),
+      });
+      return true;
+    }
+    if (path.endsWith('/recipes/801') && method === 'DELETE') {
+      deletedId = 801;
+      recipes = [];
+      await route.fulfill({ status: 204, body: '' });
+      return true;
+    }
+    return false;
+  });
+
+  await page.getByRole('link', { name: 'Recipes' }).click();
+  await page.getByRole('button', { name: /Add Recipe/ }).click();
+  await page.getByPlaceholder('e.g. Cappuccino').fill('Playwright Test Cappuccino');
+  await page.getByPlaceholder('Describe recipe preparation or notes...').fill('Isolated browser test recipe');
+  const recipeNumbers = page.locator('input[type="number"]');
+  await recipeNumbers.nth(0).fill('1');
+  await recipeNumbers.nth(1).fill('150');
+  await page.locator('select').selectOption('701');
+  await page.getByPlaceholder('Qty').fill('18');
+  await page.getByRole('button', { name: 'Define Recipe' }).click();
+
+  await expect(page.getByText('Playwright Test Cappuccino', { exact: true })).toBeVisible();
+  expect(createPayload).toMatchObject({
+    name: 'Playwright Test Cappuccino',
+    description: 'Isolated browser test recipe',
+    yield_quantity: 1,
+    yield_unit: 'portion',
+    selling_price: 150,
+    ingredients: [{ product_id: 701, quantity_required: 18 }],
+  });
+
+  await page.getByRole('button', { name: /View Full Recipe/ }).click();
+  await expect(page.getByText('Playwright Test Beans', { exact: true })).toBeVisible();
+  await expect(page.getByText('18 g', { exact: true })).toBeVisible();
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.locator('button').filter({ has: page.locator('svg') }).first().click({ force: true }).catch(() => {});
+  const recipeCard = page.locator('div').filter({ has: page.getByRole('heading', { name: 'Playwright Test Cappuccino' }) }).last();
+  await recipeCard.locator('button').first().click();
+  await expect(page.getByText(/No recipes defined/)).toBeVisible();
+  expect(deletedId).toBe(801);
+});
