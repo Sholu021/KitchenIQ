@@ -15,6 +15,7 @@ from app.schemas.schemas import (
     ProductUpdate,
     ProductOut,
     ProductListResponse,
+    ProductStatusUpdate,
     CategoryCreate,
     CategoryOut
 )
@@ -138,6 +139,7 @@ def create_product(
 def list_products(
     search: Optional[str] = Query(None, description="Search by product name or SKU"),
     category_id: Optional[int] = Query(None, description="Filter by Category ID"),
+    is_active: Optional[bool] = Query(None, description="Filter by active status; omit for all products"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -149,6 +151,9 @@ def list_products(
 
     if category_id is not None:
         query = query.filter(Product.category_id == category_id)
+
+    if is_active is not None:
+        query = query.filter(Product.is_active == is_active)
 
     if search:
         query = query.filter(
@@ -168,6 +173,31 @@ def list_products(
         "items": products
     }
 
+
+@router.patch("/{product_id}/status", response_model=ProductOut)
+def update_product_status(
+    product_id: int,
+    req: ProductStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager),
+):
+    product = db.query(Product).filter(
+        Product.id == product_id,
+        Product.organization_id == current_user.organization_id,
+    ).first()
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    if product.is_active == req.is_active:
+        return product
+    product.is_active = req.is_active
+    AuditService.log(
+        db=db, organization_id=current_user.organization_id, user_id=current_user.id,
+        action="ACTIVATE" if req.is_active else "DEACTIVATE",
+        entity_type="Product", entity_id=product.id,
+    )
+    db.commit()
+    db.refresh(product)
+    return product
 
 @router.patch("/{product_id}", response_model=ProductOut)
 def update_product(
