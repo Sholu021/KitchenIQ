@@ -870,3 +870,105 @@ test('rejects an insufficient-stock sale without persisting a sale', async ({ pa
   expect(sales).toHaveLength(0);
   await expect(page.getByText('No sales recorded yet.', { exact: false })).toBeVisible();
 });
+
+
+test('creates, edits, and deletes a supplier using isolated synthetic API fixtures', async ({ page }) => {
+  let suppliers = [];
+  let createPayload;
+  let updatePayload;
+  let deletedId;
+
+  await enterIsolatedDemo(page, async (route, path) => {
+    const method = route.request().method();
+    if (path.endsWith('/suppliers') && method === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(suppliers) });
+      return true;
+    }
+    if (path.endsWith('/suppliers') && method === 'POST') {
+      createPayload = route.request().postDataJSON();
+      suppliers = [{ id: 2001, ...createPayload }];
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(suppliers[0]) });
+      return true;
+    }
+    if (path.endsWith('/suppliers/2001') && method === 'PATCH') {
+      updatePayload = route.request().postDataJSON();
+      suppliers = suppliers.map((supplier) => ({ ...supplier, ...updatePayload }));
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(suppliers[0]) });
+      return true;
+    }
+    if (path.endsWith('/suppliers/2001') && method === 'DELETE') {
+      deletedId = 2001;
+      suppliers = [];
+      await route.fulfill({ status: 204, body: '' });
+      return true;
+    }
+    return false;
+  });
+
+  await page.getByRole('link', { name: 'Suppliers' }).click();
+  await expect(page.getByRole('heading', { name: 'Suppliers Directory' })).toBeVisible();
+  await page.getByRole('button', { name: 'Add Supplier' }).click();
+
+  const nameInput = page.getByPlaceholder('e.g. Arabica Roast Co.');
+  await nameInput.fill('Playwright Test Supplier');
+  await page.getByPlaceholder('e.g. +1 555 123-456').fill('+91 90000 20001');
+  await page.getByPlaceholder('orders@supplier.com').fill('orders@pw-supplier.test');
+  await page.getByPlaceholder('e.g. 100 Wholesaler Drive, City').fill('Test Market, Patna');
+  await page.getByRole('button', { name: 'Save Supplier' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Playwright Test Supplier' })).toBeVisible();
+  expect(createPayload).toEqual({
+    name: 'Playwright Test Supplier',
+    phone: '+91 90000 20001',
+    email: 'orders@pw-supplier.test',
+    address: 'Test Market, Patna',
+  });
+
+  const card = page.getByRole('heading', { name: 'Playwright Test Supplier' }).locator('xpath=../../..');
+  await card.getByRole('button').nth(0).click();
+  await expect(page.getByRole('heading', { name: 'Edit Supplier: Playwright Test Supplier' })).toBeVisible();
+  await nameInput.fill('Edited Playwright Supplier');
+  await page.getByRole('button', { name: 'Save Supplier' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Edited Playwright Supplier' })).toBeVisible();
+  expect(updatePayload).toEqual({
+    name: 'Edited Playwright Supplier',
+    phone: '+91 90000 20001',
+    email: 'orders@pw-supplier.test',
+    address: 'Test Market, Patna',
+  });
+
+  const editedCard = page.getByRole('heading', { name: 'Edited Playwright Supplier' }).locator('xpath=../../..');
+  page.once('dialog', (dialog) => dialog.accept());
+  await editedCard.getByRole('button').nth(1).click();
+  await expect(page.getByText(/No suppliers found/)).toBeVisible();
+  expect(deletedId).toBe(2001);
+});
+
+test('shows supplier API validation errors without losing the form', async ({ page }) => {
+  await enterIsolatedDemo(page, async (route, path) => {
+    if (path.endsWith('/suppliers') && route.request().method() === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+      return true;
+    }
+    if (path.endsWith('/suppliers') && route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({ detail: 'Supplier email is already registered.' }),
+      });
+      return true;
+    }
+    return false;
+  });
+
+  await page.getByRole('link', { name: 'Suppliers' }).click();
+  await page.getByRole('button', { name: 'Add Supplier' }).click();
+  await page.getByPlaceholder('e.g. Arabica Roast Co.').fill('Duplicate Test Supplier');
+  await page.getByPlaceholder('orders@supplier.com').fill('duplicate@pw-supplier.test');
+  await page.getByRole('button', { name: 'Save Supplier' }).click();
+
+  await expect(page.getByText('Supplier email is already registered.')).toBeVisible();
+  await expect(page.getByPlaceholder('e.g. Arabica Roast Co.')).toHaveValue('Duplicate Test Supplier');
+  await expect(page.getByRole('button', { name: 'Save Supplier' })).toBeVisible();
+});
