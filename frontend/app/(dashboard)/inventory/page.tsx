@@ -247,6 +247,41 @@ export default function InventoryPage() {
       return res.data;
     },
   });
+
+  // Expired quantities are not usable stock. Match the backend's FEFO valuation
+  // ordering and cap batch quantities at the product's recorded stock.
+  const getUsableStock = (product: any) => {
+    const currentStock = Math.max(0, Number(product.current_stock ?? 0));
+    const productBatches = (batches as any[])
+      .filter((batch) => batch.product_id === product.id)
+      .slice()
+      .sort((a, b) => {
+        if (!a.expiry_date) return 1;
+        if (!b.expiry_date) return -1;
+        return new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime();
+      });
+
+    let remainingValuationStock = currentStock;
+    let expiredQuantity = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (const batch of productBatches) {
+      if (remainingValuationStock <= 0) break;
+      const batchQuantity = Math.max(0, Number(batch.remaining_quantity ?? 0));
+      const valuedQuantity = Math.min(batchQuantity, remainingValuationStock);
+      remainingValuationStock -= valuedQuantity;
+
+      if (
+        batch.expiry_date &&
+        new Date(batch.expiry_date).getTime() < today.getTime()
+      ) {
+        expiredQuantity += valuedQuantity;
+      }
+    }
+
+    return Math.max(0, currentStock - expiredQuantity);
+  };
   useEffect(() => {
     if (
       !batchIdParam ||
@@ -425,12 +460,13 @@ export default function InventoryPage() {
     ? Number(inventoryValuation.total_inventory_value)
     : products.reduce((acc: number, p: any) => acc + Number(p.current_stock ?? 0) * Number(p.cost_price ?? 0), 0);
   
-  const lowStockCount = ingredientProducts.filter(
-    (p: any) => p.current_stock > 0 && p.reorder_level > 0 && p.current_stock <= p.reorder_level
-  ).length;
+  const lowStockCount = ingredientProducts.filter((p: any) => {
+    const usableStock = getUsableStock(p);
+    return usableStock > 0 && p.reorder_level > 0 && usableStock <= p.reorder_level;
+  }).length;
 
   const outOfStockCount = ingredientProducts.filter(
-    (p: any) => p.current_stock <= 0
+    (p: any) => getUsableStock(p) <= 0
   ).length;
 
   const expiringCount =
@@ -451,10 +487,11 @@ export default function InventoryPage() {
       selectedCategory === 'All' ||
       (p.category?.name && p.category.name.toLowerCase() === selectedCategory.toLowerCase());
 
-    const isOutOfStock = p.current_stock === 0;
-    const isCritical = p.current_stock > 0 && p.current_stock <= p.reorder_level * 0.5;
-    const isLow = p.current_stock > 0 && p.current_stock <= p.reorder_level && !isCritical;
-    const isHealthy = p.current_stock > p.reorder_level;
+    const usableStock = getUsableStock(p);
+    const isOutOfStock = usableStock <= 0;
+    const isCritical = usableStock > 0 && usableStock <= p.reorder_level * 0.5;
+    const isLow = usableStock > 0 && usableStock <= p.reorder_level && !isCritical;
+    const isHealthy = usableStock > p.reorder_level;
 
     const productBatches = batches.filter((b: any) => {
 
@@ -958,9 +995,10 @@ export default function InventoryPage() {
                       
 
                       const isExpanded = !!expandedProducts[p.id];
-                      const isOutOfStock = p.current_stock === 0;
-                      const isCritical = p.current_stock > 0 && p.current_stock <= p.reorder_level * 0.5;
-                      const isLow = p.current_stock > 0 && p.current_stock <= p.reorder_level && !isCritical;
+                      const usableStock = getUsableStock(p);
+                      const isOutOfStock = usableStock <= 0;
+                      const isCritical = usableStock > 0 && usableStock <= p.reorder_level * 0.5;
+                      const isLow = usableStock > 0 && usableStock <= p.reorder_level && !isCritical;
 
                       const productBatches = batches.filter((b: any) => b.product_id === p.id);
 
@@ -1001,22 +1039,33 @@ export default function InventoryPage() {
                               {p.category?.name || 'Uncategorized'}
                             </td>
                             <td className="px-6 py-4 text-right font-mono font-bold text-slate-900">
-                              {p.current_stock} <span className="text-xs text-slate-400 font-sans font-medium">{p.unit}</span>
+                              {usableStock} <span className="text-xs text-slate-400 font-sans font-medium">{p.unit}</span>
+                              {usableStock < Number(p.current_stock ?? 0) && (
+                                <span className="block text-[9px] font-semibold text-rose-600">
+                                  {Number(p.current_stock ?? 0) - usableStock} {p.unit} expired · excluded
+                                </span>
+                              )}
                             </td>
                             <td className="px-6 py-4 text-right font-mono text-slate-500 text-xs">
                               {p.reorder_level} {p.unit}
                             </td>
                             <td className="px-6 py-4">
-                              {isOutOfStock ? (
-                                <span className="text-[9px] font-bold px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 rounded-full">Out of Stock</span>
-                              ) : isCritical ? (
-                                <span className="text-[9px] font-bold px-2 py-0.5 bg-rose-50 border border-rose-100 text-rose-600 rounded-full">Critical</span>
-                              ) : isLow ? (
-                                <span className="text-[9px] font-bold px-2 py-0.5 bg-amber-50 border border-amber-100 text-amber-600 rounded-full">Low Stock</span>
-                              ) : (
-                                <span className="text-[9px] font-bold px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-full">Healthy</span>
-                              )}
-                              {hasExpiredBatch && <span className="mt-1 inline-block text-[9px] font-bold px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-full">Expired Batch</span>}
+                              <div className="flex flex-col items-start gap-1">
+                                {isOutOfStock ? (
+                                  <span className="text-[9px] font-bold px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 rounded-full">Out of Stock</span>
+                                ) : isCritical ? (
+                                  <span className="text-[9px] font-bold px-2 py-0.5 bg-rose-50 border border-rose-100 text-rose-600 rounded-full">Critical</span>
+                                ) : isLow ? (
+                                  <span className="text-[9px] font-bold px-2 py-0.5 bg-amber-50 border border-amber-100 text-amber-600 rounded-full">Low Stock</span>
+                                ) : (
+                                  <span className="text-[9px] font-bold px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-full">Healthy</span>
+                                )}
+                                {hasExpiredBatch && (
+                                  <span className="inline-block text-[9px] font-bold px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-full">
+                                    Expired Batch
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="px-6 py-4">
                               {daysLeft !== null ? (
