@@ -1049,9 +1049,7 @@ test('renders AI health, reorder, and waste insights with isolated fixtures', as
 
   const aiInsightRequests = [];
   await enterIsolatedDemo(page, async (route, path) => {
-    if (path.includes('/ai/insights')) {
-      aiInsightRequests.push({ path, method: route.request().method() });
-    }
+    aiInsightRequests.push({ path, method: route.request().method() });
     if (path.endsWith('/ai/insights') && route.request().method() === 'GET') {
       await route.fulfill({
         status: 200,
