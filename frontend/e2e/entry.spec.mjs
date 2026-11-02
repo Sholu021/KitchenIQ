@@ -40,7 +40,7 @@ async function enterIsolatedDemo(page) {
 
   await page.goto('/login');
   await page.getByRole('button', { name: /explore demo account/i }).click();
-  await expect(page).toHaveURL(/\\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible();
 }
 
