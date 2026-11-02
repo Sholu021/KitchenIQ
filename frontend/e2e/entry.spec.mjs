@@ -1015,3 +1015,96 @@ test('renders analytics metrics and switches reporting periods with isolated fix
   await expect.poll(() => requestedPeriods.filter((period) => period === 'all').length).toBeGreaterThanOrEqual(2);
 });
 
+
+
+test('renders AI health, reorder, and waste insights with isolated fixtures', async ({ page }) => {
+  const insightsFixture = {
+    health_summary: {
+      status: 'WARNING',
+      summary: 'Synthetic inventory health summary for browser regression.',
+      recommendations: ['Review low stock for test flour.', 'Check expiry dates for test cocoa.'],
+      waste_risk_value: 125.5,
+    },
+    reorder_suggestions: [{
+      product_name: 'Playwright Test Flour',
+      priority: 'HIGH',
+      reason: 'Synthetic stock is below reorder level.',
+      suggested_quantity: 8,
+      unit: 'kg',
+      estimated_cost: 320,
+    }],
+    waste_analysis: {
+      expired_batches_value: 45.25,
+      expiring_7_days_value: 18.75,
+      expired_items_list: [],
+      dead_stock_recommendations: [{
+        product_name: 'Playwright Test Cocoa',
+        reason: 'No recent movement in synthetic fixture.',
+        value: 22.5,
+      }],
+    },
+  };
+
+  await enterIsolatedDemo(page, async (route, path) => {
+    if (path.endsWith('/ai/insights') && route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(insightsFixture),
+      });
+      return true;
+    }
+    if (path.endsWith('/ai/copilot') && route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ answer: 'Synthetic copilot answer: review flour stock.' }),
+      });
+      return true;
+    }
+    return false;
+  });
+
+  await page.getByRole('link', { name: /AI Insights/i }).click();
+  await expect(page.getByRole('heading', { name: 'AI Intelligence Hub' })).toBeVisible();
+  await expect(page.getByText('Synthetic inventory health summary for browser regression.')).toBeVisible();
+  await expect(page.getByText('₹125.50', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: /Reorders/ }).click();
+  await expect(page.getByText('Playwright Test Flour', { exact: true })).toBeVisible();
+  await expect(page.getByText('8 kg', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: /Waste Analysis/ }).click();
+  await expect(page.getByText('₹45.25', { exact: true })).toBeVisible();
+  await expect(page.getByText('Playwright Test Cocoa', { exact: true })).toBeVisible();
+
+  const question = page.getByPlaceholder("Ask: 'What should I reorder?'");
+  await question.fill('What should I reorder?');
+  await page.getByRole('button', { name: '' }).last().click();
+  await expect(page.getByText('Synthetic copilot answer: review flour stock.')).toBeVisible();
+});
+
+test('AI Insights handles empty payloads and copilot API failures without crashing', async ({ page }) => {
+  await enterIsolatedDemo(page, async (route, path) => {
+    if (path.endsWith('/ai/insights') && route.request().method() === 'GET') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) });
+      return true;
+    }
+    if (path.endsWith('/ai/copilot') && route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ detail: 'Synthetic upstream unavailable' }),
+      });
+      return true;
+    }
+    return false;
+  });
+
+  await page.getByRole('link', { name: /AI Insights/i }).click();
+  await expect(page.getByRole('heading', { name: 'AI Intelligence Hub' })).toBeVisible();
+  await expect(page.getByText('Excellent! No products are currently below safety reorder points.')).toBeHidden();
+  await page.getByPlaceholder("Ask: 'What should I reorder?'").fill('Check stock');
+  await page.locator('form').getByRole('button').click();
+  await expect(page.getByText('Sorry, I had trouble analyzing your kitchen logs. Please try again.')).toBeVisible();
+});
