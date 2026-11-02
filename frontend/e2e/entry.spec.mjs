@@ -278,6 +278,9 @@ test('creates, views, and deletes a recipe using isolated synthetic API fixtures
   await expect(page.getByText('Playwright Test Beans', { exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: '18 g', exact: true })).toBeVisible();
 
+  await page.locator('div.fixed.inset-0').getByRole('button').click();
+  await expect(page.getByText('Full Ingredient Breakdown')).toBeHidden();
+
   page.once('dialog', (dialog) => dialog.accept());
   const recipeHeading = page.getByRole('heading', { name: 'Playwright Test Cappuccino' });
   const recipeCard = recipeHeading.locator('xpath=../../..');
