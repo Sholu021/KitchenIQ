@@ -284,7 +284,7 @@ def get_ai_insights(db: Session, organization_id: int) -> Dict[str, Any]:
             "  ],\n"
             "  \"waste_analysis\": {\n"
             "    \"expired_batches_value\": float_value,\n"
-            "    \"expiring_30_days_value\": float_value,\n"
+            "    \"expiring_7_days_value\": float_value,\n"
             "    \"expired_items_list\": [ ... ],\n"
             "    \"dead_stock_recommendations\": [\n"
             "       { \"product_name\": \"string\", \"current_stock\": float, \"unit\": \"string\", \"value\": float, \"reason\": \"string\" }\n"
@@ -455,14 +455,17 @@ def ask_ai_copilot(db: Session, organization_id: int, question: str) -> str:
         # 1. Answer reorder questions
         if "reorder" in q or "buy" in q or "purchase" in q:
             low_stock_products = [
-               p for p in products
-               if p["current_stock"] > 0
-               and p["current_stock"] <= p["reorder_level"]
+                p for p in products
+                if not p["is_finished_product"]
+                and p["current_stock"] > 0
+                and p["reorder_level"] > 0
+                and p["current_stock"] <= p["reorder_level"]
             ]
 
             out_of_stock_products = [
                 p for p in products
-                if p["current_stock"] <= 0
+                if not p["is_finished_product"]
+                and p["current_stock"] <= 0
             ]
 
             recommendations = []
