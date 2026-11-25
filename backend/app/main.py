@@ -3,7 +3,7 @@ import os
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes.audit import router as audit_router
@@ -67,6 +67,22 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+
+@app.middleware("http")
+async def log_cloudflare_request_headers(request: Request, call_next):
+    """Log Cloudflare tracing headers for requests that reach the application."""
+    cf_ray = request.headers.get("cf-ray", "missing")
+    cf_connecting_ip = request.headers.get("cf-connecting-ip", "missing")
+    logger.info(
+        "Incoming request: method=%s path=%s CF-Ray=%s CF-Connecting-IP=%s",
+        request.method,
+        request.url.path,
+        cf_ray,
+        cf_connecting_ip,
+    )
+    return await call_next(request)
+
 
 register_exception_handlers(app)
 app.state.limiter = limiter
